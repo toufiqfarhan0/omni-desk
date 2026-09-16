@@ -67,12 +67,12 @@ def _seed_existing_bookings() -> None:
 
     # Seed 4 realistic appointments for the Owner Dashboard
     seed_data = [
-        ("cleaning", 0, "10:00", "Eleanor Vance", "+14155550192", True),
-        ("checkup", 0, "14:30", "Marcus Sterling", "+14155550148", True),
-        ("whitening", 1, "11:00", "Sophia Al-Mansoor", "+14155550211", False),
-        ("root-canal", 2, "09:30", "James Thornton", "+14155550384", True),
+        ("cleaning", 0, "10:00", "Eleanor Vance", "eleanor.vance@gmail.com", True),
+        ("checkup", 0, "14:30", "Marcus Sterling", "marcus.sterling@gmail.com", True),
+        ("whitening", 1, "11:00", "Sophia Al-Mansoor", "sophia.mansoor@gmail.com", False),
+        ("root-canal", 2, "09:30", "James Thornton", "james.thornton@gmail.com", True),
     ]
-    for service, offset, time_str, name, phone, confirmed in seed_data:
+    for service, offset, time_str, name, email, confirmed in seed_data:
         target_day = date.today() + timedelta(days=offset)
         if target_day.weekday() >= 5:
             target_day += timedelta(days=2)
@@ -85,7 +85,7 @@ def _seed_existing_bookings() -> None:
             "date": target_day.isoformat(),
             "time": time_str,
             "customer_name": name,
-            "phone": phone,
+            "email": email,
             "confirmation_sent": confirmed,
             "price": SERVICES[service]["price"],
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -123,7 +123,7 @@ def next_open_days(after: date, count: int = 2) -> list[date]:
     return found
 
 
-def book(service: str, day: date, time_str: str, name: str, phone: str) -> dict:
+def book(service: str, day: date, time_str: str, name: str, email: str) -> dict:
     key = (day.isoformat(), time_str)
     if key in _taken:
         raise SlotUnavailable(f"{time_str} on {day.isoformat()} is already booked")
@@ -136,7 +136,7 @@ def book(service: str, day: date, time_str: str, name: str, phone: str) -> dict:
         "date": day.isoformat(),
         "time": time_str,
         "customer_name": name,
-        "phone": phone,
+        "email": email,
         "confirmation_sent": False,
         "price": SERVICES[service].get("price", 120),
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),

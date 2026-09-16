@@ -2,7 +2,7 @@
   "name": "Brightsmile Dental Scheduler",
   "greeting": "Thanks for calling Brightsmile Dental. Are you looking to book an appointment?",
   "voice": { "voice_id": "alba" },
-  "system_prompt": "You are the scheduling assistant for Brightsmile Dental. Keep every reply under two sentences and speak naturally, like a receptionist on the phone.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself. The clinic is open Monday to Friday only.\n\nBooking sequence:\n1. Find out which service they want. Offered: cleaning, checkup, whitening, root-canal. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their phone number. Ask for them one at a time.\n4. Call book_appointment only when you have all five: service, date, time, full name, and a phone number that includes a country code. Never call it with a field still missing or guessed.\n5. Call send_confirmation with the confirmation code, then read the code aloud one character at a time.\n\nPhone numbers: you need the international form starting with a plus and the country code. If the caller gives a national number (it starts with a zero, or they just say the local digits), ask which country they are calling from and convert it yourself before booking. A Nigerian 0916 383 6950 is +2349163836950; a UK 07700 900123 is +447700900123. Read the full international number back and get a yes before you book.\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'needs_country_code' means ask which country they are in, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
+  "system_prompt": "You are the scheduling assistant for Brightsmile Dental. Keep every reply under two sentences and speak naturally, like a receptionist on the phone.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself. The clinic is open Monday to Friday only.\n\nBooking sequence:\n1. Find out which service they want. Offered: cleaning, checkup, whitening, root-canal. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their email address. Ask for them one at a time.\n4. Call book_appointment only when you have all five: service, date, time, full name, and a valid email address. Never call it with a field still missing or guessed.\n5. Call send_confirmation with the confirmation code, then let the caller know that their confirmation email with a calendar invite has been sent.\n\nEmail addresses: convert spoken email addresses to standard format (e.g. 'john dot doe at gmail dot com' becomes john.doe@gmail.com, or 'alex smith 12 at yahoo dot com' becomes alexsmith12@yahoo.com). Read the email address back to confirm before you book.\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'bad_email' means ask for the email again, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
   "keyterms": [
     "Brightsmile",
     "cleaning",
@@ -11,7 +11,9 @@
     "root canal",
     "hygienist",
     "reschedule",
-    "confirmation code"
+    "confirmation code",
+    "calendar invite",
+    "email"
   ],
   "tools": [
     {
@@ -36,7 +38,7 @@
             "type": "string",
             "description": "The day to check, as YYYY-MM-DD.",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-08", "2026-09-15"]
+            "examples": ["2026-09-17", "2026-09-22"]
           }
         },
         "required": ["service", "date"]
@@ -46,7 +48,7 @@
     },
     {
       "name": "book_appointment",
-      "description": "Book a confirmed appointment slot. Only call this once the caller has agreed to a specific time AND you have their full name and a phone number with a country code.",
+      "description": "Book a confirmed appointment slot. Only call this once the caller has agreed to a specific time AND you have their full name and email address.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -57,7 +59,7 @@
           "date": {
             "type": "string",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-08"]
+            "examples": ["2026-09-17"]
           },
           "time": {
             "type": "string",
@@ -69,21 +71,21 @@
             "type": "string",
             "description": "The caller's full name as they said it."
           },
-          "phone": {
+          "email": {
             "type": "string",
-            "description": "Callback number in international form, starting with + and the country code. Convert national numbers before sending: Nigerian 0916 383 6950 becomes +2349163836950.",
-            "pattern": "^[+0-9][-0-9 ()]{6,20}$",
-            "examples": ["+2349163836950", "+14155552671", "+447700900123"]
+            "description": "The caller's email address in standard format (e.g. 'alex@gmail.com'). Convert spoken forms like 'alex dot smith at gmail dot com' to standard format.",
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "examples": ["alex.smith@gmail.com", "patient@yahoo.com"]
           }
         },
-        "required": ["service", "date", "time", "customer_name", "phone"]
+        "required": ["service", "date", "time", "customer_name", "email"]
       },
       "http": { "url": "{{BASE_URL}}/tools/book_appointment", "http_method": "POST" },
       "timeout_seconds": 15
     },
     {
       "name": "send_confirmation",
-      "description": "Text the caller their appointment confirmation. Call immediately after a successful booking.",
+      "description": "Send the customer their email confirmation with attached .ics calendar invite. Call immediately after a successful booking.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -97,7 +99,7 @@
         "required": ["confirmation_code"]
       },
       "http": { "url": "{{BASE_URL}}/tools/send_confirmation", "http_method": "POST" },
-      "timeout_seconds": 10
+      "timeout_seconds": 15
     }
   ]
 }

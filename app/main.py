@@ -10,8 +10,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
+import base64
 import json
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -59,28 +61,187 @@ class BookingRequest(BaseModel):
     date: str
     time: str = Field(description="24-hour slot start, e.g. '14:30'")
     customer_name: str
-    phone: str
+    email: str
 
 
 class ConfirmationRequest(BaseModel):
     confirmation_code: str
 
 
-def _normalize_phone(raw: str) -> tuple[str | None, str]:
-    """Return (e164, problem). A national number is a question, not an error."""
-    cleaned = "".join(ch for ch in raw if ch.isdigit() or ch == "+")
-    lo, hi = E164_DIGITS
+def _normalize_email(raw: str) -> tuple[str | None, str]:
+    """Sanitize and validate spoken or transcribed email address."""
+    s = raw.strip().lower()
+    # Replace spoken artifacts if any remain from STT
+    s = re.sub(r"\s+at\s+", "@", s)
+    s = re.sub(r"\s+dot\s+", ".", s)
+    s = re.sub(r"\s+", "", s)
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if re.match(pattern, s):
+        return s, ""
+    return None, "bad_email"
 
-    if cleaned.startswith("+"):
-        digits = cleaned[1:]
-        if digits.isdigit() and lo <= len(digits) <= hi and not digits.startswith("0"):
-            return "+" + digits, ""
-        return None, "incomplete"
 
-    digits = cleaned.lstrip("0")
-    if digits.isdigit() and lo <= len(digits) <= hi:
-        return None, "needs_country"
-    return None, "incomplete"
+def _generate_ics(record: dict) -> str:
+    """Generate an RFC 5545 iCalendar string with a 1-hour alarm notification."""
+    day_str = record.get("date", "")
+    time_str = record.get("time", "")
+    service_label = record.get("service_label", "Dental Appointment")
+    name = record.get("customer_name", "Patient")
+    code = record.get("confirmation_code", "")
+    service_info = store.SERVICES.get(record.get("service", ""), {})
+    minutes = service_info.get("minutes", 30)
+
+    try:
+        start_dt = datetime.strptime(f"{day_str} {time_str}", "%Y-%m-%d %H:%M")
+        end_dt = start_dt + timedelta(minutes=minutes)
+    except Exception:
+        start_dt = datetime.utcnow()
+        end_dt = start_dt + timedelta(minutes=30)
+
+    now_dt = datetime.utcnow()
+    dtstamp = now_dt.strftime("%Y%m%dT%H%M%SZ")
+    dtstart = start_dt.strftime("%Y%m%dT%H%M00")
+    dtend = end_dt.strftime("%Y%m%dT%H%M00")
+    uid = f"omnidesk-{code}-{start_dt.strftime('%Y%m%d%H%M')}@brightsmile.demo"
+
+    ics_lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//OmniDesk//Brightsmile Dental Receptionist//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"DTSTART:{dtstart}",
+        f"DTEND:{dtend}",
+        f"SUMMARY:{service_label} - Brightsmile Dental",
+        f"DESCRIPTION:Confirmed appointment for {name}.\\nService: {service_label}\\nConfirmation Code: {code}\\nClinic: Brightsmile Dental (100 Market St, Suite 400)",
+        "LOCATION:Brightsmile Dental, 100 Market St, Suite 400",
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT60M",
+        "ACTION:DISPLAY",
+        f"DESCRIPTION:Reminder: {service_label} at Brightsmile Dental in 1 hour",
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]
+    return "\r\n".join(ics_lines) + "\r\n"
+
+
+def _send_resend_confirmation(record: dict) -> dict:
+    """Send confirmation email via Resend with attached .ics calendar invite."""
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if not resend_api_key:
+        return {"sent": False, "reason": "no_api_key"}
+
+    from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+    to_email = record.get("email")
+    if not to_email:
+        return {"sent": False, "reason": "no_email"}
+
+    service_label = record.get("service_label", "Dental Appointment")
+    name = record.get("customer_name", "Valued Customer")
+    day_str = record.get("date", "")
+    time_str = record.get("time", "")
+    code = record.get("confirmation_code", "")
+    price = record.get("price", 120)
+
+    try:
+        parsed_day = datetime.strptime(day_str, "%Y-%m-%d").date()
+        spoken_day = _speak_day(parsed_day)
+    except Exception:
+        spoken_day = day_str
+
+    try:
+        spoken_time = _speak_time(time_str)
+    except Exception:
+        spoken_time = time_str
+
+    ics_content = _generate_ics(record)
+    ics_b64 = base64.b64encode(ics_content.encode("utf-8")).decode("utf-8")
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Appointment Confirmed - Brightsmile Dental</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f8; margin: 0; padding: 32px 16px; color: #111827;">
+  <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="padding: 24px 28px; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0284c7; margin-bottom: 4px;">Brightsmile Dental &bull; Voice Confirmation</div>
+      <h1 style="font-size: 20px; font-weight: 600; margin: 0; color: #0f172a;">Your appointment is confirmed</h1>
+    </div>
+    <div style="padding: 28px;">
+      <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.5; color: #374151;">Hello <strong>{name}</strong>,</p>
+      <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.5; color: #4b5563;">Thank you for scheduling with our AI receptionist. We have reserved your appointment slot. A native calendar invite (<code style="font-size: 12px; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">.ics</code>) is attached to this email.</p>
+      
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin-bottom: 24px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr>
+            <td style="padding: 6px 0; color: #64748b; width: 120px;">Service:</td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">{service_label}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Date & Time:</td>
+            <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">{spoken_day} at {spoken_time}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Confirmation:</td>
+            <td style="padding: 6px 0;"><code style="font-family: monospace; font-size: 13px; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px;">{code}</code></td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Est. Fee:</td>
+            <td style="padding: 6px 0; color: #0f172a;">${price}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 0; color: #64748b;">Location:</td>
+            <td style="padding: 6px 0; color: #0f172a;">Brightsmile Dental Clinic<br><span style="font-size: 12px; color: #64748b;">100 Market St, Suite 400</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #166534; margin-bottom: 24px;">
+        <strong>Calendar Sync:</strong> Open the attached <code>appointment.ics</code> file on your phone or computer to automatically sync this to Apple Calendar, Google Calendar, or Outlook with a 1-hour advance reminder.
+      </div>
+
+      <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">If you need to reschedule or have any questions before your visit, reply to this email or speak with our receptionist anytime.</p>
+    </div>
+    <div style="padding: 16px 28px; background: #fafafa; border-top: 1px solid #f3f4f6; font-size: 12px; color: #9ca3af; text-align: center;">
+      OmniDesk Autonomous Voice Receptionist &bull; Powered by AssemblyAI
+    </div>
+  </div>
+</body>
+</html>"""
+
+    try:
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": f"Brightsmile Dental <{from_email}>",
+                "to": [to_email],
+                "subject": f"Appointment Confirmed: {service_label} - Brightsmile Dental",
+                "html": html_content,
+                "attachments": [
+                    {
+                        "filename": "appointment.ics",
+                        "content": ics_b64,
+                    }
+                ],
+            },
+            timeout=10,
+        )
+        if resp.status_code in (200, 201):
+            return {"sent": True, "id": resp.json().get("id")}
+        return {"sent": False, "status_code": resp.status_code, "detail": resp.text}
+    except Exception as exc:
+        return {"sent": False, "error": str(exc)}
 
 
 def _parse_day(value: str) -> date | None:
@@ -200,26 +361,16 @@ def book_appointment(req: BookingRequest) -> dict:
     if day is None:
         return {"ok": False, "reason": "bad_date", "message": "Date must be in YYYY-MM-DD form."}
 
-    phone, problem = _normalize_phone(req.phone)
-    if problem == "needs_country":
-        return {
-            "ok": False,
-            "reason": "needs_country_code",
-            "message": (
-                "I have the number but not the country code. Ask the caller which "
-                "country they're calling from, then send it in full — a Nigerian "
-                "0916 383 6950 becomes +2349163836950."
-            ),
-        }
+    email, problem = _normalize_email(req.email)
     if problem:
         return {
             "ok": False,
-            "reason": "bad_phone",
-            "message": "That number doesn't look complete. Ask the caller to repeat it.",
+            "reason": "bad_email",
+            "message": "That email address doesn't look valid. Ask the caller to repeat their email address clearly.",
         }
 
     try:
-        record = store.book(req.service, day, req.time, req.customer_name, phone)
+        record = store.book(req.service, day, req.time, req.customer_name, email)
     except store.SlotUnavailable:
         slots = store.available_slots(day)
         return {
@@ -252,9 +403,13 @@ def send_confirmation(req: ConfirmationRequest) -> dict:
             "reason": "unknown_code",
             "message": "No appointment matches that confirmation code.",
         }
+
+    email_res = _send_resend_confirmation(record)
+    target_email = record.get("email", "your email")
     return {
         "ok": True,
-        "message": f"Confirmation sent to {record['phone']}.",
+        "resend_sent": email_res.get("sent", False),
+        "message": f"Confirmation email with calendar invite sent to {target_email}.",
     }
 
 
@@ -273,20 +428,20 @@ def api_owner_stats() -> dict:
 
     customer_map: dict[str, dict] = {}
     for a in appts:
-        phone = a.get("phone", "")
+        email = a.get("email", "")
         name = a.get("customer_name", "Anonymous")
-        if phone not in customer_map:
-            customer_map[phone] = {
+        if email not in customer_map:
+            customer_map[email] = {
                 "name": name,
-                "phone": phone,
+                "email": email,
                 "appointments_count": 0,
                 "last_service": a.get("service_label", ""),
                 "last_date": a.get("date", ""),
             }
-        customer_map[phone]["appointments_count"] += 1
-        if a.get("date", "") >= customer_map[phone]["last_date"]:
-            customer_map[phone]["last_date"] = a.get("date", "")
-            customer_map[phone]["last_service"] = a.get("service_label", "")
+        customer_map[email]["appointments_count"] += 1
+        if a.get("date", "") >= customer_map[email]["last_date"]:
+            customer_map[email]["last_date"] = a.get("date", "")
+            customer_map[email]["last_service"] = a.get("service_label", "")
 
     return {
         "today_bookings_count": len(today_appts),
