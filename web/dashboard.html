@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>OmniDesk — Business Owner Portal & Voice Agent Builder</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --surface: #fafafa;
+        --surface-2: #f4f4f5;
+        --border: #e4e4e7;
+        --border-dark: #d4d4d8;
+        --text: #09090b;
+        --text-muted: #71717a;
+        --text-sub: #a1a1aa;
+        --accent: #000000;
+        --accent-fg: #ffffff;
+        --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", monospace;
+        --radius: 8px;
+        --radius-lg: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font);
+        background: #fafafa;
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Top Header */
+      .topbar {
+        background: #ffffff;
+        border-bottom: 1px solid var(--border);
+        height: 64px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+
+      .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .logo-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text);
+      }
+
+      .logo-mark {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+      }
+
+      .logo-mark svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .brand-title {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .divider-v {
+        width: 1px;
+        height: 20px;
+        background: var(--border);
+      }
+
+      /* Business Switcher */
+      .biz-selector-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .biz-select {
+        font-family: var(--font);
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--text);
+        cursor: pointer;
+        outline: none;
+      }
+
+      .biz-select:focus {
+        border-color: #000000;
+      }
+
+      .btn-new-biz {
+        font-family: var(--font);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: var(--radius);
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+      }
+
+      .btn-new-biz:hover {
+        background: #f4f4f5;
+      }
+
+      /* Right actions */
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .demo-link {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 6px 10px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        transition: all 0.15s;
+      }
+
+      .demo-link:hover {
+        color: var(--text);
+        border-color: var(--border);
+        background: #ffffff;
+      }
+
+      .owner-badge {
+        font-size: 12.5px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: var(--radius);
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .owner-badge .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #000000;
+      }
+
+      .btn-auth {
+        font-family: var(--font);
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: var(--radius);
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      /* Navigation Tabs Bar */
+      .tabs-bar {
+        background: #ffffff;
+        border-bottom: 1px solid var(--border);
+        padding: 0 24px;
+        display: flex;
+        gap: 24px;
+      }
+
+      .tab-item {
+        padding: 14px 2px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-decoration: none;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        transition: all 0.15s ease;
+      }
+
+      .tab-item:hover {
+        color: var(--text);
+      }
+
+      .tab-item.active {
+        color: var(--text);
+        font-weight: 600;
+        border-bottom-color: #000000;
+      }
+
+      .badge-count {
+        font-size: 10.5px;
+        font-family: var(--mono);
+        padding: 1px 6px;
+        border-radius: 99px;
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+
+      /* Main Workspace Container */
+      .container {
+        max-width: 1240px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 28px 24px 64px;
+        flex: 1;
+      }
+
+      .tab-pane {
+        display: none;
+      }
+
+      .tab-pane.active {
+        display: block;
+      }
+
+      /* Banner status */
+      .banner {
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        background: #ffffff;
+        border: 1px solid var(--border);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .banner-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .agent-status-pill {
+        font-size: 11px;
+        font-family: var(--mono);
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #000000;
+        color: #ffffff;
+        text-transform: uppercase;
+      }
+
+      /* Cards & Grids */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      }
+
+      .card-head {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .card-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .card-subtitle {
+        font-size: 12.5px;
+        color: var(--text-muted);
+        margin-top: 3px;
+      }
+
+      /* Form controls */
+      .form-group {
+        margin-bottom: 18px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text);
+      }
+
+      .form-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .input-text,
+      .select-input,
+      .textarea {
+        width: 100%;
+        font-family: var(--font);
+        font-size: 13.5px;
+        padding: 9px 12px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .input-text:focus,
+      .select-input:focus,
+      .textarea:focus {
+        border-color: #000000;
+      }
+
+      .textarea {
+        min-height: 110px;
+        resize: vertical;
+        line-height: 1.45;
+      }
+
+      .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .row-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+      }
+
+      /* Services Editor Table */
+      .services-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .service-row {
+        background: #fafafa;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: 1.5fr 70px 70px 1.5fr 36px;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .service-row input {
+        font-family: var(--font);
+        font-size: 12.5px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+      }
+
+      .btn-del {
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: var(--text-muted);
+      }
+
+      .btn-del:hover {
+        background: #fee2e2;
+        color: #ef4444;
+      }
+
+      .btn-add-service {
+        font-family: var(--font);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: var(--radius);
+        border: 1px dashed var(--border-dark);
+        background: #ffffff;
+        cursor: pointer;
+        width: 100%;
+        text-align: center;
+      }
+
+      .btn-add-service:hover {
+        background: #f4f4f5;
+      }
+
+      /* Keyterms Chips */
+      .chip-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .chip {
+        font-size: 12px;
+        font-family: var(--mono);
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .chip-remove {
+        cursor: pointer;
+        font-weight: 700;
+        color: var(--text-muted);
+      }
+
+      .chip-remove:hover {
+        color: #000000;
+      }
+
+      /* Buttons */
+      .btn-primary {
+        font-family: var(--font);
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.15s ease;
+      }
+
+      .btn-primary:hover {
+        background: #262626;
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        font-family: var(--font);
+        font-size: 13.5px;
+        font-weight: 500;
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        background: #ffffff;
+        color: var(--text);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn-secondary:hover {
+        background: #f4f4f5;
+      }
+
+      /* Real-Time Live Voice Simulator */
+      .sim-box {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .sim-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #fafafa;
+      }
+
+      .sim-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+
+      .sim-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #a1a1aa;
+      }
+
+      .sim-dot.live {
+        background: #000000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
+        animation: pulse 1.8s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+
+      .sim-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .sim-feed {
+        height: 320px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        background: #fafafa;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .bubble {
+        max-width: 82%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .bubble.user {
+        align-self: flex-end;
+        background: #000000;
+        color: #ffffff;
+      }
+
+      .bubble.agent {
+        align-self: flex-start;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+
+      .bubble-who {
+        display: block;
+        font-size: 10.5px;
+        font-weight: 600;
+        margin-bottom: 3px;
+        opacity: 0.7;
+      }
+
+      .sim-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn-call {
+        flex: 1;
+        font-family: var(--font);
+        font-size: 14px;
+        font-weight: 600;
+        padding: 12px;
+        border-radius: var(--radius);
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.15s ease;
+      }
+
+      .btn-call:hover {
+        background: #262626;
+      }
+
+      .btn-call.ending {
+        background: #dc2626;
+      }
+
+      .btn-call.ending:hover {
+        background: #b91c1c;
+      }
+
+      .sim-timer {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 0 12px;
+      }
+
+      /* KPI Metrics Bar */
+      .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .kpi-box {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+      }
+
+      .kpi-label {
+        font-size: 11.5px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+      }
+
+      .kpi-num {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 4px 0 2px;
+      }
+
+      .kpi-sub {
+        font-size: 11px;
+        color: var(--text-sub);
+      }
+
+      /* Data Tables */
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+      }
+
+      th {
+        background: #fafafa;
+        padding: 10px 14px;
+        font-size: 11.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+      }
+
+      td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      tr:hover td {
+        background: #fafafa;
+      }
+
+      .badge-tag {
+        font-size: 11px;
+        font-family: var(--mono);
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        color: var(--text);
+        display: inline-block;
+      }
+
+      .badge-tag.sent {
+        background: #000000;
+        color: #ffffff;
+        border-color: #000000;
+      }
+
+      /* Modals */
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(2px);
+        display: grid;
+        place-items: center;
+        z-index: 100;
+        padding: 16px;
+      }
+
+      .modal[hidden] {
+        display: none;
+      }
+
+      .modal-box {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        max-width: 520px;
+        width: 100%;
+        padding: 28px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      }
+
+      .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .btn-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+      }
+
+      .btn-close:hover {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="brand-group">
+        <a href="/" class="logo-link">
+          <div class="logo-mark">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="30" height="30">
+              <path fill="currentColor" d="m75 9.4c-36.6 0-66.4 29.6-66.4 66s27.3 65.2 66.4 65.2c15.2 0 29-4.7 40.1-13.1 6-4.6 10.6-9.6 13.9-14 7-9.9 12.4-23.5 12.4-38.1 0-33.3-28.1-66-66.4-66zm35.8 26.5 0.5 0.5c-3.3 0.7-6.5 1.7-10.6 2.8-5.7-7.2-11.9-12.4-18.8-16.5 8.3 1 16 3.6 28.9 13.2zm-56.2-9.3c11.4 1 23.2 6.4 31.4 15l3.1 3.4c-6.2 4.2-10.8 8.8-15.6 16.4-7.2-9.7-16.8-19.8-35-24.7 4.6-4.2 10.5-7.8 16.1-10.1zm-25.6 20.4c13.6 2.1 25.8 8.5 37.3 27.3-6.1 10.4-16.3 22.4-37.6 26.8-3-5.2-6.9-14.1-7-25.1 0-10.7 3.6-21.3 7.7-29zm8.2 65.9c10.9-2.6 22.7-7.7 32.8-20.2l3.6-5.7h0.1c4.7 6.2 8.3 10.3 15.5 15.7l-3.8 4.3c-8 7.5-18.5 13.9-33.9 15.4-5.2-2.6-9.5-5.6-14.3-9.5zm41.6 14.9c6.4-3.2 14.9-8.9 21.9-17.8 2.6 1.1 7.3 2.6 11 3.8-4.7 4.6-15.9 12.5-32.9 14zm1.8-53.4c-2.1 4.1-4.8 8.8-7 12.4l-2.1-3.3-5.1-9.2 7.1-12.4c3.1 4.4 5.5 9.2 7.1 12.1v0.2c3.5-5.9 8-11.4 15.1-17.2 2 4.9 3.5 10.4 3.4 18.2 0 6.5-1.4 11.3-3.3 16.3-5.2-4.1-9.8-8.7-15.2-17.1zm40.2 27.4c-3.9-0.3-8.9-1.6-13.8-3.7 3.4-7.4 5.5-15.2 5.5-23.9-0.1-6.8-1.2-14-5.5-24.1 1-0.5 7.3-3.1 13.2-3.8 5 8.2 8.3 17.2 8.2 28.9-0.2 9.2-3.2 19.1-7.6 26.6z"/>
+            </svg>
+          </div>
+          <span class="brand-title">OmniDesk</span>
+        </a>
+
+        <div class="divider-v"></div>
+
+        <!-- Business Switcher -->
+        <div class="biz-selector-wrap">
+          <select id="biz-select" class="biz-select">
+            <option value="biz_demo_dental">OmniDesk Dental Clinic</option>
+          </select>
+          <button id="btn-create-biz" class="btn-new-biz" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Business
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <a href="/console" class="demo-link" target="_blank">
+          Open Demo Console &nearr;
+        </a>
+        <div id="owner-badge" class="owner-badge">
+          <span class="dot"></span>
+          <span id="owner-email-text">demo@omnidesk.ai</span>
+        </div>
+        <button id="btn-auth-switch" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+          Switch Account
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs-bar">
+      <button class="tab-item active" data-tab="tab-builder">
+        AI Agent Builder
+      </button>
+      <button class="tab-item" data-tab="tab-simulator">
+        Live Voice Tester
+        <span class="badge-count" id="badge-agent-state">Ready</span>
+      </button>
+      <button class="tab-item" data-tab="tab-bookings">
+        Customer Bookings
+        <span class="badge-count" id="badge-bookings-count">0</span>
+      </button>
+      <button class="tab-item" data-tab="tab-conversations">
+        Call History
+        <span class="badge-count" id="badge-conv-count">0</span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="container">
+      <!-- Status Banner -->
+      <div class="banner">
+        <div class="banner-info">
+          <span class="agent-status-pill" id="banner-agent-pill">AssemblyAI Provisioned</span>
+          <span id="banner-agent-desc">Voice Agent active on AssemblyAI Voice Agent API with live bidirectional tools.</span>
+        </div>
+        <button id="btn-deploy-agent" class="btn-primary" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Save & Deploy Voice Agent
+        </button>
+      </div>
+
+      <!-- TAB 1: AI AGENT & WORKFLOW BUILDER -->
+      <section class="tab-pane active" id="tab-builder">
+        <div class="grid-2">
+          <!-- Left Column: Workflow Configuration -->
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Agent Workflow & Persona</h2>
+                <p class="card-subtitle">Configure how your voice receptionist speaks, responds, and enforces booking rules.</p>
+              </div>
+            </div>
+
+            <!-- Industry Preset Selector -->
+            <div class="form-group">
+              <label class="form-label" for="preset-industry">Industry Template (Dropdown Preset)</label>
+              <select id="preset-industry" class="select-input">
+                <option value="dental">Dental Clinic (Cleanings, Checkups, Root Canals, Whitening)</option>
+                <option value="medspa">MedSpa & Aesthetics (Botox, Facials, Laser Resurfacing)</option>
+                <option value="legal">Law Firm & Legal Advisory (Consultations, Retainers, Contracts)</option>
+                <option value="salon">Salon, Spa & Barber (Haircuts, Coloring, Styling)</option>
+                <option value="auto">Automotive Repair (Oil Change, Brake Inspection, Diagnostics)</option>
+                <option value="realestate">Real Estate Agency (Property Tour, Appraisal, Consultation)</option>
+                <option value="custom">Custom Industry / Enterprise</option>
+              </select>
+              <p class="form-hint">Selecting an industry template instantly loads battle-tested prompts, services, and voice defaults.</p>
+            </div>
+
+            <div class="row-2">
+              <div class="form-group">
+                <label class="form-label" for="biz-name-input">Practice / Business Name</label>
+                <input type="text" id="biz-name-input" class="input-text" value="OmniDesk Dental Clinic" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="voice-tone-select">Speaking Tone & Style</label>
+                <select id="voice-tone-select" class="select-input">
+                  <option value="warm">Warm, Friendly & Empathetic</option>
+                  <option value="professional">Professional, Polished & Formal</option>
+                  <option value="efficient">Fast, Crisp & Direct</option>
+                  <option value="reassuring">Calm, Clinical & Reassuring</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row-2">
+              <div class="form-group">
+                <label class="form-label" for="voice-model-select">Voice Model</label>
+                <select id="voice-model-select" class="select-input">
+                  <option value="131a436c-0fc4-4797-90f7-d0e515d18b06">Jessica — Clear, Natural Female</option>
+                  <option value="098b63e0-3273-47a2-9694-de982d618991">George — Deep, Professional Male</option>
+                  <option value="b7d50908-b17c-442d-ad8d-810c63997ed9">Alice — Engaging, Friendly Female</option>
+                  <option value="79a125e8-cd45-4c13-8a67-188112f4dd22">River — Relaxed, Natural Neutral</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="slot-duration-select">Slot Interval</label>
+                <select id="slot-duration-select" class="select-input">
+                  <option value="15">15 Minutes</option>
+                  <option value="30" selected>30 Minutes</option>
+                  <option value="45">45 Minutes</option>
+                  <option value="60">60 Minutes</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Initial Spoken Greeting -->
+            <div class="form-group">
+              <label class="form-label" for="greeting-input">Spoken Initial Greeting</label>
+              <input type="text" id="greeting-input" class="input-text" value="Thanks for calling OmniDesk Dental Clinic. Are you looking to book an appointment?" />
+              <p class="form-hint">The first sentence the AI receptionist speaks when the caller connects.</p>
+            </div>
+
+            <!-- System Prompt & Instructions -->
+            <div class="form-group">
+              <label class="form-label" for="system-prompt-input">System Prompt & Instructions</label>
+              <textarea id="system-prompt-input" class="textarea" rows="6"></textarea>
+              <p class="form-hint">Define business policies, rules, and conversational guidelines for the agent.</p>
+            </div>
+
+            <!-- Phonetic Keyterms -->
+            <div class="form-group">
+              <label class="form-label">Phonetic Boost Terms (Keyterms)</label>
+              <div class="chip-wrap" id="keyterms-chips"></div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="new-keyterm-input" class="input-text" placeholder="Add custom term (e.g. procedure, staff name)..." />
+                <button type="button" id="btn-add-keyterm" class="btn-secondary" style="padding: 8px 14px;">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Services Catalog & Operating Hours -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Services Catalog -->
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2 class="card-title">Services & Pricing Catalog</h2>
+                  <p class="card-subtitle">The procedures or offerings your AI receptionist can schedule.</p>
+                </div>
+              </div>
+
+              <div class="services-list" id="services-list-container">
+                <!-- Dynamically populated -->
+              </div>
+
+              <button type="button" id="btn-add-service-row" class="btn-add-service">
+                + Add Service Offering
+              </button>
+            </div>
+
+            <!-- Operating Schedule -->
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2 class="card-title">Operating Schedule</h2>
+                  <p class="card-subtitle">Control calendar booking availability window.</p>
+                </div>
+              </div>
+
+              <div class="row-2">
+                <div class="form-group">
+                  <label class="form-label" for="open-hour-input">Opening Time</label>
+                  <select id="open-hour-input" class="select-input">
+                    <option value="8">8:00 AM</option>
+                    <option value="9" selected>9:00 AM</option>
+                    <option value="10">10:00 AM</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="close-hour-input">Closing Time</label>
+                  <select id="close-hour-input" class="select-input">
+                    <option value="16">4:00 PM</option>
+                    <option value="17" selected>5:00 PM</option>
+                    <option value="18">6:00 PM</option>
+                    <option value="19">7:00 PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 12.5px; color: var(--text-muted);">
+                <strong>Confirmation Delivery:</strong> Resend Transactional Email with attached RFC 5545 <code>.ics</code> calendar invite enabled.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: LIVE VOICE SIMULATOR & TESTER -->
+      <section class="tab-pane" id="tab-simulator">
+        <div class="grid-2">
+          <!-- Voice Test Card -->
+          <div class="sim-box">
+            <div class="sim-header">
+              <div class="sim-status">
+                <span class="sim-dot" id="sim-dot"></span>
+                <span id="sim-status-label">Idle &mdash; Click Start Call to test voice agent</span>
+              </div>
+              <span class="sim-timer" id="sim-timer">0:00</span>
+            </div>
+
+            <div class="sim-body">
+              <div class="sim-feed" id="sim-feed">
+                <div class="bubble agent">
+                  <span class="bubble-who">OmniDesk Voice Assistant</span>
+                  Click "Start Call" below to test your customized voice agent in real-time over 24kHz bidirectional audio.
+                </div>
+              </div>
+
+              <div class="sim-controls">
+                <button id="btn-start-sim" class="btn-call" type="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  Start Call
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tools Execution Log -->
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title">Live Tool Invocations</h2>
+                <p class="card-subtitle">Server-side HTTP tool executions triggered by the model during this call.</p>
+              </div>
+            </div>
+
+            <div id="sim-tools-feed" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+              <p style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 24px;">
+                No tool executions yet. Speak with the agent to check dates or reserve a slot.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CUSTOMER BOOKINGS & CRM -->
+      <section class="tab-pane" id="tab-bookings">
+        <div class="kpi-row">
+          <div class="kpi-box">
+            <div class="kpi-label">Today's Bookings</div>
+            <div class="kpi-num" id="kpi-today-count">0</div>
+            <div class="kpi-sub">Active schedule</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">Upcoming (14 Days)</div>
+            <div class="kpi-num" id="kpi-upcoming-count">0</div>
+            <div class="kpi-sub">Confirmed slots</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">Total Bookings</div>
+            <div class="kpi-num" id="kpi-total-count">0</div>
+            <div class="kpi-sub">All-time appointments</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">Pipeline Value</div>
+            <div class="kpi-num" id="kpi-total-val">$0</div>
+            <div class="kpi-sub">Confirmed appointment fee</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Date & Time</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Fee</th>
+                <th>Calendar Invite</th>
+                <th>Booked At</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-table-body">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                  Loading customer bookings...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: CALL HISTORY & CONVERSATION TRANSCRIPTS -->
+      <section class="tab-pane" id="tab-conversations">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Caller</th>
+                <th>Email</th>
+                <th>Started</th>
+                <th>Duration</th>
+                <th>Outcome</th>
+                <th>Transcript</th>
+              </tr>
+            </thead>
+            <tbody id="conv-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                  Loading call history...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- AUTH MODAL (SUPABASE EMAIL AUTH) -->
+    <div class="modal" id="auth-modal" hidden>
+      <div class="modal-box">
+        <div class="modal-head">
+          <h2 style="font-size: 18px; font-weight: 700;">Owner Authentication</h2>
+          <button type="button" class="btn-close" id="btn-close-auth">&times;</button>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+          Sign in with your email to manage your AI voice receptionist, customize prompts, and inspect live customer call logs.
+        </p>
+
+        <form id="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="auth-email-input">Business Email Address</label>
+            <input type="email" id="auth-email-input" class="input-text" placeholder="owner@practice.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="auth-name-input">Full Name (Optional)</label>
+            <input type="text" id="auth-name-input" class="input-text" placeholder="Dr. Jane Doe" />
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 24px;">
+            <button type="submit" class="btn-primary" style="flex: 1;">
+              Continue to Dashboard
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- NEW BUSINESS MODAL -->
+    <div class="modal" id="new-biz-modal" hidden>
+      <div class="modal-box">
+        <div class="modal-head">
+          <h2 style="font-size: 18px; font-weight: 700;">Create New Business Workflow</h2>
+          <button type="button" class="btn-close" id="btn-close-new-biz">&times;</button>
+        </div>
+
+        <form id="new-biz-form">
+          <div class="form-group">
+            <label class="form-label" for="modal-biz-name">Business Name</label>
+            <input type="text" id="modal-biz-name" class="input-text" placeholder="e.g. Apex Legal Group" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-biz-industry">Industry</label>
+            <select id="modal-biz-industry" class="select-input">
+              <option value="dental">Dental Clinic</option>
+              <option value="medspa">MedSpa & Aesthetics</option>
+              <option value="legal">Law Firm & Legal Advisory</option>
+              <option value="salon">Salon & Spa</option>
+              <option value="auto">Automotive Repair</option>
+              <option value="realestate">Real Estate</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 24px;">
+            <button type="submit" class="btn-primary" style="flex: 1;">
+              Create Workflow
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- CONVERSATION TRANSCRIPT MODAL -->
+    <div class="modal" id="transcript-modal" hidden>
+      <div class="modal-box" style="max-width: 640px;">
+        <div class="modal-head">
+          <h2 style="font-size: 16px; font-weight: 700;" id="transcript-modal-title">Call Transcript</h2>
+          <button type="button" class="btn-close" id="btn-close-transcript">&times;</button>
+        </div>
+        <div id="transcript-modal-body" style="max-height: 480px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border);">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <script src="/dashboard.js"></script>
+  </body>
+</html>
