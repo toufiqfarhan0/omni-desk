@@ -18,30 +18,30 @@
       :root {
         --bg: #ffffff;
         --surface: #ffffff;
-        --surface-subtle: #f8fafc;
-        --surface-card: #f8fafc;
-        --border: #e2e8f0;
-        --border-subtle: #f1f5f9;
-        --border-hover: #cbd5e1;
-        --text: #0f172a;
-        --text-secondary: #334155;
-        --text-muted: #64748b;
-        --text-dimmer: #94a3b8;
-        --accent: #0d9488;
-        --accent-hover: #0f766e;
-        --accent-soft: #f0fdfa;
-        --accent-border: #ccfbf1;
-        --accent-text: #0f766e;
+        --surface-subtle: #fafafa;
+        --surface-card: #f5f5f5;
+        --border: #e5e5e5;
+        --border-subtle: #f0f0f0;
+        --border-hover: #171717;
+        --text: #000000;
+        --text-secondary: #262626;
+        --text-muted: #737373;
+        --text-dimmer: #a3a3a3;
+        --accent: #000000;
+        --accent-hover: #262626;
+        --accent-soft: #f5f5f5;
+        --accent-border: #e5e5e5;
+        --accent-text: #000000;
         --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         --radius-sm: 6px;
         --radius-md: 10px;
         --radius-lg: 16px;
         --radius-xl: 24px;
-        --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-        --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-        --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-        --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.03);
+        --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+        --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
       }
 
       * {
@@ -102,11 +102,11 @@
         width: 32px;
         height: 32px;
         border-radius: 9px;
-        background: linear-gradient(135deg, #0d9488 0%, #047857 100%);
+        background: #000000;
         display: grid;
         place-items: center;
         color: #ffffff;
-        box-shadow: 0 2px 6px rgba(13, 148, 136, 0.28);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
       }
 
       .brand-name {
@@ -163,16 +163,16 @@
       }
 
       .btn-primary {
-        background: var(--accent);
+        background: #000000;
         color: #ffffff;
-        border-color: var(--accent);
-        box-shadow: 0 1px 3px rgba(13, 148, 136, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-color: #000000;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
       }
 
       .btn-primary:hover {
-        background: var(--accent-hover);
-        border-color: var(--accent-hover);
-        box-shadow: 0 3px 8px rgba(13, 148, 136, 0.35);
+        background: #262626;
+        border-color: #262626;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
       }
 
       .btn-outline {
@@ -286,8 +286,8 @@
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+        background: #000000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
         animation: pulseDot 2s infinite;
       }
 
@@ -335,7 +335,7 @@
       }
 
       .preview-bubble.caller {
-        background: var(--accent);
+        background: #000000;
         color: #ffffff;
         align-self: flex-end;
         border-top-right-radius: 4px;
@@ -360,8 +360,9 @@
         font-family: var(--mono);
         font-size: 11px;
         font-weight: 600;
-        background: #e2e8f0;
-        color: #1e293b;
+        background: #f5f5f5;
+        color: #000000;
+        border: 1px solid #e5e5e5;
         padding: 2px 6px;
         border-radius: 4px;
       }
@@ -652,7 +653,8 @@
 
       /* CTA Banner */
       .cta-banner {
-        background: linear-gradient(135deg, #0d9488 0%, #047857 100%);
+        background: #000000;
+        border: 1px solid #262626;
         border-radius: var(--radius-xl);
         padding: 64px 40px;
         text-align: center;
@@ -672,21 +674,23 @@
         margin: 0 auto 32px;
         font-size: 17px;
         max-width: 580px;
-        color: rgba(255, 255, 255, 0.88);
+        color: #a3a3a3;
         line-height: 1.55;
       }
 
       .btn-cta-white {
         background: #ffffff;
-        color: #0d9488;
+        color: #000000;
         font-weight: 700;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        border: 1px solid #ffffff;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
       }
 
       .btn-cta-white:hover {
-        background: #f8fafc;
+        background: #f0f0f0;
+        border-color: #f0f0f0;
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
       }
 
       /* Footer */
@@ -957,7 +961,7 @@
               </div>
               <div class="feature-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                <span><strong>International Phone Validation:</strong> Converts local numbers to clean E.164.</span>
+                <span><strong>Resend Email & .ics Invites:</strong> Sends instant booking confirmations with 1-tap calendar invites.</span>
               </div>
               <div class="feature-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>

@@ -526,7 +526,7 @@ async function loadOwnerStats() {
           <td><strong>${a.date}</strong> &middot; ${a.time}</td>
           <td>${a.customer_name}</td>
           <td>${a.service_label} <span style="color: var(--text-muted); font-size: 11.5px;">($${a.price})</span></td>
-          <td><span style="font-family: var(--mono); font-size: 12px; color: var(--text-secondary);">${a.phone}</span></td>
+          <td><span style="font-family: var(--mono); font-size: 12px; color: var(--text-secondary);">${a.email || "—"}</span></td>
         </tr>`
         )
         .join("");
@@ -541,7 +541,7 @@ async function loadOwnerStats() {
           (c) => `
         <tr>
           <td><strong>${c.name}</strong></td>
-          <td><span style="font-family: var(--mono); font-size: 12px;">${c.phone}</span></td>
+          <td><span style="font-family: var(--mono); font-size: 12px;">${c.email || "—"}</span></td>
           <td><span class="tenant-badge">${c.appointments_count} visit${c.appointments_count === 1 ? "" : "s"}</span></td>
           <td>${c.last_service || "Dental Checkup"} <span style="color: var(--text-muted); font-size: 11px;">(${c.last_date})</span></td>
         </tr>`
