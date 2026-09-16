@@ -313,10 +313,6 @@ async function start() {
       type: "session.update",
       session: {
         agent_id: config.agent_id,
-        turn_detection: {
-          interrupt_response: true,
-          interruption_delay: 0,
-        },
       },
     }));
   };
