@@ -8,10 +8,30 @@ import string
 from datetime import date, datetime, timedelta
 
 SERVICES = {
-    "cleaning": {"label": "Dental Cleaning", "minutes": 30},
-    "checkup": {"label": "Routine Checkup", "minutes": 30},
-    "whitening": {"label": "Teeth Whitening", "minutes": 60},
-    "root-canal": {"label": "Root Canal", "minutes": 90},
+    "cleaning": {
+        "label": "Dental Cleaning",
+        "minutes": 30,
+        "price": 120,
+        "description": "Full dental hygiene cleaning, ultrasonic plaque removal and enamel polish.",
+    },
+    "checkup": {
+        "label": "Routine Checkup",
+        "minutes": 30,
+        "price": 85,
+        "description": "Comprehensive dental examination, gum health check and preventive evaluation.",
+    },
+    "whitening": {
+        "label": "Teeth Whitening",
+        "minutes": 60,
+        "price": 250,
+        "description": "Professional clinical teeth whitening for stain removal and enamel brightening.",
+    },
+    "root-canal": {
+        "label": "Root Canal",
+        "minutes": 90,
+        "price": 650,
+        "description": "Specialized endodontic therapy, pulp restoration and tooth preservation.",
+    },
 }
 
 OPEN_HOUR = 9
@@ -44,6 +64,32 @@ def _seed_existing_bookings() -> None:
         for slot in _slots_for_day(day):
             if rng.random() < 0.45:
                 _taken.add((day.isoformat(), slot))
+
+    # Seed 4 realistic appointments for the Owner Dashboard
+    seed_data = [
+        ("cleaning", 0, "10:00", "Eleanor Vance", "+14155550192", True),
+        ("checkup", 0, "14:30", "Marcus Sterling", "+14155550148", True),
+        ("whitening", 1, "11:00", "Sophia Al-Mansoor", "+14155550211", False),
+        ("root-canal", 2, "09:30", "James Thornton", "+14155550384", True),
+    ]
+    for service, offset, time_str, name, phone, confirmed in seed_data:
+        target_day = date.today() + timedelta(days=offset)
+        if target_day.weekday() >= 5:
+            target_day += timedelta(days=2)
+        code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        _taken.add((target_day.isoformat(), time_str))
+        _appointments[code] = {
+            "confirmation_code": code,
+            "service": service,
+            "service_label": SERVICES[service]["label"],
+            "date": target_day.isoformat(),
+            "time": time_str,
+            "customer_name": name,
+            "phone": phone,
+            "confirmation_sent": confirmed,
+            "price": SERVICES[service]["price"],
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
 
 
 def _confirmation_code() -> str:
@@ -92,6 +138,8 @@ def book(service: str, day: date, time_str: str, name: str, phone: str) -> dict:
         "customer_name": name,
         "phone": phone,
         "confirmation_sent": False,
+        "price": SERVICES[service].get("price", 120),
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
     _appointments[code] = record
     return record

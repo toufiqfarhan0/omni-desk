@@ -263,6 +263,60 @@ def list_appointments() -> dict:
     return {"appointments": list(store._appointments.values())}
 
 
+@app.get("/api/owner-stats")
+def api_owner_stats() -> dict:
+    today_iso = date.today().isoformat()
+    appts = list(store._appointments.values())
+    today_appts = [a for a in appts if a.get("date") == today_iso]
+    upcoming_appts = [a for a in appts if a.get("date", "") > today_iso]
+    total_rev = sum(a.get("price", 120) for a in appts)
+
+    customer_map: dict[str, dict] = {}
+    for a in appts:
+        phone = a.get("phone", "")
+        name = a.get("customer_name", "Anonymous")
+        if phone not in customer_map:
+            customer_map[phone] = {
+                "name": name,
+                "phone": phone,
+                "appointments_count": 0,
+                "last_service": a.get("service_label", ""),
+                "last_date": a.get("date", ""),
+            }
+        customer_map[phone]["appointments_count"] += 1
+        if a.get("date", "") >= customer_map[phone]["last_date"]:
+            customer_map[phone]["last_date"] = a.get("date", "")
+            customer_map[phone]["last_service"] = a.get("service_label", "")
+
+    return {
+        "today_bookings_count": len(today_appts),
+        "upcoming_bookings_count": len(upcoming_appts),
+        "total_bookings_count": len(appts),
+        "estimated_revenue": total_rev,
+        "today_appointments": today_appts,
+        "upcoming_appointments": upcoming_appts,
+        "all_appointments": sorted(appts, key=lambda x: (x.get("date", ""), x.get("time", ""))),
+        "customers": list(customer_map.values()),
+        "services": [
+            {
+                "key": k,
+                "label": v["label"],
+                "minutes": v["minutes"],
+                "price": v.get("price", 120),
+                "description": v.get("description", ""),
+            }
+            for k, v in sorted(store.SERVICES.items())
+        ],
+        "business": {
+            "name": "Brightsmile Dental",
+            "hours": f"Monday to Friday, {_speak_time(f'{store.OPEN_HOUR:02d}:00')} – {_speak_time(f'{store.CLOSE_HOUR:02d}:00')}",
+            "slot_minutes": store.SLOT_MINUTES,
+            "voice_agent": "AssemblyAI Voice Agent API",
+            "confirmation_engine": "Resend Email (.ics Calendar Invite)",
+        },
+    }
+
+
 # --- demo endpoints -------------------------------------------------------
 
 
