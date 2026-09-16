@@ -1,4 +1,4 @@
-.env
+.env*
 agent_id.txt
 *.db
 *.db-shm

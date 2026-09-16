@@ -96,10 +96,7 @@ function clearEmpty(node) {
 
 // ------------------------------------------------------------ transcript
 
-let fullTranscript = [];
-
 function addLine(who, text) {
-  fullTranscript.push(`${who === "agent" ? "Agent" : "Caller"}: ${text}`);
   clearEmpty(els.transcript);
 
   const row = document.createElement("div");
@@ -249,7 +246,6 @@ function stopPlayback() {
 // --------------------------------------------------------------- session
 
 async function start() {
-  fullTranscript = [];
   resetTimer(); // clear the previous call's duration
   setStatus("Connecting", "busy");
   els.talk.disabled = true;
@@ -394,17 +390,6 @@ function cleanup() {
   els.talk.classList.remove("ending");
   setStatus("Idle", "idle");
   pollEvents(); // catch anything that landed as the call closed
-
-  if (fullTranscript.length > 0) {
-    const text = fullTranscript.join("\n");
-    if (text.length > 20) {
-      fetch("/api/call-ended", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: text, tenant_name: "Brightsmile Dental" })
-      }).catch(() => {});
-    }
-  }
 }
 
 els.talk.addEventListener("click", () => (live ? stop() : start()));
@@ -530,53 +515,3 @@ infoEls.btn.addEventListener("click", openInfo);
 for (const node of infoEls.modal.querySelectorAll("[data-close]")) {
   node.addEventListener("click", closeInfo);
 }
-
-// ----------------------------------------------------------- dossiers data
-
-const dossiersEls = {
-  btn: document.getElementById("dossiers-btn"),
-  modal: document.getElementById("dossiers-modal"),
-  body: document.getElementById("dossiers-body"),
-};
-
-async function openDossiers() {
-  if (!dossiersEls.modal) return;
-  dossiersEls.modal.hidden = false;
-  dossiersEls.body.innerHTML = "<p class='block-note'>Loading dossiers…</p>";
-  try {
-    const res = await fetch("/api/dossiers");
-    const { dossiers } = await res.json();
-    dossiersEls.body.textContent = "";
-    if (!dossiers || !dossiers.length) {
-      dossiersEls.body.innerHTML = "<p class='block-note'>No call dossiers yet. Complete a voice call to see AssemblyAI LeMUR extract structured clinical notes & business summaries.</p>";
-      return;
-    }
-    for (const d of dossiers) {
-      const sec = block(
-        `${d.business_name || "Call"} · ${d.intent || "Booking"}`,
-        d.session_id || "call",
-        d.summary || "(No summary)"
-      );
-      sec.append(kv([
-        ["Caller", d.caller_name || "Unknown"],
-        ["Phone", d.caller_phone || "Not provided"],
-        ["Sentiment", d.sentiment || "Neutral"],
-        ["Urgency", d.urgency || "Normal"],
-        ["Next Steps", d.next_steps || "None"],
-      ]));
-      dossiersEls.body.append(sec);
-    }
-  } catch (_) {
-    dossiersEls.body.textContent = "Could not load dossiers. Is the server running?";
-  }
-}
-
-function closeDossiers() {
-  if (dossiersEls.modal) dossiersEls.modal.hidden = true;
-}
-
-if (dossiersEls.btn) dossiersEls.btn.addEventListener("click", openDossiers);
-for (const node of document.querySelectorAll("[data-close-dossiers]")) {
-  node.addEventListener("click", closeDossiers);
-}
-

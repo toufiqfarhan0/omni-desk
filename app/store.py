@@ -1,6 +1,4 @@
-"""In-memory booking store + event logger + dossier storage.
-Preserves original booking logic while supporting LeMUR post-call dossiers.
-"""
+"""In-memory booking store. Swap for a real database when you deploy for real."""
 
 from __future__ import annotations
 
@@ -144,16 +142,3 @@ def log_event(path: str, request_body: bytes, response_body: bytes) -> None:
 
 def events_since(cursor: int) -> list[dict]:
     return [e for e in _events if e["seq"] > cursor]
-
-
-# --- dossiers log (LeMUR post-call analysis) ------------------------------
-
-_dossiers: list[dict] = []
-
-
-def save_dossier(dossier: dict) -> None:
-    _dossiers.insert(0, dossier)
-
-
-def list_dossiers(limit: int = 20) -> list[dict]:
-    return _dossiers[:limit]

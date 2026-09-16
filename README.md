@@ -1,266 +1,230 @@
-# OmniDesk
+# assemblyai-voice-agent-scheduler
 
-**A general-purpose, multi-tenant voice receptionist platform built on AssemblyAI's Voice Agent API.**
+A voice agent that books real dental appointments, built on AssemblyAI's Voice
+Agent API using **server-side HTTP tools** — so there is no tool dispatcher and
+nothing of yours stays connected during a call.
 
-Any business — a legal firm, a plumbing company, a dental clinic — can register a profile. From that point, calls are handled automatically: the agent checks availability, books appointments, answers FAQs, and escalates emergencies. When the call ends, AssemblyAI's LeMUR engine processes the full transcript and delivers a structured executive dossier to the business owner's Discord channel in under three seconds.
+Reference implementation for the tutorial *"Ship a Voice Agent That Books
+Appointments Without Writing a Tool Dispatcher"*, written for the
+[AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon).
 
-No WebSocket dispatcher. No long-lived server process. No per-call backend maintenance.
+## The idea
 
-Built for the [AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon) on lablab.ai.
-
----
-
-## How it works
-
-OmniDesk runs two complementary patterns in sequence.
-
-**During the call — Pattern 1: Stored Agent + HTTP Tools**
-
-The agent is defined once as a JSON document and uploaded to AssemblyAI. When a caller asks anything that requires live data — availability, business hours, pricing, a booking — AssemblyAI's cloud servers send an HTTP POST to your FastAPI backend directly. Your server answers with a sentence the agent reads aloud. There is no dispatcher loop, no session-scoped WebSocket handler, and no code that has to stay running on your machine for the agent to function.
-
-**After the call — Pattern 6: Async LeMUR Intelligence**
-
-The moment the caller hangs up, the full transcript is piped to AssemblyAI's LeMUR engine. LeMUR extracts a structured dossier: caller intent, urgency score, sentiment trajectory, a two-sentence executive summary, a checklist of action items, and a pre-written follow-up message. The dossier appears in the owner's Discord channel and on the live dashboard within seconds.
+Most voice-agent tutorials put your program in the middle of every call:
 
 ```
-Caller Browser  ──── WebSocket ────►  AssemblyAI Voice Agent (Stored agent.json)
-                                                  │
-                                      HTTP POST (Zero Dispatcher)
-                                                  │
-                     Cloudflare Tunnel  ──►  FastAPI /tools/*
-                                                  │
-                                         SQLite  +  Tool Logger
-                                                  │
-                                       Call ends (session.end)
-                                                  │
-                                        Async LeMUR Pipeline
-                                                  │
-                                 ┌────────────────┼──────────────┐
-                            Dossier JSON      SQLite         Discord
-                                              Stored         Rich Embed
+caller <-> AssemblyAI <-> your script (connected all call) <-> your logic
+                          listens for tool.call, replies with tool.result
 ```
 
----
+This one doesn't. You describe the agent once as JSON, hand AssemblyAI a set of
+URLs, and it calls your API itself:
 
-## Architecture
-
-### Two patterns, one product
-
-| Layer | Technology | Role |
-| :--- | :--- | :--- |
-| Voice Interaction | AssemblyAI Voice Agent API (Universal-3 Pro) | STT, VAD, LLM reasoning, TTS, turn-taking |
-| Post-Call Intelligence | AssemblyAI LeMUR | Transcript analysis, dossier extraction |
-| API Backend | FastAPI + Uvicorn | REST endpoints for all HTTP tools and dashboard APIs |
-| Data Persistence | SQLite (built-in) | Tenants, bookings, call records, LeMUR dossiers, tool event log |
-| Public HTTPS Ingress | Cloudflare Tunnel (cloudflared) | Free public HTTPS so AssemblyAI can reach local tool endpoints |
-| Notifications | Discord Webhooks | Rich embed cards delivered to the business owner's channel at call end |
-| Frontend | Vanilla HTML5 + CSS + JS | Light-mode SPA — Call view, Dossiers, Tenants, Appointments |
-
-### Multi-tenancy without overhead
-
-Each business is a row in the `tenants` SQLite table:
-
-```json
-{
-  "tenant_id": "apex-legal",
-  "business_name": "Apex Legal Partners",
-  "persona": "A formal, professional legal intake receptionist.",
-  "greeting": "Thank you for contacting Apex Legal Partners. Are you a new or existing client?",
-  "operating_hours": { "days": "Monday to Friday", "open": "08:30", "close": "18:00" },
-  "services": {
-    "consultation": { "label": "Initial Legal Consultation", "minutes": 45 },
-    "case-review": { "label": "Document and Case Review", "minutes": 60 }
-  },
-  "faq": {
-    "retainer": "Initial retainers start at $2,500 depending on case type.",
-    "parking": "Validated parking is available underground at 400 Madison Ave."
-  },
-  "discord_webhook": "https://discord.com/api/webhooks/..."
-}
+```
+caller <-> AssemblyAI --HTTP POST--> your booking API
 ```
 
-The same `agent.json` serves every tenant. When the agent needs to answer a question or check a calendar, the `query_business_info` and `check_availability` tools read the active tenant's profile from SQLite and return a sentence shaped for speech. No re-deployment, no code change, no agent re-publish.
+Close your laptop and the agent still answers.
 
-### The five HTTP tools
-
-| Tool | Parameters | What it does |
-| :--- | :--- | :--- |
-| `get_today` | — | Returns the current date and next three open business days. Prevents LLM date hallucinations. |
-| `query_business_info` | `topic`, `tenant_id` | Reads FAQ entries, pricing, and policies from the tenant profile. Returns a spoken sentence. |
-| `check_availability` | `service`, `date`, `tenant_id` | Checks live slot availability. Returns open times or, if full, the next day with openings. |
-| `book_appointment` | `service`, `date`, `time`, `customer_name`, `phone`, `tenant_id` | Locks the slot, writes the booking to SQLite, returns a confirmation code. |
-| `escalate_urgent_issue` | `caller_name`, `phone`, `reason`, `tenant_id` | Fires an immediate Discord alert to the business owner without waiting for the call to end. |
-
-### Discord alert flow
-
-The business owner sets this up once:
-
-1. Discord: Channel Settings > Integrations > Webhooks > New Webhook > Copy URL.
-2. OmniDesk Settings page: paste the URL into the Discord Webhook field and save.
-3. Done. Every call that ends posts a rich embed to that channel. No bot, no OAuth, no server required.
-
-Emergency escalations (`escalate_urgent_issue`) fire during the call. Standard dossiers fire at call end. Both land in the same channel, building a searchable call history the owner can scroll through on any device.
-
----
-
-## Setup
-
-### Requirements
-
-- Python 3.11+
-- An AssemblyAI account with an API key. [Sign up](https://www.assemblyai.com/dashboard) — new accounts receive $50 in non-expiring credit.
-- Cloudflare Tunnel (`cloudflared`) for a free public HTTPS address. [Download](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
-- A browser with microphone access (Chrome or Edge recommended).
-- A Discord server with a webhook URL if you want call notifications.
-
-### Installation
+## 1. Install and run the API
 
 ```bash
-git clone https://github.com/toufiqfarhan0/omni-desk.git
-cd omni-desk
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # macOS / Linux
+.venv/Scripts/activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+
+uvicorn app.main:app --reload   # http://localhost:8000
 ```
 
-Edit `.env`:
+Check it answers:
 
-```env
-ASSEMBLYAI_API_KEY=your_key_here
-AGENT_ID=                        # filled in after create_agent.py runs
-PUBLIC_API_BASE_URL=             # filled in after cloudflared tunnel starts
-DISCORD_WEBHOOK_URL=             # optional — paste your Discord webhook URL
-```
-
-### Running locally
-
-Open three terminals in the project directory.
-
-**Terminal 1 — API server:**
 ```bash
-.venv\Scripts\activate
-uvicorn app.main:app --reload
+curl -X POST http://localhost:8000/tools/get_today
 ```
 
-**Terminal 2 — Public HTTPS tunnel:**
+## 2. Put the API on the public internet
+
+**This is the step people get stuck on.** AssemblyAI calls your tools from its
+own servers, so `http://localhost:8000` is unreachable to it — and the publish
+script rejects it rather than letting you find out mid-call. You need a public
+**HTTPS** URL. Two easy ways:
+
+### Option A — ngrok
+
+```bash
+ngrok http 8000
+```
+
+It prints a forwarding line. Copy the **https** one:
+
+```
+Forwarding   https://a1b2-102-89-33-14.ngrok-free.app -> http://localhost:8000
+```
+
+Your value is `https://a1b2-102-89-33-14.ngrok-free.app`
+
+### Option B — Cloudflare Tunnel
+
+No account needed for a quick tunnel:
+
 ```bash
 cloudflared tunnel --url http://localhost:8000
 ```
 
-Copy the `https://...trycloudflare.com` URL from the output and paste it into `.env` as `PUBLIC_API_BASE_URL`.
+It prints a URL like:
 
-**Terminal 3 — Publish the agent:**
+```
+https://formal-tribune-serving-mathematics.trycloudflare.com
+```
+
+Your value is `https://formal-tribune-serving-mathematics.trycloudflare.com`
+
+### Either way
+
+Put it in `.env` with **no trailing slash**:
+
 ```bash
-.venv\Scripts\activate
+PUBLIC_API_BASE_URL=https://a1b2-102-89-33-14.ngrok-free.app
+```
+
+Confirm the outside world can actually reach it before going further:
+
+```bash
+curl -X POST https://a1b2-102-89-33-14.ngrok-free.app/tools/get_today
+```
+
+If that returns today's date, AssemblyAI can reach it too.
+
+> **These URLs change.** Both free tiers hand you a new address every restart.
+> When yours changes, update `.env` and re-run the publish script with
+> `--update <agent_id>` — otherwise the agent keeps calling a dead URL and every
+> tool times out mid-conversation.
+
+## 3. Publish the agent
+
+Copy `.env.example` to `.env` and fill in `ASSEMBLYAI_API_KEY`
+([free account, $50 of non-expiring credit](https://www.assemblyai.com/dashboard)),
+then:
+
+```bash
 python scripts/create_agent.py
 ```
 
-This verifies the API is reachable, uploads the agent definition to AssemblyAI, and writes the returned `agent_id` to `agent_id.txt` and your `.env`.
-
-Open `http://localhost:8000`, select a demo tenant, and press Start call.
-
-### Updating the agent after a tunnel restart
-
-Cloudflare's free tunnels issue a new URL on every restart. When the URL changes:
+It checks your public URL is live, uploads `agent.json`, and prints an
+`agent_id` (also written to `agent_id.txt`). After editing `agent.json`:
 
 ```bash
-# Update PUBLIC_API_BASE_URL in .env, then:
 python scripts/create_agent.py --update <agent_id>
 ```
 
----
+## 4. Talk to it
 
-## Project structure
+Open <http://localhost:8000> and press **Start call**. Ask to book a cleaning
+for next Tuesday.
 
-```
-omni-desk/
-├── agent.json              Universal agent definition (uploaded once to AssemblyAI)
-├── app/
-│   ├── main.py             FastAPI application — all tool and dashboard endpoints
-│   ├── store.py            Multi-tenant SQLite store — tenants, bookings, events
-│   ├── db.py               Schema creation and connection factory
-│   ├── lemur.py            Async LeMUR wrapper — dossier extraction and parsing
-│   └── discord.py          Discord webhook embed builder and sender
-├── web/
-│   ├── index.html          Light-mode SPA — 4 views served by FastAPI StaticFiles
-│   ├── app.js              Navigation, WebSocket audio, polling, dossier rendering
-│   └── worklet.js          AudioWorklet PCM processor for 24kHz microphone capture
-├── scripts/
-│   └── create_agent.py     Publishes or updates the agent on AssemblyAI
-├── .env.example
-├── requirements.txt
-└── README.md
-```
+The left pane is the conversation. The right pane fills with the HTTP calls
+AssemblyAI makes to your booking API while you talk — no code in the browser
+handles them, it is reading your API's own log. Each agent reply carries chips
+naming the tool calls behind it; click one to jump to it.
 
----
+Your API key never reaches the browser: `GET /api/token` mints a 5-minute token
+server-side and the socket authenticates with that.
 
-## Dashboard views
+## Layout
 
-**Call**
-The active voice session. Left column shows selectable tenant profiles. Center shows the audio waveform, agent state, and live transcript. Right column shows each HTTP tool hit as AssemblyAI fires it — request, response, timing — updating in real time without any browser-side tool handling.
+| Path | What it is |
+| --- | --- |
+| `agent.json` | The whole agent: prompt, voice, keyterms, 4 HTTP tools |
+| `app/main.py` | Booking API — the endpoints AssemblyAI calls |
+| `app/store.py` | In-memory calendar and the demo event log |
+| `scripts/create_agent.py` | Publishes `agent.json` to `/v1/agents` |
+| `web/` | The demo page: mic capture, transcript, live tool feed |
 
-**Dossiers**
-The post-call intelligence feed. One card per completed call. Each card shows the caller, intent, urgency level (1 low to 5 critical), sentiment, the executive summary, action items, and a copy-ready follow-up message. Cards animate in at call end.
+## The four tools
 
-**Tenants**
-Business profile manager. Create or edit a tenant: name, persona, greeting, operating hours, services, FAQ entries, and Discord webhook. A test button fires a sample embed to confirm the webhook is live before the next real call.
+| Tool | Why it exists |
+| --- | --- |
+| `get_today` | The model has no clock. Without this it guesses dates, and guesses wrong. |
+| `check_availability` | Returns open slots, or the next open day when closed or full. |
+| `book_appointment` | Reserves the slot, returns a confirmation code. |
+| `send_confirmation` | Texts the caller their code. |
 
-**Appointments**
-A ledger of all bookings across all tenants with status tracking: Confirmed, Pending, Escalated.
+Every response carries an `ok` flag and a `message` written to be read aloud.
+Failures are values, not exceptions — `slot_taken` comes back with the times
+still free, so the agent recovers inside the conversation instead of
+apologising and hanging up.
 
----
+## Two layers of validation, and which to use
 
-## Known constraints
+The tool schemas use `pattern`, `enum` and `examples`. Values failing those are
+rejected *before* your API is called and the agent re-asks. That is the right
+place for anything the agent can fix by listening again.
 
-The Cloudflare free-tier tunnel URL changes on every process restart. For a stable public URL, deploy the FastAPI app to Render, Railway, or Fly.io and set `PUBLIC_API_BASE_URL` to that domain permanently.
+It is the wrong place for anything the agent needs *explained*. An early version
+of this project put strict E.164 (`+` and country code) in the phone `pattern`.
+A caller reading a Nigerian number aloud — `091 6383 6950` — failed it, and
+because schema rejection is opaque, the agent told the caller the booking system
+was broken and offered a callback. The booking was lost.
 
-The in-memory event log resets when the server restarts. Tool events older than the current process are not available, though all bookings and dossiers persist in SQLite.
+The fix was to loosen the pattern to "looks like a phone number" and normalise
+inside the API, which can answer with something speakable:
 
-`send_confirmation` simulates an SMS — it marks the booking as confirmed and returns a message indicating the text was sent. Integrating a real SMS provider (Twilio, Africa's Talking) requires replacing that endpoint's body and adding the provider's credentials to `.env`.
-
----
-
-## Deployment
-
-The API is a standard ASGI application. Deploy on any platform that runs a persistent Python process:
-
-```
-Build command:  pip install -r requirements.txt
-Start command:  uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```json
+{ "ok": false,
+  "reason": "needs_country_code",
+  "message": "I have the number but not the country code. Ask the caller which
+              country they're calling from..." }
 ```
 
-Set `ASSEMBLYAI_API_KEY` and `DISCORD_WEBHOOK_URL` as environment variables on the host, then update and re-publish the agent:
+Now the agent asks the right question and the call completes. **Schema for what
+the agent can fix by re-asking; your API for what it needs explained.**
+
+## Deploying it
+
+A tunnel is fine while you build, but the URL dies with your terminal. To put
+this somewhere permanent, note one thing first: **the calendar and the tool-call
+feed live in memory**, so this wants a long-running process, not a serverless
+function.
+
+On Render, Railway or Fly it deploys as-is:
+
+```
+Build:  pip install -r requirements.txt
+Start:  uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Set `ASSEMBLYAI_API_KEY` in the host's environment, then point the agent at the
+new address and re-publish:
 
 ```bash
 PUBLIC_API_BASE_URL=https://your-app.onrender.com
 python scripts/create_agent.py --update <agent_id>
 ```
 
-Avoid serverless platforms (Vercel functions, AWS Lambda cold-start configs) for the demo panel — the `/api/events` polling endpoint is hit several times per second during a live call and requires a single persistent process to maintain the in-memory event buffer.
+Vercel supports FastAPI too, but its functions are ephemeral and can run on
+different instances per request. The browser polls `/api/events` several times a
+second, so it would keep missing calls that landed elsewhere. Move `store.py`
+onto a real database first and it works fine.
 
----
+You never need server-side WebSockets, whatever you choose. The browser talks
+straight to AssemblyAI; your API only ever answers plain HTTP.
 
-## Frequently asked questions
+## Where to take it next
 
-**Does OmniDesk need a WebSocket connection to stay open during a call?**
-No. The browser maintains a WebSocket to AssemblyAI for audio only. Your server receives only plain HTTP POST requests from AssemblyAI's cloud when a tool is invoked. The server can restart mid-call and tool calls will resume normally once it is back up.
+This is a starting point, not a finished product. Obvious directions:
 
-**What happens if the Discord webhook is not set?**
-The webhook field is optional. When empty, dossiers are saved to SQLite and displayed in the dashboard only. The rest of the call flow is unaffected.
+- **Swap the in-memory store for a real database** so bookings survive restarts.
+- **Send a real SMS.** `send_confirmation` currently just marks a flag. Wire it
+  to Twilio, Africa's Talking, or whatever covers your region.
+- **Add reschedule and cancel tools.** Both need the agent to look an
+  appointment up by confirmation code first, which is a good exercise in
+  keeping tool sets small — the docs suggest staying under ten per phase.
+- **Handle the caller who wants the first available slot** rather than naming a
+  day, which means a tool that searches forward instead of checking one date.
+- **Put it on a phone number.** Deliberately left out here: Twilio trial numbers
+  only dial numbers you have verified in advance, so nobody else could ring it.
+  Once you are on a paid number, AssemblyAI connects over SIP.
 
-**Can I add a new tenant without restarting the server?**
-Yes. Tenants are created via the Settings view or the `POST /api/tenants` endpoint at runtime. No server restart or agent re-publish is required.
+## Licence
 
-**Can I add more tools?**
-Yes. Add a FastAPI endpoint under `/tools/`, add the schema and `http` block to `agent.json`, and re-run `create_agent.py --update`. The agent picks up the new tool on the next call without any dispatcher change.
-
-**Can I use a real LLM instead of AssemblyAI's built-in model?**
-Yes. Add an `llm` block to `agent.json` with `base_url`, `model`, and `api_key` pointing to any OpenAI-compatible endpoint. Latency becomes your responsibility; keep first-token time under 400ms for natural conversation.
-
----
-
-## License
-
-MIT
+MIT. Use it, fork it, ship it.

@@ -8,27 +8,24 @@ inventing an answer.
 
 from __future__ import annotations
 
-import asyncio
+from datetime import date, datetime, timedelta
+
 import json
 import os
-import uuid
-from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 from . import store
-from .discord import send_dossier_embed
-from .lemur import extract_dossier
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-app = FastAPI(title="Voice Agent Scheduler", version="2.0.0")
+app = FastAPI(title="Voice Agent Scheduler", version="1.0.0")
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
 
@@ -49,7 +46,6 @@ async def record_tool_calls(request, call_next):
         media_type=response.media_type,
     )
 
-
 E164_DIGITS = (8, 15)
 
 
@@ -68,11 +64,6 @@ class BookingRequest(BaseModel):
 
 class ConfirmationRequest(BaseModel):
     confirmation_code: str
-
-
-class CallEndedRequest(BaseModel):
-    transcript: str
-    tenant_name: str = "Brightsmile Dental"
 
 
 def _normalize_phone(raw: str) -> tuple[str | None, str]:
@@ -353,46 +344,6 @@ def api_token() -> dict:
     if resp.status_code >= 400:
         raise HTTPException(resp.status_code, f"Token request failed: {resp.text}")
     return {"token": resp.json()["token"]}
-
-
-# --- LeMUR Post-Call Intelligence + Discord Dispatch ----------------------
-
-
-async def _run_lemur_post_call(session_id: str, transcript: str, business_name: str) -> None:
-    api_key = os.getenv("ASSEMBLYAI_API_KEY", "")
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL", "")
-    try:
-        dossier = await extract_dossier(transcript, business_name=business_name, api_key=api_key)
-        dossier["session_id"] = session_id
-        dossier["business_name"] = business_name
-        dossier["created_at"] = datetime.now().isoformat()
-        store.save_dossier(dossier)
-
-        if webhook_url:
-            await send_dossier_embed(
-                webhook_url=webhook_url,
-                dossier=dossier,
-                tenant_name=business_name,
-                session_id=session_id,
-            )
-    except Exception as exc:
-        print(f"[LeMUR post-call error]: {exc}")
-
-
-@app.post("/api/call-ended")
-async def call_ended(req: CallEndedRequest, background_tasks: BackgroundTasks) -> dict:
-    """Triggered by the browser when a voice session ends."""
-    session_id = f"call_{uuid.uuid4().hex[:8]}"
-    if len(req.transcript.strip()) > 20:
-        background_tasks.add_task(
-            _run_lemur_post_call, session_id, req.transcript, req.tenant_name
-        )
-    return {"status": "queued", "session_id": session_id}
-
-
-@app.get("/api/dossiers")
-def api_dossiers() -> dict:
-    return {"dossiers": store.list_dossiers()}
 
 
 if WEB_DIR.exists():
