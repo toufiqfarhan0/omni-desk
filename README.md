@@ -1,80 +1,85 @@
-# OmniDesk — Autonomous Voice Receptionist & Booking Platform
+# OmniDesk — Autonomous Voice Receptionist & Practice Operating System
 
-OmniDesk is an autonomous voice receptionist platform built on the AssemblyAI Voice Agent API. It uses direct server-side HTTP tools to handle dynamic appointment scheduling, live calendar lookups, and customer confirmations without requiring a persistent runtime tool dispatcher during the call.
+OmniDesk is an autonomous voice receptionist platform powered by the AssemblyAI Voice Agent API. It utilizes direct server-side HTTP tools to execute real-time calendar availability lookups, deterministic booking validation, and automated customer confirmation dispatches without requiring a persistent client-side tool dispatcher during the call.
 
-The platform includes a sleek, light-mode web dashboard featuring live voice streaming with instantaneous barge-in, a real-time HTTP tool inspector, and an Owner Console slide-over sheet for practice management.
+The platform includes a curated, light-mode landing page designed under tasteskill.dev anti-slop principles, a live voice console with instant audio barge-in, an interactive tool inspector, and an Owner Console slide-over sheet engineered following Emil Kowalski and Better UI specifications.
 
 ---
 
 ## System Architecture
 
 ```text
-                  OMNIDESK PLATFORM
-                          |
-           +--------------+--------------+
-           |                             |
-     BUSINESS OWNER                   CUSTOMER
-           |                             |
-           v                             v
-     Create Business               Visit / Call
-           |                             |
-           v                             v
-     Configure AI Agent ----------> Voice Agent
-           |                             |
-           |                             v
-           |                        Conversation
-           |                             |
-           |                             v
-           |                       Booking Request
-           |                             |
-           +-----------------------------+
-                                         |
-                                         v
-                                  Booking Engine
-                                         |
-                                         v
-                                      Database
-                                         |
-                          +--------------+--------------+
-                          v                             v
-                    Owner Dashboard                  Customer
-                    (sees booking)              (gets confirmation via
-                                              Resend Email + .ics Invite)
+                                      OMNIDESK PLATFORM
+                                             |
+                      +----------------------+----------------------+
+                      |                                             |
+                 BUSINESS OWNER                                  CUSTOMER
+                      |                                             |
+                      v                                             v
+             Create & Setup Practice                      Web Voice / Inbound Call
+                      |                                             |
+                      v                                             v
+             Configure AI Agent ----------------------------> AssemblyAI Voice Agent
+             (Hours, Services, Knowledge)                   (Real-time Audio Stream)
+                      |                                             |
+                      |                                             v
+                      |                                        Conversation
+                      |                                     (Intent, Date, Slot)
+                      |                                             |
+                      |                                             v
+                      |                                      Booking Request
+                      |                                    (Service, Date, Email)
+                      |                                             |
+                      +---------------------------------------------+
+                                                    |
+                                                    v
+                                         Server-Side HTTP Tools
+                                    (/check_availability, /book_appointment)
+                                                    |
+                                                    v
+                                              Booking Engine
+                                        (Slot Lock & Conflict Check)
+                                                    |
+                                                    v
+                                                Database
+                                                    |
+                      +-----------------------------+-----------------------------+
+                      |                                                           |
+                      v                                                           v
+             Owner Dashboard Sheet                                      Customer Confirmation
+            (Real-Time Calendar, KPI                                  (Resend Transactional Email
+             Metrics, Customer Directory)                               + Attached .ics Invite)
 ```
 
 ---
 
 ## Key Capabilities
 
-- **Server-Side HTTP Tools**: AssemblyAI executes tool endpoints directly against your booking API. No client-side tool dispatcher is required.
-- **Ultra-Low Latency & Instant Barge-In**: Audio playback is managed through Web Audio scheduling (`playHead = Math.max(playHead, audioCtx.currentTime)`), cutting off agent speech instantaneously when the caller begins speaking (`input.speech.started`).
-- **Owner Console (Slide-over Sheet)**: A slide-over panel designed with Emil Kowalski design engineering principles and Better UI standards, providing:
-  - **Overview**: Real-time KPI cards for today's bookings, upcoming schedule, and confirmed revenue.
-  - **Calendar**: Complete tabular log of all confirmed appointments, confirmation codes, and slot times.
-  - **Customers**: Caller directory tracking client visit frequency and previous services.
-  - **Services**: Clinical service catalog with configurable pricing and duration.
-  - **AI Agent**: Phonetic boost vocabulary (keyterms), voice parameters, and tool endpoints.
-  - **Settings**: Practice hours and Resend confirmation engine configuration.
-- **Transactional Confirmation Engine**: Sends HTML booking receipts accompanied by native `.ics` calendar events for 1-tap addition to Google Calendar, Apple Calendar, and Microsoft Outlook.
+- **Server-Side HTTP Tools**: AssemblyAI invokes backend endpoints directly over public HTTPS. The browser does not mediate or execute database transactions.
+- **Sub-300ms Barge-In**: Audio input and output streams are processed concurrently. When the user starts speaking (`input.speech.started`), active playback buffers are discarded instantaneously via Web Audio API scheduling (`playHead = Math.max(playHead, audioCtx.currentTime)`).
+- **Email Verification & Native Calendar Invites**: When a slot is confirmed, OmniDesk generates an RFC 5545 compliant `.ics` calendar invite with a 60-minute pre-appointment alarm notification and dispatches it through the Resend Transactional Email API with a branded HTML receipt.
+- **Tasteskill-Inspired Landing Page**: Viewport-fitted hero with micro-interactions, live dialogue simulator, foundational architecture bento grid, and quick access into the interactive voice console.
+- **Owner Console (Slide-over Sheet)**: Accessible directly from the voice console, providing practice owners with live KPI metrics (today's bookings, upcoming schedule, projected revenue), tabular calendar bookings, customer directory, and clinical service offerings.
 
 ---
 
-## Directory Structure
+## Repository Structure
 
 ```text
 assemblyai-voice-agent-scheduler/
 |-- app/
 |   |-- __init__.py
-|   |-- main.py           # FastAPI application & HTTP tool endpoints
-|   |-- store.py          # In-memory booking store & deterministic slot engine
+|   |-- main.py           # FastAPI application, HTTP tools, Resend email & .ics generation
+|   |-- store.py          # Slot scheduling engine, booking state, and event logger
 |-- scripts/
-|   |-- create_agent.py   # Registers or updates the agent definition on AssemblyAI
+|   |-- create_agent.py   # Provisions or updates the agent definition on AssemblyAI
 |-- web/
-|   |-- index.html        # Light-mode dashboard with Owner Console sheet
-|   |-- app.js            # AudioWorklet client, WebSocket stream & sheet logic
-|   |-- worklet.js        # Float32 to PCM16 audio converter worklet
-|-- agent.json            # Agent identity, voice settings, and HTTP tool schemas
-|-- requirements.txt      # Python dependencies
+|   |-- index.html        # Public landing page (tasteskill aesthetic)
+|   |-- console.html      # Voice receptionist workspace and Owner Console sheet
+|   |-- app.js            # AudioWorklet client, WebSocket handler, and sheet logic
+|   |-- worklet.js        # PCM16 to Float32 linear audio converter worklet
+|-- agent.json            # AssemblyAI agent specification, voice settings, and HTTP tool schemas
+|-- requirements.txt      # Python dependencies (FastAPI, Uvicorn, HTTPX, Pydantic, etc.)
 |-- .env.example          # Environment variable template
 ```
 
@@ -82,134 +87,140 @@ assemblyai-voice-agent-scheduler/
 
 ## Prerequisites
 
-- Python 3.10+
-- AssemblyAI API Key ([assemblyai.com](https://www.assemblyai.com/))
-- Public HTTPS tunneling utility (Cloudflare Tunnel or ngrok)
+- Python 3.10 or higher
+- AssemblyAI API Key ([AssemblyAI Dashboard](https://www.assemblyai.com/dashboard))
+- Resend API Key ([Resend Dashboard](https://resend.com/))
+- Public HTTPS tunnel utility (Cloudflare Tunnel `cloudflared` or `ngrok`)
 
 ---
 
-## Getting Started
+## Configuration
 
-### 1. Environment Setup
-
-Clone the repository and install dependencies into a virtual environment:
-
-```bash
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-Create your `.env` configuration:
+Create your `.env` configuration file from the provided template:
 
 ```bash
 cp .env.example .env
 ```
 
-Set your AssemblyAI API key inside `.env`:
+Populate the required environment variables:
 
 ```env
+# AssemblyAI Credentials
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
+
+# Stored Agent Identifier (populated after create_agent.py runs)
+AGENT_ID=agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Public HTTPS URL where AssemblyAI can reach your HTTP tools
+# (Updated whenever you launch a new tunnel session)
+PUBLIC_API_BASE_URL=https://your-tunnel-subdomain.trycloudflare.com
+
+# Resend Transactional Email Credentials
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM_EMAIL=onboarding@resend.dev
 ```
 
 ---
 
-### 2. Start the Booking API
+## Local Development & Deployment
 
-Launch the local FastAPI service:
-
-```bash
-uvicorn app.main:app --port 8000 --reload
-```
-
-Verify the service is running:
+### 1. Install Dependencies
 
 ```bash
-curl http://localhost:8000/health
+# Create virtual environment
+python -m venv .venv
+
+# Activate on Windows
+.venv\Scripts\activate
+
+# Activate on macOS / Linux
+source .venv/bin/activate
+
+# Install required packages
+pip install -r requirements.txt
 ```
 
----
+### 2. Start the Backend Server
 
-### 3. Expose the API to the Public Internet
+Launch the FastAPI application on port 8000:
 
-Because AssemblyAI executes HTTP tools directly from its cloud infrastructure, your local server must be reachable via a public HTTPS URL.
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-#### Option A: Cloudflare Tunnel (Recommended)
+Verify service health:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+### 3. Expose the API to AssemblyAI
+
+Because AssemblyAI executes tool calls directly from its cloud infrastructure, your local backend must be publicly reachable over HTTPS.
+
+#### Using Cloudflare Tunnel (Recommended)
 
 ```bash
 cloudflared tunnel --url http://localhost:8000
 ```
 
-Copy the generated URL (e.g., `https://your-tunnel-subdomain.trycloudflare.com`) and add it to `.env`:
+Copy the generated URL (e.g. `https://slides-mpg-sample-awesome.trycloudflare.com`) and update `PUBLIC_API_BASE_URL` in `.env`.
 
-```env
-PUBLIC_API_BASE_URL=https://your-tunnel-subdomain.trycloudflare.com
-```
-
-#### Option B: ngrok
+#### Using ngrok
 
 ```bash
 ngrok http 8000
 ```
 
-Copy the forwarding HTTPS URL and add it to `.env`:
+Copy the HTTPS forwarding address and update `PUBLIC_API_BASE_URL` in `.env`.
 
-```env
-PUBLIC_API_BASE_URL=https://your-subdomain.ngrok-free.app
-```
+### 4. Provision or Update the Voice Agent
 
-Verify public connectivity:
-
-```bash
-curl -X POST https://your-tunnel-subdomain.trycloudflare.com/tools/get_today
-```
-
----
-
-### 4. Publish the Voice Agent
-
-Run the provisioning script to upload `agent.json` and tool schemas to AssemblyAI:
+Register the agent with AssemblyAI:
 
 ```bash
 python scripts/create_agent.py
 ```
 
-The script will output your unique `agent_id` (e.g., `agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`) and save it to `agent_id.txt` and `.env`.
-
-To update an existing agent after modifying `agent.json`:
+If you have an existing agent ID, update the agent definition and tool URLs:
 
 ```bash
 python scripts/create_agent.py --update <agent_id>
 ```
 
----
+The script points all 4 HTTP tools (`get_today`, `check_availability`, `book_appointment`, `send_confirmation`) to your active public tunnel URL.
 
-### 5. Open the Dashboard
+### 5. Access the Web Applications
 
-Navigate to `http://localhost:8000` in your web browser.
-
-1. **Start Call**: Click "Start Call" to initiate a real-time bidirectional audio stream.
-2. **Talk Naturally**: Speak to the agent (e.g., *"Hi, I'd like to schedule a dental cleaning for next Tuesday morning"*).
-3. **Interrupt Any Time**: Speak while the agent is replying; barge-in cuts the agent's playback instantly.
-4. **Live Tool Stream**: Observe real-time HTTP tool hits on the right pane.
-5. **Owner Dashboard**: Click "Owner Dashboard" in the top header to slide open the management sheet and view live bookings, customer metrics, and services.
+- **Public Landing Page**: Navigate to `http://localhost:8000/`
+- **Voice Receptionist Console**: Navigate to `http://localhost:8000/console` (or click "Launch Brightsmile Voice Console" on the landing page)
+- **Owner Dashboard Sheet**: Click the "Owner Dashboard" button in the upper-right corner of the console to view the slide-over practice management sheet.
 
 ---
 
 ## HTTP Tool Specifications
 
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/tools/get_today` | POST | Returns current system date and upcoming open weekdays. Prevents date hallucinations. |
-| `/tools/check_availability` | POST | Validates service key, checks practice hours, and returns open slots. |
-| `/tools/book_appointment` | POST | Reserves the requested slot, prevents double booking, and generates a 6-character confirmation code. |
-| `/tools/send_confirmation` | POST | Triggers the customer confirmation dispatch (Resend Email with `.ics` calendar invite). |
+AssemblyAI calls these endpoints directly during conversational turns:
+
+| Endpoint | Method | Input Parameters | Output Summary |
+| :--- | :--- | :--- | :--- |
+| `/tools/get_today` | POST | None | System date, current weekday, and next 3 open clinic days to eliminate date hallucinations. |
+| `/tools/check_availability` | POST | `service`: string<br>`date`: YYYY-MM-DD | Practice hours check and open 30-minute booking slots for the requested date. |
+| `/tools/book_appointment` | POST | `service`: string<br>`date`: YYYY-MM-DD<br>`time`: HH:MM<br>`customer_name`: string<br>`email`: string | Slot reservation, conflict avoidance, and generation of a unique 6-character confirmation code. |
+| `/tools/send_confirmation` | POST | `confirmation_code`: string | Dispatches an HTML booking receipt with an RFC 5545 `.ics` calendar attachment via Resend. |
+
+---
+
+## Transactional Email & Calendar Sync (.ics)
+
+When an appointment is finalized, OmniDesk automatically formats an RFC 5545 compliant calendar object:
+
+- **Organizer / Clinic**: Brightsmile Dental Clinic
+- **Start / End Timestamp**: Calculated from service duration (30 min to 90 min)
+- **Valarm Trigger**: `-PT60M` (Triggers native device notifications 1 hour before appointment)
+- **Attachment Encoding**: Base64 `.ics` attachment delivered through Resend REST API (`POST https://api.resend.com/emails`)
+
+Patients receive a clean transactional confirmation in their inbox and can tap the `.ics` file to add the reservation directly to Google Calendar, Apple Calendar, or Microsoft Outlook.
 
 ---
 
