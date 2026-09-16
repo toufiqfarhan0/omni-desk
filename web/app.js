@@ -18,7 +18,7 @@ let micStream = null;
 let workletNode = null;
 let live = false;
 
-// Playback scheduling. Holding the sources lets barge-in cut the agent off.
+// Playback scheduling. Holding the sources lets barge-in cut the agent off instantly.
 let playHead = 0;
 let scheduled = [];
 
@@ -65,7 +65,7 @@ function startTimer() {
 }
 
 function stopTimer() {
-  if (!timerTick) return; // never connected, so nothing to hold
+  if (!timerTick) return;
   clearInterval(timerTick);
   timerTick = null;
   els.timer.textContent = formatDuration(Date.now() - timerStart);
@@ -104,7 +104,7 @@ function addLine(who, text) {
 
   const label = document.createElement("span");
   label.className = "who";
-  label.textContent = who === "agent" ? "Agent" : "You";
+  label.textContent = who === "agent" ? "Brightsmile Assistant" : "You";
 
   const body = document.createElement("p");
   body.textContent = text;
@@ -119,7 +119,7 @@ function addLine(who, text) {
       chip.type = "button";
       chip.className = "chip" + (event.failed ? " warn" : "");
       chip.textContent = event.tool;
-      chip.title = "Show this call";
+      chip.title = "Show tool call details";
       chip.addEventListener("click", () => revealCall(event.seq));
       used.append(chip);
     }
@@ -150,13 +150,23 @@ function renderCall(event) {
   card.dataset.seq = event.seq;
 
   const head = document.createElement("header");
+  head.className = "call-header";
+
+  const nameGroup = document.createElement("div");
+  nameGroup.className = "call-method-name";
+  const tag = document.createElement("span");
+  tag.className = "method-tag";
+  tag.textContent = "POST";
   const name = document.createElement("span");
   name.className = "call-name";
-  name.textContent = event.tool;
+  name.textContent = `/tools/${event.tool}`;
+  nameGroup.append(tag, name);
+
   const time = document.createElement("span");
   time.className = "call-time";
   time.textContent = event.at;
-  head.append(name, time);
+
+  head.append(nameGroup, time);
   card.append(head);
 
   const args = formatArgs(event.arguments);
@@ -176,7 +186,7 @@ function renderCall(event) {
 
   const msg = document.createElement("p");
   msg.className = "call-msg";
-  msg.textContent = (event.result && event.result.message) || "(no message)";
+  msg.textContent = (event.result && event.result.message) || "(no response message)";
   card.append(msg);
 
   els.calls.append(card);
@@ -184,6 +194,11 @@ function renderCall(event) {
 
   callTotal += 1;
   els.count.textContent = `${callTotal} call${callTotal === 1 ? "" : "s"}`;
+
+  // Refresh owner stats if a booking tool was executed
+  if (event.tool === "book_appointment" || event.tool === "send_confirmation") {
+    loadOwnerStats();
+  }
 }
 
 function revealCall(seq) {
@@ -204,13 +219,14 @@ async function pollEvents() {
       pending.push(event);
     }
   } catch (_) {
-    /* transient; the next tick retries */
+    /* retry next poll */
   }
 }
 
 // ---------------------------------------------------------------- audio
 
 function playChunk(int16) {
+  if (!audioCtx) return;
   const buffer = audioCtx.createBuffer(1, int16.length, SAMPLE_RATE);
   const channel = buffer.getChannelData(0);
   for (let i = 0; i < int16.length; i++) channel[i] = int16[i] / 32768;
@@ -220,7 +236,7 @@ function playChunk(int16) {
   source.connect(audioCtx.destination);
 
   const now = audioCtx.currentTime;
-  if (playHead < now) playHead = now + 0.04;
+  if (playHead < now) playHead = now;
   source.start(playHead);
   playHead += buffer.duration;
 
@@ -236,7 +252,7 @@ function stopPlayback() {
     try {
       source.stop();
     } catch (_) {
-      /* already finished */
+      /* already ended */
     }
   }
   scheduled = [];
@@ -246,7 +262,7 @@ function stopPlayback() {
 // --------------------------------------------------------------- session
 
 async function start() {
-  resetTimer(); // clear the previous call's duration
+  resetTimer();
   setStatus("Connecting", "busy");
   els.talk.disabled = true;
 
@@ -257,7 +273,7 @@ async function start() {
     token = (await res.json()).token;
   } catch (err) {
     setStatus("No token", "error");
-    addLine("agent", `Could not mint a token: ${err.message}`);
+    addLine("agent", `Could not mint AssemblyAI token: ${err.message}`);
     els.talk.disabled = false;
     return;
   }
@@ -265,7 +281,7 @@ async function start() {
   const config = await fetch("/api/config").then((r) => r.json());
   if (!config.agent_id) {
     setStatus("No agent", "error");
-    addLine("agent", "Run scripts/create_agent.py first, then reload this page.");
+    addLine("agent", "Agent ID not configured. Run scripts/create_agent.py first.");
     els.talk.disabled = false;
     return;
   }
@@ -281,8 +297,8 @@ async function start() {
       },
     });
   } catch (err) {
-    setStatus("No microphone", "error");
-    addLine("agent", "Microphone access was blocked. Allow it and try again.");
+    setStatus("No mic", "error");
+    addLine("agent", "Microphone access was denied. Please allow microphone permissions and try again.");
     els.talk.disabled = false;
     return;
   }
@@ -293,7 +309,16 @@ async function start() {
   ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: "session.update", session: { agent_id: config.agent_id } }));
+    ws.send(JSON.stringify({
+      type: "session.update",
+      session: {
+        agent_id: config.agent_id,
+        turn_detection: {
+          interrupt_response: true,
+          interruption_delay: 0,
+        },
+      },
+    }));
   };
 
   ws.onmessage = (event) => {
@@ -304,14 +329,19 @@ async function start() {
         live = true;
         setStatus("Live", "live");
         els.talk.disabled = false;
-        els.talk.textContent = "End call";
+        els.talk.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+          </svg>
+          End call
+        `;
         els.talk.classList.add("ending");
         startTimer();
         pollTimer = setInterval(pollEvents, POLL_MS);
         break;
 
       case "input.speech.started":
-        stopPlayback(); // the caller cut in
+        stopPlayback(); // instantaneous barge-in cut
         break;
 
       case "transcript.user":
@@ -351,11 +381,10 @@ async function start() {
     }
   };
   audioCtx.createMediaStreamSource(micStream).connect(workletNode);
-  workletNode.connect(audioCtx.destination); // keeps the graph pulling
+  workletNode.connect(audioCtx.destination);
 }
 
 function stop() {
-  // Closing the socket bare leaves a 30s resume window that still bills.
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "session.end" }));
     setStatus("Ending", "busy");
@@ -369,7 +398,7 @@ function stop() {
 function cleanup() {
   if (!live && !micStream && !audioCtx) return;
   live = false;
-  stopTimer(); // freeze the duration, don't clear it
+  stopTimer();
 
   clearInterval(pollTimer);
   pollTimer = null;
@@ -386,10 +415,17 @@ function cleanup() {
 
   ws = null;
   els.talk.disabled = false;
-  els.talk.textContent = "Start call";
+  els.talk.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" x2="12" y1="19" y2="22"/>
+    </svg>
+    Start call
+  `;
   els.talk.classList.remove("ending");
   setStatus("Idle", "idle");
-  pollEvents(); // catch anything that landed as the call closed
+  pollEvents();
 }
 
 els.talk.addEventListener("click", () => (live ? stop() : start()));
@@ -403,7 +439,156 @@ fetch("/api/config")
     els.agentId.textContent = "api offline";
   });
 
-// ----------------------------------------------------------- demo data
+// ------------------------------------------------------------ OWNER DASHBOARD SHEET
+
+const sheet = {
+  btn: document.getElementById("owner-btn"),
+  panel: document.getElementById("owner-sheet"),
+  backdrop: document.getElementById("owner-backdrop"),
+  closeBtn: document.getElementById("sheet-close-btn"),
+  tabs: document.querySelectorAll(".tab-btn"),
+  panes: document.querySelectorAll(".tab-pane"),
+  kpiToday: document.getElementById("kpi-today"),
+  kpiUpcoming: document.getElementById("kpi-upcoming"),
+  kpiRev: document.getElementById("kpi-rev"),
+  overviewTodayTable: document.getElementById("overview-today-table"),
+  calendarTable: document.getElementById("calendar-table"),
+  calendarCount: document.getElementById("calendar-count"),
+  customersTable: document.getElementById("customers-table"),
+  servicesGrid: document.getElementById("services-grid"),
+  keytermsRow: document.getElementById("sheet-keyterms"),
+};
+
+function openSheet() {
+  sheet.panel.classList.add("active");
+  sheet.backdrop.classList.add("active");
+  loadOwnerStats();
+  document.addEventListener("keydown", onSheetKey);
+}
+
+function closeSheet() {
+  sheet.panel.classList.remove("active");
+  sheet.backdrop.classList.remove("active");
+  document.removeEventListener("keydown", onSheetKey);
+}
+
+function onSheetKey(e) {
+  if (e.key === "Escape") closeSheet();
+}
+
+sheet.btn.addEventListener("click", openSheet);
+sheet.closeBtn.addEventListener("click", closeSheet);
+sheet.backdrop.addEventListener("click", closeSheet);
+
+// Tab switching
+sheet.tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    sheet.tabs.forEach((t) => t.classList.remove("active"));
+    sheet.panes.forEach((p) => p.classList.remove("active"));
+    tab.classList.add("active");
+    const target = document.getElementById(tab.dataset.tab);
+    if (target) target.classList.add("active");
+  });
+});
+
+async function loadOwnerStats() {
+  try {
+    const res = await fetch("/api/owner-stats");
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // 1. Overview KPIs
+    sheet.kpiToday.textContent = data.today_bookings_count;
+    sheet.kpiUpcoming.textContent = data.upcoming_bookings_count;
+    sheet.kpiRev.textContent = `$${data.estimated_revenue.toLocaleString()}`;
+
+    // 2. Today's table
+    if (data.today_appointments && data.today_appointments.length) {
+      sheet.overviewTodayTable.innerHTML = data.today_appointments
+        .map(
+          (a) => `
+        <tr>
+          <td><strong style="font-family: var(--mono);">${a.time}</strong></td>
+          <td>${a.customer_name}</td>
+          <td>${a.service_label}</td>
+          <td><span class="badge-success">Confirmed</span></td>
+        </tr>`
+        )
+        .join("");
+    } else {
+      sheet.overviewTodayTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">No bookings scheduled for today</td></tr>`;
+    }
+
+    // 3. All Appointments / Calendar Table
+    sheet.calendarCount.textContent = `${data.all_appointments.length} total`;
+    if (data.all_appointments && data.all_appointments.length) {
+      sheet.calendarTable.innerHTML = data.all_appointments
+        .map(
+          (a) => `
+        <tr>
+          <td><code style="font-family: var(--mono); font-weight: 600; color: var(--accent-text); background: var(--accent-soft); padding: 2px 6px; border-radius: 4px;">${a.confirmation_code}</code></td>
+          <td><strong>${a.date}</strong> &middot; ${a.time}</td>
+          <td>${a.customer_name}</td>
+          <td>${a.service_label} <span style="color: var(--text-muted); font-size: 11.5px;">($${a.price})</span></td>
+          <td><span style="font-family: var(--mono); font-size: 12px; color: var(--text-secondary);">${a.phone}</span></td>
+        </tr>`
+        )
+        .join("");
+    } else {
+      sheet.calendarTable.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">No appointments on record yet</td></tr>`;
+    }
+
+    // 4. Customers Table
+    if (data.customers && data.customers.length) {
+      sheet.customersTable.innerHTML = data.customers
+        .map(
+          (c) => `
+        <tr>
+          <td><strong>${c.name}</strong></td>
+          <td><span style="font-family: var(--mono); font-size: 12px;">${c.phone}</span></td>
+          <td><span class="tenant-badge">${c.appointments_count} visit${c.appointments_count === 1 ? "" : "s"}</span></td>
+          <td>${c.last_service || "Dental Checkup"} <span style="color: var(--text-muted); font-size: 11px;">(${c.last_date})</span></td>
+        </tr>`
+        )
+        .join("");
+    } else {
+      sheet.customersTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">No customer profiles recorded yet</td></tr>`;
+    }
+
+    // 5. Services Grid
+    if (data.services && data.services.length) {
+      sheet.servicesGrid.innerHTML = data.services
+        .map(
+          (s) => `
+        <div class="service-card">
+          <div class="service-head">
+            <span class="service-name">${s.label}</span>
+            <span class="service-price">$${s.price}</span>
+          </div>
+          <p class="service-desc">${s.description || "Clinical service offering for oral health and patient care."}</p>
+          <span class="service-dur">Duration: ${s.minutes} minutes</span>
+        </div>`
+        )
+        .join("");
+    }
+
+    // 6. AI Agent Keyterms
+    fetch("/api/demo-info")
+      .then((r) => r.json())
+      .then((info) => {
+        if (info.agent && info.agent.keyterms) {
+          sheet.keytermsRow.innerHTML = info.agent.keyterms
+            .map((term) => `<span class="pill">${term}</span>`)
+            .join("");
+        }
+      })
+      .catch(() => {});
+  } catch (err) {
+    console.error("Error loading owner stats:", err);
+  }
+}
+
+// ----------------------------------------------------------- demo data modal
 
 const infoEls = {
   btn: document.getElementById("info-btn"),
@@ -447,31 +632,35 @@ function renderInfo(data) {
   const config = block(
     "Who it is",
     "agent.json",
-    "Uploaded once by scripts/create_agent.py. AssemblyAI stores this and never asks you for it again — it is the agent's identity, not its data."
+    "Uploaded once by scripts/create_agent.py. AssemblyAI stores this as the agent's identity."
   );
-  config.append(kv([
-    ["Name", data.agent.name],
-    ["Voice", data.agent.voice],
-  ]));
+  config.append(
+    kv([
+      ["Name", data.agent.name],
+      ["Voice", data.agent.voice],
+    ])
+  );
   config.append(el("p", "block-note", "Tools it is allowed to call:"));
   config.append(pills(data.agent.tools.map((t) => t.name), "tool"));
   if (data.agent.keyterms.length) {
-    config.append(el("p", "block-note", "Words boosted so the transcriber hears them correctly:"));
+    config.append(el("p", "block-note", "Boosted vocabulary for accurate transcription:"));
     config.append(pills(data.agent.keyterms));
   }
 
   const live = block(
     "What it can see",
     "your booking API",
-    "None of this is in the JSON. The agent has no calendar of its own — it finds all of this out by calling your API while you talk to it."
+    "Dynamic availability fetched live during the conversation via HTTP tool calls."
   );
-  live.append(kv([
-    ["Open", `${data.hours.days}, ${data.hours.open} to ${data.hours.close}`],
-    ["Slots", `${data.hours.slot_minutes} minutes long`],
-  ]));
-  live.append(el("p", "block-note", "Services you can ask for:"));
+  live.append(
+    kv([
+      ["Open", `${data.hours.days}, ${data.hours.open} to ${data.hours.close}`],
+      ["Slots", `${data.hours.slot_minutes} minutes long`],
+    ])
+  );
+  live.append(el("p", "block-note", "Available Dental Services:"));
   live.append(pills(data.services.map((s) => s.key)));
-  live.append(el("p", "block-note", "Next open days, and what is genuinely free right now:"));
+  live.append(el("p", "block-note", "Upcoming open days & live availability:"));
   for (const day of data.days) {
     const card = el("div", "day");
     const head = el("div", "day-head");
@@ -495,13 +684,11 @@ function onInfoKey(event) {
 async function openInfo() {
   infoEls.modal.hidden = false;
   document.addEventListener("keydown", onInfoKey);
-  infoEls.modal.querySelector(".icon-btn").focus();
 
-  // Always refetch — slots change as the agent books them.
   try {
     renderInfo(await fetch("/api/demo-info").then((r) => r.json()));
   } catch (_) {
-    infoEls.body.textContent = "Could not load demo data. Is the booking API running?";
+    infoEls.body.textContent = "Could not load demo data. Is the server running?";
   }
 }
 
