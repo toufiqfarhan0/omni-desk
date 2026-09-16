@@ -1,230 +1,218 @@
-# assemblyai-voice-agent-scheduler
+# OmniDesk — Autonomous Voice Receptionist & Booking Platform
 
-A voice agent that books real dental appointments, built on AssemblyAI's Voice
-Agent API using **server-side HTTP tools** — so there is no tool dispatcher and
-nothing of yours stays connected during a call.
+OmniDesk is an autonomous voice receptionist platform built on the AssemblyAI Voice Agent API. It uses direct server-side HTTP tools to handle dynamic appointment scheduling, live calendar lookups, and customer confirmations without requiring a persistent runtime tool dispatcher during the call.
 
-Reference implementation for the tutorial *"Ship a Voice Agent That Books
-Appointments Without Writing a Tool Dispatcher"*, written for the
-[AssemblyAI Voice Agent Hackathon](https://lablab.ai/ai-hackathons/assemblyai-voice-agent-hackathon).
+The platform includes a sleek, light-mode web dashboard featuring live voice streaming with instantaneous barge-in, a real-time HTTP tool inspector, and an Owner Console slide-over sheet for practice management.
 
-## The idea
+---
 
-Most voice-agent tutorials put your program in the middle of every call:
+## System Architecture
 
+```text
+                  OMNIDESK PLATFORM
+                          |
+           +--------------+--------------+
+           |                             |
+     BUSINESS OWNER                   CUSTOMER
+           |                             |
+           v                             v
+     Create Business               Visit / Call
+           |                             |
+           v                             v
+     Configure AI Agent ----------> Voice Agent
+           |                             |
+           |                             v
+           |                        Conversation
+           |                             |
+           |                             v
+           |                       Booking Request
+           |                             |
+           +-----------------------------+
+                                         |
+                                         v
+                                  Booking Engine
+                                         |
+                                         v
+                                      Database
+                                         |
+                          +--------------+--------------+
+                          v                             v
+                    Owner Dashboard                  Customer
+                    (sees booking)              (gets confirmation via
+                                              Resend Email + .ics Invite)
 ```
-caller <-> AssemblyAI <-> your script (connected all call) <-> your logic
-                          listens for tool.call, replies with tool.result
+
+---
+
+## Key Capabilities
+
+- **Server-Side HTTP Tools**: AssemblyAI executes tool endpoints directly against your booking API. No client-side tool dispatcher is required.
+- **Ultra-Low Latency & Instant Barge-In**: Audio playback is managed through Web Audio scheduling (`playHead = Math.max(playHead, audioCtx.currentTime)`), cutting off agent speech instantaneously when the caller begins speaking (`input.speech.started`).
+- **Owner Console (Slide-over Sheet)**: A slide-over panel designed with Emil Kowalski design engineering principles and Better UI standards, providing:
+  - **Overview**: Real-time KPI cards for today's bookings, upcoming schedule, and confirmed revenue.
+  - **Calendar**: Complete tabular log of all confirmed appointments, confirmation codes, and slot times.
+  - **Customers**: Caller directory tracking client visit frequency and previous services.
+  - **Services**: Clinical service catalog with configurable pricing and duration.
+  - **AI Agent**: Phonetic boost vocabulary (keyterms), voice parameters, and tool endpoints.
+  - **Settings**: Practice hours and Resend confirmation engine configuration.
+- **Transactional Confirmation Engine**: Sends HTML booking receipts accompanied by native `.ics` calendar events for 1-tap addition to Google Calendar, Apple Calendar, and Microsoft Outlook.
+
+---
+
+## Directory Structure
+
+```text
+assemblyai-voice-agent-scheduler/
+|-- app/
+|   |-- __init__.py
+|   |-- main.py           # FastAPI application & HTTP tool endpoints
+|   |-- store.py          # In-memory booking store & deterministic slot engine
+|-- scripts/
+|   |-- create_agent.py   # Registers or updates the agent definition on AssemblyAI
+|-- web/
+|   |-- index.html        # Light-mode dashboard with Owner Console sheet
+|   |-- app.js            # AudioWorklet client, WebSocket stream & sheet logic
+|   |-- worklet.js        # Float32 to PCM16 audio converter worklet
+|-- agent.json            # Agent identity, voice settings, and HTTP tool schemas
+|-- requirements.txt      # Python dependencies
+|-- .env.example          # Environment variable template
 ```
 
-This one doesn't. You describe the agent once as JSON, hand AssemblyAI a set of
-URLs, and it calls your API itself:
+---
 
-```
-caller <-> AssemblyAI --HTTP POST--> your booking API
-```
+## Prerequisites
 
-Close your laptop and the agent still answers.
+- Python 3.10+
+- AssemblyAI API Key ([assemblyai.com](https://www.assemblyai.com/))
+- Public HTTPS tunneling utility (Cloudflare Tunnel or ngrok)
 
-## 1. Install and run the API
+---
+
+## Getting Started
+
+### 1. Environment Setup
+
+Clone the repository and install dependencies into a virtual environment:
 
 ```bash
 python -m venv .venv
-.venv/Scripts/activate          # macOS/Linux: source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+
+# macOS / Linux
+source .venv/bin/activate
+
 pip install -r requirements.txt
-
-uvicorn app.main:app --reload   # http://localhost:8000
 ```
 
-Check it answers:
+Create your `.env` configuration:
 
 ```bash
-curl -X POST http://localhost:8000/tools/get_today
+cp .env.example .env
 ```
 
-## 2. Put the API on the public internet
+Set your AssemblyAI API key inside `.env`:
 
-**This is the step people get stuck on.** AssemblyAI calls your tools from its
-own servers, so `http://localhost:8000` is unreachable to it — and the publish
-script rejects it rather than letting you find out mid-call. You need a public
-**HTTPS** URL. Two easy ways:
+```env
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
+```
 
-### Option A — ngrok
+---
+
+### 2. Start the Booking API
+
+Launch the local FastAPI service:
 
 ```bash
-ngrok http 8000
+uvicorn app.main:app --port 8000 --reload
 ```
 
-It prints a forwarding line. Copy the **https** one:
+Verify the service is running:
 
+```bash
+curl http://localhost:8000/health
 ```
-Forwarding   https://a1b2-102-89-33-14.ngrok-free.app -> http://localhost:8000
-```
 
-Your value is `https://a1b2-102-89-33-14.ngrok-free.app`
+---
 
-### Option B — Cloudflare Tunnel
+### 3. Expose the API to the Public Internet
 
-No account needed for a quick tunnel:
+Because AssemblyAI executes HTTP tools directly from its cloud infrastructure, your local server must be reachable via a public HTTPS URL.
+
+#### Option A: Cloudflare Tunnel (Recommended)
 
 ```bash
 cloudflared tunnel --url http://localhost:8000
 ```
 
-It prints a URL like:
+Copy the generated URL (e.g., `https://your-tunnel-subdomain.trycloudflare.com`) and add it to `.env`:
 
+```env
+PUBLIC_API_BASE_URL=https://your-tunnel-subdomain.trycloudflare.com
 ```
-https://formal-tribune-serving-mathematics.trycloudflare.com
-```
 
-Your value is `https://formal-tribune-serving-mathematics.trycloudflare.com`
-
-### Either way
-
-Put it in `.env` with **no trailing slash**:
+#### Option B: ngrok
 
 ```bash
-PUBLIC_API_BASE_URL=https://a1b2-102-89-33-14.ngrok-free.app
+ngrok http 8000
 ```
 
-Confirm the outside world can actually reach it before going further:
+Copy the forwarding HTTPS URL and add it to `.env`:
+
+```env
+PUBLIC_API_BASE_URL=https://your-subdomain.ngrok-free.app
+```
+
+Verify public connectivity:
 
 ```bash
-curl -X POST https://a1b2-102-89-33-14.ngrok-free.app/tools/get_today
+curl -X POST https://your-tunnel-subdomain.trycloudflare.com/tools/get_today
 ```
 
-If that returns today's date, AssemblyAI can reach it too.
+---
 
-> **These URLs change.** Both free tiers hand you a new address every restart.
-> When yours changes, update `.env` and re-run the publish script with
-> `--update <agent_id>` — otherwise the agent keeps calling a dead URL and every
-> tool times out mid-conversation.
+### 4. Publish the Voice Agent
 
-## 3. Publish the agent
-
-Copy `.env.example` to `.env` and fill in `ASSEMBLYAI_API_KEY`
-([free account, $50 of non-expiring credit](https://www.assemblyai.com/dashboard)),
-then:
+Run the provisioning script to upload `agent.json` and tool schemas to AssemblyAI:
 
 ```bash
 python scripts/create_agent.py
 ```
 
-It checks your public URL is live, uploads `agent.json`, and prints an
-`agent_id` (also written to `agent_id.txt`). After editing `agent.json`:
+The script will output your unique `agent_id` (e.g., `agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`) and save it to `agent_id.txt` and `.env`.
+
+To update an existing agent after modifying `agent.json`:
 
 ```bash
 python scripts/create_agent.py --update <agent_id>
 ```
 
-## 4. Talk to it
+---
 
-Open <http://localhost:8000> and press **Start call**. Ask to book a cleaning
-for next Tuesday.
+### 5. Open the Dashboard
 
-The left pane is the conversation. The right pane fills with the HTTP calls
-AssemblyAI makes to your booking API while you talk — no code in the browser
-handles them, it is reading your API's own log. Each agent reply carries chips
-naming the tool calls behind it; click one to jump to it.
+Navigate to `http://localhost:8000` in your web browser.
 
-Your API key never reaches the browser: `GET /api/token` mints a 5-minute token
-server-side and the socket authenticates with that.
+1. **Start Call**: Click "Start Call" to initiate a real-time bidirectional audio stream.
+2. **Talk Naturally**: Speak to the agent (e.g., *"Hi, I'd like to schedule a dental cleaning for next Tuesday morning"*).
+3. **Interrupt Any Time**: Speak while the agent is replying; barge-in cuts the agent's playback instantly.
+4. **Live Tool Stream**: Observe real-time HTTP tool hits on the right pane.
+5. **Owner Dashboard**: Click "Owner Dashboard" in the top header to slide open the management sheet and view live bookings, customer metrics, and services.
 
-## Layout
+---
 
-| Path | What it is |
-| --- | --- |
-| `agent.json` | The whole agent: prompt, voice, keyterms, 4 HTTP tools |
-| `app/main.py` | Booking API — the endpoints AssemblyAI calls |
-| `app/store.py` | In-memory calendar and the demo event log |
-| `scripts/create_agent.py` | Publishes `agent.json` to `/v1/agents` |
-| `web/` | The demo page: mic capture, transcript, live tool feed |
+## HTTP Tool Specifications
 
-## The four tools
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/tools/get_today` | POST | Returns current system date and upcoming open weekdays. Prevents date hallucinations. |
+| `/tools/check_availability` | POST | Validates service key, checks practice hours, and returns open slots. |
+| `/tools/book_appointment` | POST | Reserves the requested slot, prevents double booking, and generates a 6-character confirmation code. |
+| `/tools/send_confirmation` | POST | Triggers the customer confirmation dispatch (Resend Email with `.ics` calendar invite). |
 
-| Tool | Why it exists |
-| --- | --- |
-| `get_today` | The model has no clock. Without this it guesses dates, and guesses wrong. |
-| `check_availability` | Returns open slots, or the next open day when closed or full. |
-| `book_appointment` | Reserves the slot, returns a confirmation code. |
-| `send_confirmation` | Texts the caller their code. |
+---
 
-Every response carries an `ok` flag and a `message` written to be read aloud.
-Failures are values, not exceptions — `slot_taken` comes back with the times
-still free, so the agent recovers inside the conversation instead of
-apologising and hanging up.
+## License
 
-## Two layers of validation, and which to use
-
-The tool schemas use `pattern`, `enum` and `examples`. Values failing those are
-rejected *before* your API is called and the agent re-asks. That is the right
-place for anything the agent can fix by listening again.
-
-It is the wrong place for anything the agent needs *explained*. An early version
-of this project put strict E.164 (`+` and country code) in the phone `pattern`.
-A caller reading a Nigerian number aloud — `091 6383 6950` — failed it, and
-because schema rejection is opaque, the agent told the caller the booking system
-was broken and offered a callback. The booking was lost.
-
-The fix was to loosen the pattern to "looks like a phone number" and normalise
-inside the API, which can answer with something speakable:
-
-```json
-{ "ok": false,
-  "reason": "needs_country_code",
-  "message": "I have the number but not the country code. Ask the caller which
-              country they're calling from..." }
-```
-
-Now the agent asks the right question and the call completes. **Schema for what
-the agent can fix by re-asking; your API for what it needs explained.**
-
-## Deploying it
-
-A tunnel is fine while you build, but the URL dies with your terminal. To put
-this somewhere permanent, note one thing first: **the calendar and the tool-call
-feed live in memory**, so this wants a long-running process, not a serverless
-function.
-
-On Render, Railway or Fly it deploys as-is:
-
-```
-Build:  pip install -r requirements.txt
-Start:  uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
-
-Set `ASSEMBLYAI_API_KEY` in the host's environment, then point the agent at the
-new address and re-publish:
-
-```bash
-PUBLIC_API_BASE_URL=https://your-app.onrender.com
-python scripts/create_agent.py --update <agent_id>
-```
-
-Vercel supports FastAPI too, but its functions are ephemeral and can run on
-different instances per request. The browser polls `/api/events` several times a
-second, so it would keep missing calls that landed elsewhere. Move `store.py`
-onto a real database first and it works fine.
-
-You never need server-side WebSockets, whatever you choose. The browser talks
-straight to AssemblyAI; your API only ever answers plain HTTP.
-
-## Where to take it next
-
-This is a starting point, not a finished product. Obvious directions:
-
-- **Swap the in-memory store for a real database** so bookings survive restarts.
-- **Send a real SMS.** `send_confirmation` currently just marks a flag. Wire it
-  to Twilio, Africa's Talking, or whatever covers your region.
-- **Add reschedule and cancel tools.** Both need the agent to look an
-  appointment up by confirmation code first, which is a good exercise in
-  keeping tool sets small — the docs suggest staying under ten per phase.
-- **Handle the caller who wants the first available slot** rather than naming a
-  day, which means a tool that searches forward instead of checking one date.
-- **Put it on a phone number.** Deliberately left out here: Twilio trial numbers
-  only dial numbers you have verified in advance, so nobody else could ring it.
-  Once you are on a paid number, AssemblyAI connects over SIP.
-
-## Licence
-
-MIT. Use it, fork it, ship it.
+MIT License.
