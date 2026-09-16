@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from starlette.responses import Response
+from starlette.responses import FileResponse, Response
 
 from . import store
 
@@ -398,6 +398,15 @@ def api_token() -> dict:
     if resp.status_code >= 400:
         raise HTTPException(resp.status_code, f"Token request failed: {resp.text}")
     return {"token": resp.json()["token"]}
+
+
+@app.get("/console")
+@app.get("/demo")
+def serve_console():
+    console_file = WEB_DIR / "console.html"
+    if console_file.exists():
+        return FileResponse(console_file)
+    return FileResponse(WEB_DIR / "index.html")
 
 
 if WEB_DIR.exists():

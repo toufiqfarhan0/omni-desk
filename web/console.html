@@ -1,0 +1,1421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Brightsmile Dental — Voice Agent Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-subtle: #f1f5f9;
+        --surface-hover: #e2e8f0;
+        --border: #e2e8f0;
+        --border-subtle: #edf2f7;
+        --border-hover: #cbd5e1;
+        --text: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --text-dimmer: #94a3b8;
+        --accent: #0d9488;
+        --accent-hover: #0f766e;
+        --accent-soft: #f0fdfa;
+        --accent-border: #ccfbf1;
+        --accent-text: #0f766e;
+        --warn: #d97706;
+        --warn-soft: #fffbeb;
+        --warn-border: #fef3c7;
+        --err: #e11d48;
+        --err-soft: #fff1f2;
+        --err-border: #ffe4e6;
+        --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-xl: 18px;
+        --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+        --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+        --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+        --shadow-sheet: -10px 0 30px -5px rgba(15, 23, 42, 0.1), -2px 0 8px -2px rgba(15, 23, 42, 0.05);
+        --bar-h: 74px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.5;
+        letter-spacing: -0.011em;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow: hidden;
+      }
+
+      /* ------------------------------------------------------------ TOP NAVIGATION */
+      .top {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 24px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        box-shadow: var(--shadow-xs);
+        z-index: 10;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .mark {
+        width: 34px;
+        height: 34px;
+        flex: none;
+        border-radius: var(--radius-md);
+        background: linear-gradient(135deg, #0d9488 0%, #047857 100%);
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(13, 148, 136, 0.28);
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.018em;
+        color: var(--text);
+      }
+
+      .tenant-badge {
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        border: 1px solid var(--accent-border);
+        padding: 1px 7px;
+        border-radius: 999px;
+      }
+
+      .brand p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        padding: 5px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface-subtle);
+        color: var(--text-secondary);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      #status::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.8;
+      }
+
+      #status[data-state="live"] {
+        color: var(--accent-text);
+        background: var(--accent-soft);
+        border-color: var(--accent-border);
+      }
+
+      #status[data-state="live"]::before {
+        background: var(--accent);
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+        animation: pulseDot 1.8s infinite;
+      }
+
+      #status[data-state="busy"] {
+        color: var(--warn);
+        background: var(--warn-soft);
+        border-color: var(--warn-border);
+      }
+
+      #status[data-state="error"] {
+        color: var(--err);
+        background: var(--err-soft);
+        border-color: var(--err-border);
+      }
+
+      @keyframes pulseDot {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.3); opacity: 1; }
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font);
+        font-size: 13px;
+        font-weight: 500;
+        padding: 7px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .btn:hover {
+        background: var(--surface-subtle);
+        border-color: var(--border-hover);
+        color: var(--text);
+      }
+
+      .btn:active {
+        transform: translateY(1px) scale(0.98);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #ffffff;
+        border-color: var(--accent);
+        box-shadow: 0 1px 3px rgba(13, 148, 136, 0.25);
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        color: #ffffff;
+      }
+
+      /* ------------------------------------------------------------ MAIN WORKSPACE */
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1.05fr;
+        gap: 1px;
+        background: var(--border);
+        overflow: hidden;
+      }
+
+      @media (max-width: 900px) {
+        main {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 1fr;
+        }
+      }
+
+      .pane {
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .pane-head {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--border-subtle);
+        background: var(--surface);
+      }
+
+      .pane-title-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pane-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted);
+      }
+
+      .pane-head h2 {
+        margin: 0;
+        font-size: 13.5px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        color: var(--text);
+      }
+
+      .pane-badge {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        font-weight: 500;
+        background: var(--surface-subtle);
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border-subtle);
+      }
+
+      .scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+
+      .scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .scroll::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+
+      .empty {
+        margin: auto;
+        text-align: center;
+        max-width: 320px;
+        color: var(--text-muted);
+        font-size: 13.5px;
+        line-height: 1.6;
+        padding: 40px 20px;
+      }
+
+      .empty-icon-wrap {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        background: var(--surface-subtle);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        color: var(--text-dimmer);
+      }
+
+      /* ------------------------------------------------------------ CONVERSATION BUBBLES */
+      .line {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-width: 88%;
+        animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .line.agent {
+        align-self: flex-start;
+      }
+
+      .line.user {
+        align-self: flex-end;
+      }
+
+      .who {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        padding: 0 4px;
+      }
+
+      .line.user .who {
+        text-align: right;
+      }
+
+      .line p {
+        margin: 0;
+        padding: 10px 14px;
+        border-radius: var(--radius-lg);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .line.agent p {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-top-left-radius: 4px;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .line.user p {
+        background: var(--accent);
+        color: #ffffff;
+        border-top-right-radius: 4px;
+        box-shadow: 0 1px 3px rgba(13, 148, 136, 0.25);
+      }
+
+      .used {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+        padding-left: 2px;
+      }
+
+      .chip {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        border: 1px solid var(--accent-border);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+      }
+
+      .chip::before {
+        content: "⚡";
+        font-size: 9px;
+      }
+
+      .chip:hover {
+        background: #ccfbf1;
+        border-color: #5eead4;
+      }
+
+      .chip.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+        border-color: var(--warn-border);
+      }
+
+      /* ------------------------------------------------------------ TOOL CALL CARDS */
+      .call {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        box-shadow: var(--shadow-xs);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        animation: fadeIn 0.18s ease;
+      }
+
+      .call:hover {
+        border-color: var(--border-hover);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .call.flash {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        transform: scale(1.01);
+      }
+
+      .call.warn {
+        border-left: 3px solid var(--warn);
+      }
+
+      .call-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .call-method-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .method-tag {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: var(--radius-sm);
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+      }
+
+      .call-name {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .call-time {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dimmer);
+      }
+
+      .call-args {
+        margin: 6px 0;
+        padding: 8px 10px;
+        border-radius: var(--radius-sm);
+        background: var(--surface-subtle);
+        border: 1px solid var(--border-subtle);
+        font-family: var(--mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+        white-space: pre-wrap;
+        overflow-x: auto;
+      }
+
+      .call-msg {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      .call-reason {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--warn);
+        background: var(--warn-soft);
+        border: 1px solid var(--warn-border);
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
+      /* ------------------------------------------------------------ DOCK / BOTTOM BAR */
+      .bar {
+        flex: none;
+        height: var(--bar-h);
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.03);
+        z-index: 10;
+      }
+
+      .bar-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      #talk {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font);
+        font-size: 14px;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #ffffff;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(13, 148, 136, 0.28);
+        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      #talk:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+      }
+
+      #talk:active {
+        transform: translateY(1px) scale(0.98);
+      }
+
+      #talk.ending {
+        background: var(--err);
+        border-color: var(--err);
+        box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25);
+      }
+
+      #talk.ending:hover {
+        background: #be123c;
+        border-color: #be123c;
+      }
+
+      #talk:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      #timer {
+        font-family: var(--mono);
+        font-size: 13.5px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-muted);
+        background: var(--surface-subtle);
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+      }
+
+      #timer[data-state="running"] {
+        color: var(--accent-text);
+        background: var(--accent-soft);
+        border-color: var(--accent-border);
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 12.5px;
+        color: var(--text-muted);
+      }
+
+      .meta b {
+        font-family: var(--mono);
+        font-weight: 500;
+        color: var(--text);
+        background: var(--surface-subtle);
+        padding: 2px 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+      }
+
+      /* ------------------------------------------------------------ OWNER DASHBOARD SHEET */
+      .sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 100;
+      }
+
+      .sheet-backdrop.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .sheet {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 660px;
+        max-width: 100vw;
+        background: var(--surface);
+        box-shadow: var(--shadow-sheet);
+        display: flex;
+        flex-direction: column;
+        z-index: 101;
+        transform: translateX(100%);
+        transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .sheet.active {
+        transform: translateX(0);
+      }
+
+      .sheet-header {
+        flex: none;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface);
+      }
+
+      .sheet-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .sheet-title-row h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .sheet-close-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: all 0.15s ease;
+      }
+
+      .sheet-close-btn:hover {
+        background: var(--surface-subtle);
+        color: var(--text);
+      }
+
+      /* Sheet Segmented Nav Tabs */
+      .sheet-nav {
+        flex: none;
+        display: flex;
+        align-items: center;
+        padding: 8px 24px;
+        gap: 6px;
+        background: var(--surface-subtle);
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .sheet-nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tab-btn {
+        font-family: var(--font);
+        font-size: 12.5px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+      }
+
+      .tab-btn:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .tab-btn.active {
+        background: var(--surface);
+        color: var(--accent-text);
+        font-weight: 600;
+        border-color: var(--border);
+        box-shadow: var(--shadow-xs);
+      }
+
+      .sheet-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .tab-pane {
+        display: none;
+        flex-direction: column;
+        gap: 18px;
+        animation: fadeIn 0.18s ease;
+      }
+
+      .tab-pane.active {
+        display: flex;
+      }
+
+      /* KPI Stat Grid */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .kpi-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px;
+        box-shadow: var(--shadow-xs);
+      }
+
+      .kpi-label {
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+
+      .kpi-val {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: var(--text);
+      }
+
+      .kpi-sub {
+        font-size: 11.5px;
+        color: var(--accent-text);
+        margin-top: 4px;
+        font-weight: 500;
+      }
+
+      /* Tables in Sheet */
+      .table-wrap {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--surface);
+        box-shadow: var(--shadow-xs);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+      }
+
+      th {
+        background: var(--surface-subtle);
+        padding: 10px 14px;
+        font-weight: 600;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border);
+      }
+
+      td {
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text);
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      tr:hover td {
+        background: #f8fafc;
+      }
+
+      .badge-success {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        border: 1px solid var(--accent-border);
+        padding: 2px 7px;
+        border-radius: 999px;
+      }
+
+      .badge-pending {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--warn-soft);
+        color: var(--warn);
+        border: 1px solid var(--warn-border);
+        padding: 2px 7px;
+        border-radius: 999px;
+      }
+
+      /* Card Grid for Services */
+      .service-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .service-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        box-shadow: var(--shadow-xs);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .service-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .service-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .service-price {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 13.5px;
+        color: var(--accent-text);
+      }
+
+      .service-desc {
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        line-height: 1.45;
+      }
+
+      .service-dur {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-top: 4px;
+      }
+
+      /* Info Modal (Demo Data) */
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 90;
+        padding: 20px;
+      }
+
+      .modal[hidden] {
+        display: none;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-card {
+        position: relative;
+        width: 100%;
+        max-width: 560px;
+        max-height: 85vh;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      .modal-head {
+        padding: 16px 22px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .modal-head h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .modal-body {
+        padding: 20px 22px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .block-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+
+      .block-head h3 {
+        margin: 0;
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+
+      .block-head .src {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dimmer);
+      }
+
+      .block-note {
+        margin: 0 0 8px;
+        font-size: 12.5px;
+        color: var(--text-muted);
+      }
+
+      .pillrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .pill {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--surface-subtle);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+      }
+
+      .pill.tool {
+        font-family: var(--mono);
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        border-color: var(--accent-border);
+      }
+
+      .kv {
+        margin: 0 0 10px;
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 4px 8px;
+        font-size: 12.5px;
+      }
+
+      .kv dt {
+        color: var(--text-muted);
+      }
+
+      .kv dd {
+        margin: 0;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .day {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        margin-top: 8px;
+        background: var(--surface-subtle);
+      }
+
+      .day-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+
+      .day-count {
+        color: var(--accent-text);
+        font-size: 11.5px;
+      }
+
+      .slots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .slot {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        padding: 3px 7px;
+        border-radius: 4px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOP HEADER -->
+    <header class="top">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 2v20" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1>Brightsmile Dental</h1>
+            <span class="tenant-badge">OmniDesk Tenant</span>
+          </div>
+          <p>Autonomous Voice Receptionist &middot; AssemblyAI Voice Agent API</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a href="/" class="btn" style="text-decoration: none; color: var(--text-secondary);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+          OmniDesk Overview
+        </a>
+        <button id="owner-btn" class="btn btn-primary" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+            <path d="M14 9h4"/>
+            <path d="M14 15h4"/>
+          </svg>
+          Owner Dashboard
+        </button>
+        <button id="info-btn" class="btn" type="button">What Agent Knows</button>
+        <span id="status" data-state="idle">Idle</span>
+      </div>
+    </header>
+
+    <!-- MAIN TWO-PANE WORKSPACE -->
+    <main>
+      <!-- LEFT PANE: LIVE CONVERSATION -->
+      <section class="pane">
+        <div class="pane-head">
+          <div class="pane-title-group">
+            <svg class="pane-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <h2>Live Conversation</h2>
+          </div>
+          <span class="pane-badge">Barge-in active</span>
+        </div>
+        <div class="scroll" id="transcript">
+          <div class="empty">
+            <div class="empty-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" x2="12" y1="19" y2="22"/>
+              </svg>
+            </div>
+            <strong>Ready for incoming caller</strong>
+            <p>Start the call and ask to schedule a dental cleaning or checkup next week.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANE: LIVE ASSEMBLYAI TOOLS STREAM -->
+      <section class="pane">
+        <div class="pane-head">
+          <div class="pane-title-group">
+            <svg class="pane-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m18 16 4-4-4-4"/>
+              <path d="m6 8-4 4 4 4"/>
+              <path d="m14.5 4-5 16"/>
+            </svg>
+            <h2>AssemblyAI &rarr; Booking Engine</h2>
+          </div>
+          <span class="pane-badge" id="call-count">0 calls</span>
+        </div>
+        <div class="scroll" id="calls">
+          <div class="empty">
+            <div class="empty-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </div>
+            <strong>Live HTTP Tool Stream</strong>
+            <p>Tool calls executed by AssemblyAI directly against the booking API appear here in real-time.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- BOTTOM CONTROL DOCK -->
+    <footer class="bar">
+      <div class="bar-left">
+        <button id="talk" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+          Start call
+        </button>
+        <span id="timer" data-state="idle">0:00</span>
+      </div>
+      <div class="meta">
+        <span>Agent ID: <b id="agent-id">&hellip;</b></span>
+        <span id="cost">$4.50/hr &middot; billed per second</span>
+      </div>
+    </footer>
+
+    <!-- OWNER DASHBOARD SLIDE-OVER SHEET -->
+    <div class="sheet-backdrop" id="owner-backdrop"></div>
+    <aside class="sheet" id="owner-sheet" aria-labelledby="sheet-title" role="dialog" aria-modal="true">
+      <div class="sheet-header">
+        <div class="sheet-title-row">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+          </svg>
+          <h2 id="sheet-title">Brightsmile Dental &mdash; Owner Console</h2>
+        </div>
+        <button class="sheet-close-btn" id="sheet-close-btn" type="button" aria-label="Close sheet">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Segmented Tab Navigation -->
+      <nav class="sheet-nav">
+        <button class="tab-btn active" data-tab="tab-overview" type="button">Overview</button>
+        <button class="tab-btn" data-tab="tab-calendar" type="button">Calendar</button>
+        <button class="tab-btn" data-tab="tab-customers" type="button">Customers</button>
+        <button class="tab-btn" data-tab="tab-services" type="button">Services</button>
+        <button class="tab-btn" data-tab="tab-agent" type="button">AI Agent</button>
+        <button class="tab-btn" data-tab="tab-settings" type="button">Settings</button>
+      </nav>
+
+      <!-- Tab Content Panes -->
+      <div class="sheet-content">
+        <!-- TAB 1: OVERVIEW -->
+        <div class="tab-pane active" id="tab-overview">
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Today's Bookings</div>
+              <div class="kpi-val" id="kpi-today">0</div>
+              <div class="kpi-sub">Active schedule</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Upcoming</div>
+              <div class="kpi-val" id="kpi-upcoming">0</div>
+              <div class="kpi-sub">Next 14 days</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Est. Revenue</div>
+              <div class="kpi-val" id="kpi-rev">$0</div>
+              <div class="kpi-sub">Confirmed value</div>
+            </div>
+          </div>
+
+          <div>
+            <h3 style="margin: 0 0 10px; font-size: 13.5px; font-weight: 600;">Today's Schedule</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Customer</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="overview-today-table">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No bookings scheduled for today</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CALENDAR & APPOINTMENTS -->
+        <div class="tab-pane" id="tab-calendar">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">All Confirmed Appointments</h3>
+            <span class="tenant-badge" id="calendar-count">0 total</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Date & Time</th>
+                  <th>Customer</th>
+                  <th>Service</th>
+                  <th>Phone</th>
+                </tr>
+              </thead>
+              <tbody id="calendar-table">
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading appointments&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 3: CUSTOMERS (MINI-CRM) -->
+        <div class="tab-pane" id="tab-customers">
+          <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">Customer Profiles</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Visits</th>
+                  <th>Last Service</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table">
+                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading customer profiles&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 4: SERVICES & PRICING -->
+        <div class="tab-pane" id="tab-services">
+          <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">Clinical Service Offerings</h3>
+          <div class="service-grid" id="services-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- TAB 5: AI AGENT BUILDER -->
+        <div class="tab-pane" id="tab-agent">
+          <div class="kpi-card">
+            <div class="kpi-label">Agent Engine</div>
+            <div style="font-weight: 600; font-size: 15px;">AssemblyAI Voice Agent API</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Direct HTTP Tool execution with ultra-low latency barge-in.</div>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 6px; font-size: 12.5px; font-weight: 600;">Phonetic Boost Terms (Keyterms)</h4>
+            <div class="pillrow" id="sheet-keyterms">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <div>
+            <h4 style="margin: 0 0 6px; font-size: 12.5px; font-weight: 600;">Registered HTTP Tools</h4>
+            <div class="pillrow">
+              <span class="pill tool">get_today</span>
+              <span class="pill tool">check_availability</span>
+              <span class="pill tool">book_appointment</span>
+              <span class="pill tool">send_confirmation</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 6: SETTINGS -->
+        <div class="tab-pane" id="tab-settings">
+          <div class="kpi-card">
+            <div class="kpi-label">Practice Operating Hours</div>
+            <div style="font-weight: 600; font-size: 14px;">Monday to Friday &middot; 9:00 AM &ndash; 5:00 PM</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Slots automatically generated at 30-minute intervals.</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Customer Confirmation Engine</div>
+            <div style="font-weight: 600; font-size: 14px; color: var(--accent-text);">Resend Transactional Email</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Sends HTML appointment receipts with attached native .ics calendar events for 1-tap addition to Google / Apple Calendar.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- WHAT AGENT KNOWS MODAL (DEMO DATA) -->
+    <div class="modal" id="info" hidden>
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
+        <div class="modal-head">
+          <h2 id="info-title">What the agent knows</h2>
+          <button class="sheet-close-btn" data-close type="button" aria-label="Close modal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/>
+              <path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="info-body">
+          <p class="block-note">Loading&hellip;</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
