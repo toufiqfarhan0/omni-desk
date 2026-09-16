@@ -102,12 +102,12 @@ def _generate_ics(record: dict) -> str:
     dtstamp = now_dt.strftime("%Y%m%dT%H%M%SZ")
     dtstart = start_dt.strftime("%Y%m%dT%H%M00")
     dtend = end_dt.strftime("%Y%m%dT%H%M00")
-    uid = f"omnidesk-{code}-{start_dt.strftime('%Y%m%d%H%M')}@brightsmile.demo"
+    uid = f"omnidesk-{code}-{start_dt.strftime('%Y%m%d%H%M')}@omnidesk.dental"
 
     ics_lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//OmniDesk//Brightsmile Dental Receptionist//EN",
+        "PRODID:-//OmniDesk//OmniDesk Dental Clinic Receptionist//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:REQUEST",
         "BEGIN:VEVENT",
@@ -115,14 +115,14 @@ def _generate_ics(record: dict) -> str:
         f"DTSTAMP:{dtstamp}",
         f"DTSTART:{dtstart}",
         f"DTEND:{dtend}",
-        f"SUMMARY:{service_label} - Brightsmile Dental",
-        f"DESCRIPTION:Confirmed appointment for {name}.\\nService: {service_label}\\nConfirmation Code: {code}\\nClinic: Brightsmile Dental (100 Market St, Suite 400)",
-        "LOCATION:Brightsmile Dental, 100 Market St, Suite 400",
+        f"SUMMARY:{service_label} - OmniDesk Dental Clinic",
+        f"DESCRIPTION:Confirmed appointment for {name}.\\nService: {service_label}\\nConfirmation Code: {code}\\nClinic: OmniDesk Dental Clinic (100 Market St, Suite 400)",
+        "LOCATION:OmniDesk Dental Clinic, 100 Market St, Suite 400",
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
         "TRIGGER:-PT60M",
         "ACTION:DISPLAY",
-        f"DESCRIPTION:Reminder: {service_label} at Brightsmile Dental in 1 hour",
+        f"DESCRIPTION:Reminder: {service_label} at OmniDesk Dental Clinic in 1 hour",
         "END:VALARM",
         "END:VEVENT",
         "END:VCALENDAR",
@@ -166,12 +166,12 @@ def _send_resend_confirmation(record: dict) -> dict:
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Appointment Confirmed - Brightsmile Dental</title>
+  <title>Appointment Confirmed - OmniDesk Dental Clinic</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f8; margin: 0; padding: 32px 16px; color: #111827;">
   <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
     <div style="padding: 24px 28px; border-bottom: 1px solid #f3f4f6; background: #fafafa;">
-      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0284c7; margin-bottom: 4px;">Brightsmile Dental &bull; Voice Confirmation</div>
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #000000; margin-bottom: 4px;">OmniDesk Dental Clinic &bull; Voice Confirmation</div>
       <h1 style="font-size: 20px; font-weight: 600; margin: 0; color: #0f172a;">Your appointment is confirmed</h1>
     </div>
     <div style="padding: 28px;">
@@ -190,7 +190,7 @@ def _send_resend_confirmation(record: dict) -> dict:
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Confirmation:</td>
-            <td style="padding: 6px 0;"><code style="font-family: monospace; font-size: 13px; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px;">{code}</code></td>
+            <td style="padding: 6px 0;"><code style="font-family: monospace; font-size: 13px; font-weight: 700; background: #f5f5f5; color: #000000; padding: 2px 8px; border-radius: 4px;">{code}</code></td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Est. Fee:</td>
@@ -198,12 +198,12 @@ def _send_resend_confirmation(record: dict) -> dict:
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Location:</td>
-            <td style="padding: 6px 0; color: #0f172a;">Brightsmile Dental Clinic<br><span style="font-size: 12px; color: #64748b;">100 Market St, Suite 400</span></td>
+            <td style="padding: 6px 0; color: #0f172a;">OmniDesk Dental Clinic<br><span style="font-size: 12px; color: #64748b;">100 Market St, Suite 400</span></td>
           </tr>
         </table>
       </div>
 
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #166534; margin-bottom: 24px;">
+      <div style="background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #171717; margin-bottom: 24px;">
         <strong>Calendar Sync:</strong> Open the attached <code>appointment.ics</code> file on your phone or computer to automatically sync this to Apple Calendar, Google Calendar, or Outlook with a 1-hour advance reminder.
       </div>
 
@@ -224,9 +224,9 @@ def _send_resend_confirmation(record: dict) -> dict:
                 "Content-Type": "application/json",
             },
             json={
-                "from": f"Brightsmile Dental <{from_email}>",
+                "from": f"OmniDesk Dental Clinic <{from_email}>",
                 "to": [to_email],
-                "subject": f"Appointment Confirmed: {service_label} - Brightsmile Dental",
+                "subject": f"Appointment Confirmed: {service_label} - OmniDesk Dental Clinic",
                 "html": html_content,
                 "attachments": [
                     {
@@ -463,7 +463,7 @@ def api_owner_stats() -> dict:
             for k, v in sorted(store.SERVICES.items())
         ],
         "business": {
-            "name": "Brightsmile Dental",
+            "name": "OmniDesk Dental Clinic",
             "hours": f"Monday to Friday, {_speak_time(f'{store.OPEN_HOUR:02d}:00')} – {_speak_time(f'{store.CLOSE_HOUR:02d}:00')}",
             "slot_minutes": store.SLOT_MINUTES,
             "voice_agent": "AssemblyAI Voice Agent API",

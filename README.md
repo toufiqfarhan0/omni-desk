@@ -193,7 +193,7 @@ The script points all 4 HTTP tools (`get_today`, `check_availability`, `book_app
 ### 5. Access the Web Applications
 
 - **Public Landing Page**: Navigate to `http://localhost:8000/`
-- **Voice Receptionist Console**: Navigate to `http://localhost:8000/console` (or click "Launch Brightsmile Voice Console" on the landing page)
+- **Voice Receptionist Console**: Navigate to `http://localhost:8000/console` (or click "Launch OmniDesk Voice Console" on the landing page)
 - **Owner Dashboard Sheet**: Click the "Owner Dashboard" button in the upper-right corner of the console to view the slide-over practice management sheet.
 
 ---
@@ -215,7 +215,7 @@ AssemblyAI calls these endpoints directly during conversational turns:
 
 When an appointment is finalized, OmniDesk automatically formats an RFC 5545 compliant calendar object:
 
-- **Organizer / Clinic**: Brightsmile Dental Clinic
+- **Organizer / Clinic**: OmniDesk Dental Clinic
 - **Start / End Timestamp**: Calculated from service duration (30 min to 90 min)
 - **Valarm Trigger**: `-PT60M` (Triggers native device notifications 1 hour before appointment)
 - **Attachment Encoding**: Base64 `.ics` attachment delivered through Resend REST API (`POST https://api.resend.com/emails`)

@@ -104,7 +104,7 @@ function addLine(who, text) {
 
   const label = document.createElement("span");
   label.className = "who";
-  label.textContent = who === "agent" ? "Brightsmile Assistant" : "You";
+  label.textContent = who === "agent" ? "OmniDesk Dental Assistant" : "You";
 
   const body = document.createElement("p");
   body.textContent = text;
