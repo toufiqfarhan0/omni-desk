@@ -29,7 +29,7 @@ from .db import init_db
 from .discord import send_dossier_embed, send_escalation_embed, send_test_embed
 from .lemur import extract_dossier
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
