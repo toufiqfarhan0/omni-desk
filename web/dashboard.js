@@ -102,22 +102,20 @@ const PRESETS = {
       { key: "home-valuation", label: "Home Valuation & Market Appraisal", minutes: 60, price: 0, description: "In-depth comparative market analysis and listing pricing consultation." },
       { key: "buyer-advisory", label: "Buyer Advisory Strategy Session", minutes: 45, price: 0, description: "Financing review, neighborhood analysis, and pre-approval consultation." }
     ]
-  },
-  custom: {
-    name: "My Enterprise Service",
-    tone: "professional",
-    greeting: "Hello, thank you for reaching out. How can I assist you with scheduling today?",
-    system_prompt: "You are an autonomous AI voice receptionist. You answer customer questions politely, check open appointment slots using your tools, and finalize bookings.",
-    voice_id: "131a436c-0fc4-4797-90f7-d0e515d18b06",
-    slot_minutes: 30,
-    open_hour: 9,
-    close_hour: 17,
-    keyterms: ["Enterprise", "appointment", "booking"],
-    services: [
-      { key: "general", label: "General Consultation", minutes: 30, price: 100, description: "Standard service appointment." }
-    ]
   }
 };
+
+function detectIndustryFromText(text) {
+  if (!text) return null;
+  const t = text.toLowerCase();
+  if (t.includes("law") || t.includes("legal") || t.includes("attorney") || t.includes("counsel") || t.includes("advocat")) return "legal";
+  if (t.includes("dent") || t.includes("tooth") || t.includes("teeth") || t.includes("smile") || t.includes("ortho")) return "dental";
+  if (t.includes("medspa") || t.includes("aesthet") || t.includes("botox") || t.includes("facial") || t.includes("dermat") || t.includes("skin") || t.includes("spa")) return "medspa";
+  if (t.includes("salon") || t.includes("hair") || t.includes("barber") || t.includes("cut") || t.includes("styl")) return "salon";
+  if (t.includes("auto") || t.includes("car") || t.includes("mechanic") || t.includes("tire") || t.includes("repair") || t.includes("garage") || t.includes("vehicle") || t.includes("brake")) return "auto";
+  if (t.includes("real") || t.includes("estate") || t.includes("realt") || t.includes("proper") || t.includes("home") || t.includes("hous")) return "realestate";
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // App State
@@ -148,6 +146,8 @@ const els = {
 
   // Builder inputs
   presetIndustry: document.getElementById("preset-industry"),
+  customIndustryInput: document.getElementById("custom-industry-input"),
+  btnApplyCustomIndustry: document.getElementById("btn-apply-custom-industry"),
   bizNameInput: document.getElementById("biz-name-input"),
   voiceToneSelect: document.getElementById("voice-tone-select"),
   voiceModelSelect: document.getElementById("voice-model-select"),
@@ -193,6 +193,7 @@ const els = {
   newBizForm: document.getElementById("new-biz-form"),
   modalBizName: document.getElementById("modal-biz-name"),
   modalBizIndustry: document.getElementById("modal-biz-industry"),
+  modalBizCustomIndustry: document.getElementById("modal-biz-custom-industry"),
   btnCloseNewBiz: document.getElementById("btn-close-new-biz"),
 
   transcriptModal: document.getElementById("transcript-modal"),
@@ -211,7 +212,6 @@ async function init() {
   bindBuilderEvents();
   bindSimulatorEvents();
 
-  // Load stored owner or default demo owner
   const stored = localStorage.getItem("omnidesk_owner");
   if (stored) {
     try {
@@ -254,8 +254,20 @@ function renderBusinessSelect() {
   }
 }
 
-function selectBusiness(bizId) {
-  const found = state.businesses.find((b) => b.id === bizId);
+async function selectBusiness(bizId) {
+  // Refresh latest business state from API
+  if (state.owner) {
+    try {
+      const res = await fetch(`/api/owner/businesses?owner_id=${state.owner.id}`);
+      const data = await res.json();
+      if (data.businesses) {
+        state.businesses = data.businesses;
+        renderBusinessSelect();
+      }
+    } catch (_) {}
+  }
+
+  const found = state.businesses.find((b) => b.id === bizId) || state.businesses[0];
   if (!found) return;
   state.activeBiz = found;
   els.bizSelect.value = found.id;
@@ -266,12 +278,21 @@ function selectBusiness(bizId) {
 }
 
 // ---------------------------------------------------------------------------
-// Builder Population & Actions
+// Builder Population & Dynamic Custom Industry Application
 // ---------------------------------------------------------------------------
 
 function populateBuilder(biz) {
   els.bizNameInput.value = biz.name || "";
-  els.presetIndustry.value = biz.industry || "dental";
+
+  // Set dropdown preset if matched, else set custom industry input
+  if (PRESETS[biz.industry]) {
+    els.presetIndustry.value = biz.industry;
+    if (els.customIndustryInput) els.customIndustryInput.value = "";
+  } else {
+    els.presetIndustry.value = "";
+    if (els.customIndustryInput) els.customIndustryInput.value = biz.industry || "";
+  }
+
   els.voiceToneSelect.value = biz.tone || "professional";
   els.voiceModelSelect.value = biz.voice_id || "131a436c-0fc4-4797-90f7-d0e515d18b06";
   els.slotDurationSelect.value = String(biz.slot_minutes || 30);
@@ -297,6 +318,55 @@ function populateBuilder(biz) {
     els.bannerAgentPill.textContent = "Draft Workflow";
     els.bannerAgentPill.style.background = "#71717a";
     els.bannerAgentDesc.textContent = "Click 'Save & Deploy Voice Agent' to provision on AssemblyAI Voice Agent API.";
+  }
+}
+
+function applyIndustryTemplate(industryKeyOrCustom, forcedBizName = null) {
+  const currentBizName = forcedBizName || (els.bizNameInput.value.trim() || (state.activeBiz ? state.activeBiz.name : "My Business"));
+  
+  let p = PRESETS[industryKeyOrCustom];
+  if (!p) {
+    const detected = detectIndustryFromText(industryKeyOrCustom);
+    if (detected && PRESETS[detected]) p = PRESETS[detected];
+  }
+
+  if (p) {
+    const matchedKey = Object.keys(PRESETS).includes(industryKeyOrCustom) ? industryKeyOrCustom : (detectIndustryFromText(industryKeyOrCustom) || "");
+    els.presetIndustry.value = matchedKey;
+    if (els.customIndustryInput) els.customIndustryInput.value = "";
+    els.bizNameInput.value = currentBizName;
+    els.voiceToneSelect.value = p.tone;
+    els.greetingInput.value = `Thanks for calling ${currentBizName}. Are you looking to book an appointment?`;
+    els.systemPromptInput.value = `You are an autonomous receptionist for ${currentBizName}. You speak naturally, answer questions about our services, check real calendar slots using your tools, and book appointments for callers.`;
+    els.voiceModelSelect.value = p.voice_id;
+    els.slotDurationSelect.value = String(p.slot_minutes);
+    els.openHourInput.value = String(p.open_hour);
+    els.closeHourInput.value = String(p.close_hour);
+    state.keyterms = [currentBizName, ...p.keyterms.filter(k => k !== p.name)];
+    renderKeytermChips();
+    state.services = JSON.parse(JSON.stringify(p.services));
+    renderServicesList();
+  } else {
+    // Custom typed business type (e.g. Veterinary, Gym, Photography Studio, Accounting, etc.)
+    const cleanType = industryKeyOrCustom.trim();
+    els.presetIndustry.value = "";
+    if (els.customIndustryInput) els.customIndustryInput.value = cleanType;
+    els.bizNameInput.value = currentBizName;
+    els.voiceToneSelect.value = "professional";
+    els.greetingInput.value = `Thanks for calling ${currentBizName}. Are you looking to schedule an appointment or consultation?`;
+    els.systemPromptInput.value = `You are an autonomous AI voice receptionist for ${currentBizName}, specializing in ${cleanType}. You speak in a natural, polite, and reassuring tone. You answer caller questions about ${cleanType} offerings, check real calendar slots using your tools, collect the caller's name and email address, and book appointments.`;
+    els.voiceModelSelect.value = "131a436c-0fc4-4797-90f7-d0e515d18b06";
+    els.slotDurationSelect.value = "30";
+    els.openHourInput.value = "9";
+    els.closeHourInput.value = "17";
+    state.keyterms = [currentBizName, cleanType, "appointment", "booking", "consultation", "schedule"];
+    renderKeytermChips();
+    state.services = [
+      { key: "consultation", label: "Initial Consultation", minutes: 30, price: 95, description: `Comprehensive ${cleanType} evaluation and assessment.` },
+      { key: "standard-service", label: "Standard Service Appointment", minutes: 45, price: 150, description: `Full professional ${cleanType} appointment.` },
+      { key: "follow-up", label: "Follow-Up & Review", minutes: 30, price: 65, description: `Progress review, adjustments, and follow-up consultation.` }
+    ];
+    renderServicesList();
   }
 }
 
@@ -333,7 +403,6 @@ function renderServicesList() {
     els.servicesList.appendChild(row);
   });
 
-  // Attach input listeners
   els.servicesList.querySelectorAll(".srv-label").forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const idx = parseInt(e.target.dataset.idx, 10);
@@ -374,23 +443,30 @@ function bindBuilderEvents() {
     selectBusiness(e.target.value);
   });
 
-  // Preset Industry dropdown selection
+  // Preset Industry dropdown selection -> Updates all values (prompt, greeting, services, keyterms) while keeping practice name!
   els.presetIndustry.addEventListener("change", (e) => {
-    const p = PRESETS[e.target.value];
-    if (!p) return;
-    els.bizNameInput.value = p.name;
-    els.voiceToneSelect.value = p.tone;
-    els.greetingInput.value = p.greeting;
-    els.systemPromptInput.value = p.system_prompt;
-    els.voiceModelSelect.value = p.voice_id;
-    els.slotDurationSelect.value = String(p.slot_minutes);
-    els.openHourInput.value = String(p.open_hour);
-    els.closeHourInput.value = String(p.close_hour);
-    state.keyterms = [...p.keyterms];
-    renderKeytermChips();
-    state.services = JSON.parse(JSON.stringify(p.services));
-    renderServicesList();
+    if (e.target.value) {
+      applyIndustryTemplate(e.target.value);
+    }
   });
+
+  // Direct typing of business/industry -> Updates all values (prompt, greeting, services, keyterms)
+  if (els.btnApplyCustomIndustry) {
+    els.btnApplyCustomIndustry.addEventListener("click", () => {
+      const val = els.customIndustryInput.value.trim();
+      if (val) {
+        applyIndustryTemplate(val);
+      }
+    });
+  }
+  if (els.customIndustryInput) {
+    els.customIndustryInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        els.btnApplyCustomIndustry.click();
+      }
+    });
+  }
 
   // Add Keyterm
   els.btnAddKeyterm.addEventListener("click", () => {
@@ -426,9 +502,11 @@ function bindBuilderEvents() {
     els.btnDeployAgent.disabled = true;
     els.btnDeployAgent.innerHTML = "Deploying to AssemblyAI...";
 
+    const currentIndustry = els.presetIndustry.value || (els.customIndustryInput ? els.customIndustryInput.value.trim() : "") || state.activeBiz.industry || "general";
+
     const payload = {
       name: els.bizNameInput.value.trim(),
-      industry: els.presetIndustry.value,
+      industry: currentIndustry,
       tone: els.voiceToneSelect.value,
       greeting: els.greetingInput.value.trim(),
       system_prompt: els.systemPromptInput.value.trim(),
@@ -441,7 +519,6 @@ function bindBuilderEvents() {
     };
 
     try {
-      // 1. Update DB definition
       const updateRes = await fetch(`/api/owner/businesses/${state.activeBiz.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -450,7 +527,6 @@ function bindBuilderEvents() {
       const updateData = await updateRes.json();
       if (!updateData.ok) throw new Error("Update failed");
 
-      // 2. Deploy to AssemblyAI
       const deployRes = await fetch(`/api/owner/businesses/${state.activeBiz.id}/deploy`, {
         method: "POST"
       });
@@ -497,7 +573,6 @@ function bindTabs() {
 }
 
 function bindModals() {
-  // Switch account / login modal
   els.btnAuthSwitch.addEventListener("click", () => {
     els.authModal.hidden = false;
   });
@@ -540,26 +615,69 @@ function bindModals() {
     els.newBizModal.hidden = true;
   });
 
+  // Auto-detect industry when typing business name in modal!
+  if (els.modalBizName) {
+    els.modalBizName.addEventListener("input", (e) => {
+      const detected = detectIndustryFromText(e.target.value);
+      if (detected && PRESETS[detected] && !els.modalBizCustomIndustry.value) {
+        els.modalBizIndustry.value = detected;
+      }
+    });
+  }
+
   els.newBizForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = els.modalBizName.value.trim();
-    const industry = els.modalBizIndustry.value;
+    const selectedPreset = els.modalBizIndustry.value;
+    const customType = els.modalBizCustomIndustry.value.trim();
     if (!name || !state.owner) return;
 
-    const template = PRESETS[industry] || PRESETS.custom;
+    const chosenIndustry = selectedPreset || customType || detectIndustryFromText(name) || "general";
+    const template = PRESETS[chosenIndustry] || (detectIndustryFromText(chosenIndustry) ? PRESETS[detectIndustryFromText(chosenIndustry)] : null);
+
+    let tone = "professional";
+    let greeting = `Thanks for calling ${name}. Are you looking to book an appointment?`;
+    let systemPrompt = `You are an autonomous receptionist for ${name}. You speak naturally, answer questions about our services, check real calendar slots using your tools, and book appointments for callers.`;
+    let voiceId = "131a436c-0fc4-4797-90f7-d0e515d18b06";
+    let slotMins = 30;
+    let openH = 9;
+    let closeH = 17;
+    let keyterms = [name, chosenIndustry, "appointment", "booking"];
+    let services = [];
+
+    if (template) {
+      tone = template.tone;
+      greeting = `Thanks for calling ${name}. Are you looking to book an appointment?`;
+      systemPrompt = template.system_prompt.replace(template.name, name);
+      voiceId = template.voice_id;
+      slotMins = template.slot_minutes;
+      openH = template.open_hour;
+      closeH = template.close_hour;
+      keyterms = [name, ...template.keyterms.filter(k => k !== template.name)];
+      services = JSON.parse(JSON.stringify(template.services));
+    } else {
+      greeting = `Thanks for calling ${name}. Are you looking to schedule an appointment or consultation?`;
+      systemPrompt = `You are an autonomous AI voice receptionist for ${name}, specializing in ${chosenIndustry}. You speak in a natural, polite, and reassuring tone. You answer caller questions about ${chosenIndustry} offerings, check real calendar slots using your tools, collect the caller's name and email address, and book appointments.`;
+      services = [
+        { key: "consultation", label: "Initial Consultation", minutes: 30, price: 95, description: `Comprehensive ${chosenIndustry} evaluation and assessment.` },
+        { key: "standard-service", label: "Standard Service Appointment", minutes: 45, price: 150, description: `Full professional ${chosenIndustry} appointment.` },
+        { key: "follow-up", label: "Follow-Up & Review", minutes: 30, price: 65, description: `Progress review, adjustments, and follow-up consultation.` }
+      ];
+    }
+
     const payload = {
       owner_id: state.owner.id,
       name: name,
-      industry: industry,
-      tone: template.tone,
-      greeting: template.greeting.replace(template.name, name),
-      system_prompt: template.system_prompt.replace(template.name, name),
-      voice_id: template.voice_id,
-      slot_minutes: template.slot_minutes,
-      open_hour: template.open_hour,
-      close_hour: template.close_hour,
-      keyterms: [...template.keyterms, name],
-      services: template.services
+      industry: chosenIndustry,
+      tone: tone,
+      greeting: greeting,
+      system_prompt: systemPrompt,
+      voice_id: voiceId,
+      slot_minutes: slotMins,
+      open_hour: openH,
+      close_hour: closeH,
+      keyterms: keyterms,
+      services: services
     };
 
     try {
@@ -575,13 +693,14 @@ function bindModals() {
         selectBusiness(data.business.id);
         els.newBizModal.hidden = true;
         els.modalBizName.value = "";
+        els.modalBizCustomIndustry.value = "";
+        els.modalBizIndustry.value = "";
       }
     } catch (err) {
       alert("Failed to create business: " + err.message);
     }
   });
 
-  // Transcript modal close
   els.btnCloseTranscript.addEventListener("click", () => {
     els.transcriptModal.hidden = true;
   });
@@ -764,7 +883,6 @@ async function startSimCall() {
   els.simDot.className = "sim-dot";
 
   try {
-    // 1. Fetch short-lived token
     const tokenRes = await fetch(`/api/owner/businesses/${state.activeBiz.id}/token`);
     if (!tokenRes.status.toString().startsWith("2")) {
       const err = await tokenRes.json();
@@ -772,7 +890,6 @@ async function startSimCall() {
     }
     const { token, agent_id } = await tokenRes.json();
 
-    // 2. Microphone access
     sim.micStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -782,11 +899,9 @@ async function startSimCall() {
       }
     });
 
-    // 3. AudioWorklet & AudioContext
     sim.audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
     await sim.audioCtx.audioWorklet.addModule("/worklet.js");
 
-    // 4. WebSocket connection
     sim.ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
 
     sim.ws.onopen = () => {
@@ -811,7 +926,7 @@ async function startSimCall() {
       handleSimMessage(msg);
     };
 
-    sim.ws.onerror = (e) => {
+    sim.ws.onerror = () => {
       els.simStatusLabel.textContent = "Connection error";
       endSimCall();
     };
@@ -820,7 +935,6 @@ async function startSimCall() {
       if (sim.active) endSimCall();
     };
 
-    // Microphone audio feed to worklet
     sim.workletNode = new AudioWorkletNode(sim.audioCtx, "pcm-processor");
     sim.workletNode.port.onmessage = ({ data }) => {
       if (sim.ws && sim.ws.readyState === WebSocket.OPEN && sim.active) {
@@ -851,7 +965,6 @@ function handleSimMessage(msg) {
       break;
 
     case "input.speech.started":
-      // instantaneous barge-in cut
       stopPlayback();
       break;
 
@@ -1001,7 +1114,6 @@ async function endSimCall() {
   els.simDot.className = "sim-dot";
   els.simStatusLabel.textContent = "Call Ended & Logged to History";
 
-  // Automatically save this conversation record to DB
   if (sim.transcript.length > 0 && state.activeBiz) {
     const elapsedSeconds = Math.max(1, Math.floor((Date.now() - sim.startTime) / 1000));
     try {
