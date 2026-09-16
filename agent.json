@@ -1,91 +1,63 @@
 {
-  "name": "OmniDesk Universal Receptionist",
-  "greeting": "Hello, thanks for calling. How can I help you today?",
+  "name": "Brightsmile Dental Scheduler",
+  "greeting": "Thanks for calling Brightsmile Dental. Are you looking to book an appointment?",
   "voice": { "voice_id": "alba" },
-  "system_prompt": "You are OmniDesk, a professional and warm voice receptionist that works for any type of business. Keep every reply under two sentences and speak naturally, like a real receptionist on the phone.\n\nAt the start of every call, your first tool call must be get_today. Never skip it — you have no reliable sense of today's date without it.\n\nWhen the caller asks about services, pricing, hours, parking, policies, or anything factual about the business, call query_business_info with the relevant topic.\n\nBooking sequence:\n1. Find out which service they want. Call check_availability to confirm it exists and find open times.\n2. Read back the open times. Let the caller choose.\n3. Collect their full name, then their phone number. Ask for them one at a time.\n4. Call book_appointment only when you have ALL of: service, date, time, full name, and a phone number with a country code. Never call it with a missing or guessed field.\n5. Call send_confirmation with the code, then read the code aloud one character at a time.\n\nIf the caller describes an emergency — medical, legal, structural, or urgent — call escalate_urgent_issue immediately with their name, phone, and reason.\n\nPhone numbers: you need the international form starting with + and the country code. If the caller gives a national number (starts with zero or just local digits), ask which country they are calling from and convert it yourself. Read the full international number back and get a yes before booking.\n\nEvery tool returns a 'message' field. Base what you say on that field exactly. If a tool returns ok=false, tell the caller what the message says and act on it. Never say the booking system is broken. Never invent a confirmation code, opening time, price, or policy.",
+  "system_prompt": "You are the scheduling assistant for Brightsmile Dental. Keep every reply under two sentences and speak naturally, like a receptionist on the phone.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself. The clinic is open Monday to Friday only.\n\nBooking sequence:\n1. Find out which service they want. Offered: cleaning, checkup, whitening, root-canal. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their phone number. Ask for them one at a time.\n4. Call book_appointment only when you have all five: service, date, time, full name, and a phone number that includes a country code. Never call it with a field still missing or guessed.\n5. Call send_confirmation with the confirmation code, then read the code aloud one character at a time.\n\nPhone numbers: you need the international form starting with a plus and the country code. If the caller gives a national number (it starts with a zero, or they just say the local digits), ask which country they are calling from and convert it yourself before booking. A Nigerian 0916 383 6950 is +2349163836950; a UK 07700 900123 is +447700900123. Read the full international number back and get a yes before you book.\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'needs_country_code' means ask which country they are in, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
   "keyterms": [
-    "OmniDesk",
-    "appointment",
-    "booking",
-    "confirmation code",
+    "Brightsmile",
+    "cleaning",
+    "checkup",
+    "whitening",
+    "root canal",
+    "hygienist",
     "reschedule",
-    "availability",
-    "emergency",
-    "consultation"
+    "confirmation code"
   ],
   "tools": [
     {
       "name": "get_today",
-      "description": "Get today's date, weekday, and the next open business days. ALWAYS call this first before interpreting any relative day (today, tomorrow, next Tuesday). Never skip this tool.",
+      "description": "Get today's date and the next open clinic days. Call this before interpreting any relative day the caller mentions.",
       "parameters": { "type": "object", "properties": {}, "required": [] },
       "http": { "url": "{{BASE_URL}}/tools/get_today", "http_method": "POST" },
       "timeout_seconds": 10
     },
     {
-      "name": "query_business_info",
-      "description": "Look up business-specific information: hours, pricing, parking, policies, insurance, emergency contacts, or any FAQ. Call this whenever the caller asks something factual about the business.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "topic": {
-            "type": "string",
-            "description": "The subject the caller is asking about. Use a single short keyword: 'parking', 'pricing', 'insurance', 'emergency', 'hours', 'retainer', 'guarantee'.",
-            "examples": ["parking", "pricing", "emergency", "retainer"]
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "The business identifier for this call session.",
-            "examples": ["bright-dental", "apex-legal", "metro-plumbing"]
-          }
-        },
-        "required": ["topic", "tenant_id"]
-      },
-      "http": { "url": "{{BASE_URL}}/tools/query_business_info", "http_method": "POST" },
-      "timeout_seconds": 10
-    },
-    {
       "name": "check_availability",
-      "description": "List open appointment times for a service on a specific date. Returns open slots or, if the day is full or closed, the next available day with openings.",
+      "description": "List open appointment times for a service on a specific date. The clinic is closed at weekends.",
       "parameters": {
         "type": "object",
         "properties": {
           "service": {
             "type": "string",
-            "description": "The service key the caller wants. Use one of the services the business offers.",
-            "examples": ["cleaning", "consultation", "repair", "drain-clean"]
+            "description": "The service the caller wants.",
+            "enum": ["cleaning", "checkup", "whitening", "root-canal"]
           },
           "date": {
             "type": "string",
             "description": "The day to check, as YYYY-MM-DD.",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-17", "2026-09-22"]
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "The business identifier.",
-            "examples": ["bright-dental", "apex-legal", "metro-plumbing"]
+            "examples": ["2026-09-08", "2026-09-15"]
           }
         },
-        "required": ["service", "date", "tenant_id"]
+        "required": ["service", "date"]
       },
       "http": { "url": "{{BASE_URL}}/tools/check_availability", "http_method": "POST" },
       "timeout_seconds": 10
     },
     {
       "name": "book_appointment",
-      "description": "Book a confirmed appointment. Only call this when you have ALL five pieces of information: service, date, time, customer full name, and phone number with country code. Never call it with a guessed or missing field.",
+      "description": "Book a confirmed appointment slot. Only call this once the caller has agreed to a specific time AND you have their full name and a phone number with a country code.",
       "parameters": {
         "type": "object",
         "properties": {
           "service": {
             "type": "string",
-            "description": "The service key.",
-            "examples": ["cleaning", "consultation", "repair"]
+            "enum": ["cleaning", "checkup", "whitening", "root-canal"]
           },
           "date": {
             "type": "string",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-17"]
+            "examples": ["2026-09-08"]
           },
           "time": {
             "type": "string",
@@ -99,54 +71,19 @@
           },
           "phone": {
             "type": "string",
-            "description": "Callback number in international E.164 form starting with + and country code.",
+            "description": "Callback number in international form, starting with + and the country code. Convert national numbers before sending: Nigerian 0916 383 6950 becomes +2349163836950.",
             "pattern": "^[+0-9][-0-9 ()]{6,20}$",
             "examples": ["+2349163836950", "+14155552671", "+447700900123"]
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "The business identifier.",
-            "examples": ["bright-dental", "apex-legal", "metro-plumbing"]
           }
         },
-        "required": ["service", "date", "time", "customer_name", "phone", "tenant_id"]
+        "required": ["service", "date", "time", "customer_name", "phone"]
       },
       "http": { "url": "{{BASE_URL}}/tools/book_appointment", "http_method": "POST" },
       "timeout_seconds": 15
     },
     {
-      "name": "escalate_urgent_issue",
-      "description": "Flag an emergency or urgent situation to the business owner immediately during the call. Use when the caller describes a crisis: medical emergency, burst pipe, arrest, structural damage, or any time-critical issue.",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "caller_name": {
-            "type": "string",
-            "description": "The caller's name."
-          },
-          "phone": {
-            "type": "string",
-            "description": "The caller's phone number.",
-            "pattern": "^[+0-9][-0-9 ()]{6,20}$"
-          },
-          "reason": {
-            "type": "string",
-            "description": "A short description of the emergency or urgent issue."
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "The business identifier.",
-            "examples": ["bright-dental", "apex-legal", "metro-plumbing"]
-          }
-        },
-        "required": ["caller_name", "phone", "reason", "tenant_id"]
-      },
-      "http": { "url": "{{BASE_URL}}/tools/escalate_urgent_issue", "http_method": "POST" },
-      "timeout_seconds": 10
-    },
-    {
       "name": "send_confirmation",
-      "description": "Mark the appointment as confirmed and notify the caller. Call immediately after a successful book_appointment.",
+      "description": "Text the caller their appointment confirmation. Call immediately after a successful booking.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -154,14 +91,10 @@
             "type": "string",
             "description": "The code returned by book_appointment.",
             "pattern": "^[A-Z0-9]{6}$",
-            "examples": ["KGLDA4", "APX849"]
-          },
-          "tenant_id": {
-            "type": "string",
-            "description": "The business identifier."
+            "examples": ["KGLDA4"]
           }
         },
-        "required": ["confirmation_code", "tenant_id"]
+        "required": ["confirmation_code"]
       },
       "http": { "url": "{{BASE_URL}}/tools/send_confirmation", "http_method": "POST" },
       "timeout_seconds": 10
