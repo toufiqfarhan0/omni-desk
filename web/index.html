@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OmniDesk — Switchboard AI</title>
+  <meta name="description" content="OmniDesk: a general-purpose multi-tenant voice receptionist powered by AssemblyAI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;450;500;600;700&family=Geist+Mono:wght@400;500&display=swap" />
+  <style>
+    /* ─── Design Tokens ───────────────────────────────────────────────── */
+    :root {
+      --accent:       #0066FF;
+      --accent-dim:   rgba(0,102,255,0.12);
+      --accent-border:rgba(0,102,255,0.28);
+      --bg:           #fafaf9;
+      --panel:        #ffffff;
+      --panel-2:      #f5f5f4;
+      --raised:       #eeeeec;
+      --line:         rgba(0,0,0,0.08);
+      --line-2:       rgba(0,0,0,0.13);
+      --text:         #1c1917;
+      --text-2:       #57534e;
+      --text-3:       #a8a29e;
+      --mono:         "Geist Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+      --radius-card:  12px;
+      --radius-input: 8px;
+      --radius-pill:  999px;
+      --shadow-card:  0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+      --shadow-raised:0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06);
+      /* Urgency colours */
+      --u1: #16a34a; --u1-bg: #f0fdf4;
+      --u2: #65a30d; --u2-bg: #f7fee7;
+      --u3: #d97706; --u3-bg: #fffbeb;
+      --u4: #ea580c; --u4-bg: #fff7ed;
+      --u5: #dc2626; --u5-bg: #fef2f2;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Layout Shell ────────────────────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ─── Top Bar ─────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand-mark svg { width: 14px; height: 14px; fill: #fff; }
+
+    .brand-name {
+      font-size: 14.5px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-border);
+      border-radius: var(--radius-pill);
+      padding: 1px 7px;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .nav-btn {
+      height: 30px;
+      padding: 0 12px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 450;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .nav-btn:hover { background: var(--panel-2); color: var(--text); }
+    .nav-btn.active { background: var(--panel-2); color: var(--text); font-weight: 500; }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .agent-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius-pill);
+      font-size: 12px;
+      font-weight: 450;
+      color: var(--text-2);
+      background: var(--panel-2);
+    }
+
+    .agent-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    .agent-pill .dot.live { background: #16a34a; box-shadow: 0 0 0 2px #bbf7d0; animation: pulse-green 1.6s ease-in-out infinite; }
+
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 0 2px #bbf7d0; }
+      50% { box-shadow: 0 0 0 4px #bbf7d0; }
+    }
+
+    /* ─── Page Body ───────────────────────────────────────────────────── */
+    .body { overflow: hidden; display: flex; flex-direction: column; }
+
+    /* ─── Views ───────────────────────────────────────────────────────── */
+    .view { display: none; flex: 1; overflow: hidden; }
+    .view.active { display: flex; flex-direction: column; }
+
+    /* ─── Call View ───────────────────────────────────────────────────── */
+    .call-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      overflow: hidden;
+    }
+
+    /* ─── Panel shared ────────────────────────────────────────────────── */
+    .side-panel {
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .side-panel:last-child { border-right: none; border-left: 1px solid var(--line); }
+
+    .panel-head {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* ─── Tenant Cards ────────────────────────────────────────────────── */
+    .tenant-card {
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      background: var(--panel);
+    }
+
+    .tenant-card:hover { background: var(--panel-2); }
+
+    .tenant-card.selected {
+      border-color: var(--accent-border);
+      background: var(--accent-dim);
+    }
+
+    .tenant-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .tenant-card.selected .tenant-card-name { color: var(--accent); }
+
+    .tenant-card-meta {
+      font-size: 11.5px;
+      color: var(--text-3);
+    }
+
+    .service-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+      background: var(--raised);
+      color: var(--text-2);
+      border: 1px solid var(--line);
+    }
+
+    /* ─── Call Center ─────────────────────────────────────────────────── */
+    .call-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+      background: var(--bg);
+    }
+
+    .call-identity {
+      text-align: center;
+    }
+
+    .call-business-name {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    .call-greeting {
+      font-size: 13.5px;
+      color: var(--text-2);
+      margin-top: 4px;
+    }
+
+    /* Waveform */
+    .waveform-wrap {
+      width: 220px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .wave-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--accent);
+      height: 8px;
+      transform-origin: center;
+      transition: height 0.08s ease;
+      opacity: 0.25;
+    }
+
+    .wave-bar.active {
+      opacity: 1;
+      animation: wave-idle 1.2s ease-in-out infinite;
+    }
+
+    @keyframes wave-idle {
+      0%, 100% { height: 8px; }
+      50% { height: 24px; }
+    }
+
+    .wave-bar:nth-child(2n).active { animation-delay: 0.15s; }
+    .wave-bar:nth-child(3n).active { animation-delay: 0.3s; }
+    .wave-bar:nth-child(5n).active { animation-delay: 0.45s; }
+
+    /* State badge */
+    .state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 12px;
+      border-radius: var(--radius-pill);
+      font-size: 12.5px;
+      font-weight: 500;
+      background: var(--panel-2);
+      border: 1px solid var(--line-2);
+      color: var(--text-2);
+      transition: all 0.2s;
+    }
+
+    .state-badge.idle { }
+    .state-badge.connecting { color: var(--accent); border-color: var(--accent-border); background: var(--accent-dim); }
+    .state-badge.listening { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+    .state-badge.speaking { color: var(--accent); border-color: var(--accent-border); background: var(--accent-dim); }
+    .state-badge.thinking { color: #7c3aed; border-color: #c4b5fd; background: #f5f3ff; }
+
+    .state-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .state-badge.listening .state-dot { animation: pulse-dot 1s ease-in-out infinite; }
+    .state-badge.speaking .state-dot { animation: pulse-dot 0.6s ease-in-out infinite; }
+    .state-badge.thinking .state-dot { animation: spin-dot 1s linear infinite; border-radius: 1px; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    @keyframes spin-dot {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Call / End button */
+    .call-btn {
+      height: 48px;
+      padding: 0 32px;
+      border-radius: var(--radius-pill);
+      border: none;
+      font-family: inherit;
+      font-size: 14.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    .call-btn:active { transform: scale(0.97); }
+
+    .call-btn.start {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(0,102,255,0.35);
+    }
+
+    .call-btn.start:hover { background: #0052cc; box-shadow: 0 4px 20px rgba(0,102,255,0.4); }
+
+    .call-btn.end {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .call-btn.end:hover { background: #fee2e2; }
+
+    /* Confirmation code */
+    .confirmation-card {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: var(--radius-card);
+      padding: 14px 20px;
+      text-align: center;
+      display: none;
+    }
+
+    .confirmation-card.visible { display: block; animation: fade-in 0.3s ease; }
+
+    .confirmation-label {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #166534;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .confirmation-code {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: #16a34a;
+    }
+
+    /* ─── Tool Inspector (Right Pane) ─────────────────────────────────── */
+    .tool-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
+
+    .tool-event {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      transition: background 0.1s;
+      animation: fade-in 0.25s ease;
+    }
+
+    .tool-event:hover { background: var(--panel-2); }
+
+    .tool-event-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .tool-name-chip {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .tool-time {
+      font-size: 10.5px;
+      color: var(--text-3);
+      font-family: var(--mono);
+    }
+
+    .tool-detail {
+      display: none;
+      margin-top: 8px;
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .tool-event.expanded .tool-detail { display: block; }
+
+    .tool-detail-section {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tool-detail-section:last-child { border-bottom: none; }
+
+    .tool-detail-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-3);
+      margin-bottom: 4px;
+    }
+
+    .tool-detail pre {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text-2);
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .tool-ok { color: #16a34a; }
+    .tool-err { color: #dc2626; }
+
+    /* ─── Transcript scroll ───────────────────────────────────────────── */
+    .transcript-scroll {
+      width: 100%;
+      max-width: 480px;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    /* ─── Dossiers View ───────────────────────────────────────────────── */
+    .dossiers-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg);
+    }
+
+    .view-header {
+      margin-bottom: 16px;
+    }
+
+    .view-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    .view-sub {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+
+    .dossier-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 14px;
+    }
+
+    .dossier-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fade-in 0.3s ease;
+    }
+
+    .dossier-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .dossier-caller {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .dossier-phone {
+      font-size: 12px;
+      color: var(--text-3);
+      font-family: var(--mono);
+    }
+
+    .urgency-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      flex-shrink: 0;
+    }
+
+    .u1 { color: var(--u1); background: var(--u1-bg); }
+    .u2 { color: var(--u2); background: var(--u2-bg); }
+    .u3 { color: var(--u3); background: var(--u3-bg); }
+    .u4 { color: var(--u4); background: var(--u4-bg); }
+    .u5 { color: var(--u5); background: var(--u5-bg); }
+
+    .dossier-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .intent-chip {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text-2);
+    }
+
+    .tenant-chip {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-dim);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+    }
+
+    .dossier-summary {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    .dossier-sentiment {
+      font-size: 12px;
+      color: var(--text-3);
+      font-style: italic;
+    }
+
+    .dossier-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .dossier-action-item {
+      font-size: 12.5px;
+      color: var(--text-2);
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+    }
+
+    .dossier-action-item::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--line-2);
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .dossier-draft {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+
+    .copy-btn {
+      align-self: flex-end;
+      height: 26px;
+      padding: 0 10px;
+      border: 1px solid var(--line-2);
+      border-radius: 6px;
+      background: var(--panel);
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .copy-btn:hover { background: var(--raised); }
+    .copy-btn:active { transform: scale(0.97); }
+
+    .dossier-divider {
+      border: none;
+      border-top: 1px solid var(--line);
+    }
+
+    /* ─── Appointments View ───────────────────────────────────────────── */
+    .appointments-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg);
+    }
+
+    .table-wrap {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--panel-2);
+      color: var(--text-3);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--panel-2); }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: var(--radius-pill);
+    }
+
+    .status-confirmed { color: var(--u1); background: var(--u1-bg); }
+    .status-pending { color: var(--u3); background: var(--u3-bg); }
+    .status-escalated { color: var(--u5); background: var(--u5-bg); }
+
+    td .mono { font-family: var(--mono); font-size: 12px; }
+
+    /* ─── Tenants / Settings View ─────────────────────────────────────── */
+    .tenants-view {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--bg);
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .settings-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .settings-card-head {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .settings-card-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
+    input[type="text"], input[type="url"], textarea, select {
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius-input);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    textarea {
+      height: auto;
+      padding: 8px 10px;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: var(--radius-input);
+      border: none;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #0052cc; }
+    .btn-secondary { background: var(--panel-2); color: var(--text-2); border: 1px solid var(--line-2); }
+    .btn-secondary:hover { background: var(--raised); }
+
+    .discord-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .discord-row .form-group { flex: 1; }
+    .discord-row .btn { margin-bottom: 0; flex-shrink: 0; }
+
+    /* Tenant list in settings */
+    .tenant-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .tenant-list-item {
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-card);
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .tenant-list-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .tenant-list-meta { font-size: 12px; color: var(--text-3); }
+
+    /* ─── Empty / Loading States ──────────────────────────────────────── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      gap: 8px;
+      color: var(--text-3);
+      font-size: 13.5px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--raised);
+      display: grid;
+      place-items: center;
+      margin-bottom: 4px;
+    }
+
+    .empty-icon svg { width: 20px; height: 20px; stroke: var(--text-3); fill: none; stroke-width: 1.5; }
+
+    /* ─── Utilities ───────────────────────────────────────────────────── */
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .divider { height: 1px; background: var(--line); margin: 2px 0; }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--raised); border-radius: 3px; }
+
+    /* ─── Notification toast ──────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .toast {
+      padding: 11px 16px;
+      background: var(--text);
+      color: var(--bg);
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 450;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      animation: toast-in 0.3s cubic-bezier(0.16,1,0.3,1);
+      max-width: 320px;
+    }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ─── Responsive guards ───────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .call-layout { grid-template-columns: 1fr; }
+      .side-panel { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Top Bar ──────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 16 16"><path d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-3 3v-3H4a2 2 0 0 1-2-2V4z"/></svg>
+      </div>
+      <span class="brand-name">OmniDesk</span>
+      <span class="brand-badge">Switchboard AI</span>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-btn active" data-view="call">Call</button>
+      <button class="nav-btn" data-view="dossiers">Dossiers</button>
+      <button class="nav-btn" data-view="appointments">Appointments</button>
+      <button class="nav-btn" data-view="tenants">Tenants</button>
+    </nav>
+
+    <div class="topbar-right">
+      <div class="agent-pill">
+        <div class="dot" id="live-dot"></div>
+        <span id="agent-id-display">loading…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Body ─────────────────────────────────────────────────────────── -->
+  <main class="body">
+
+    <!-- ── Call View ──────────────────────────────────────────────────── -->
+    <section class="view active" id="view-call">
+      <div class="call-layout">
+
+        <!-- Left: Tenant Selector -->
+        <aside class="side-panel">
+          <div class="panel-head">
+            <div class="panel-title">Businesses</div>
+          </div>
+          <div class="panel-body" id="tenant-list-call"></div>
+        </aside>
+
+        <!-- Center: Call Interface -->
+        <div class="call-center">
+          <div class="call-identity">
+            <div class="call-business-name" id="active-business-name">Select a business</div>
+            <div class="call-greeting" id="active-greeting">Choose a tenant from the left panel to begin</div>
+          </div>
+
+          <div class="waveform-wrap" id="waveform">
+            <!-- 18 bars generated by JS -->
+          </div>
+
+          <div class="state-badge idle" id="state-badge">
+            <div class="state-dot"></div>
+            <span id="state-label">Ready</span>
+          </div>
+
+          <div class="transcript-scroll" id="transcript-scroll"></div>
+
+          <button class="call-btn start" id="call-btn" onclick="toggleCall()">Start call</button>
+
+          <div class="confirmation-card" id="confirmation-card">
+            <div class="confirmation-label">Booking confirmed</div>
+            <div class="confirmation-code" id="confirmation-code-display">——————</div>
+          </div>
+        </div>
+
+        <!-- Right: Tool Inspector -->
+        <aside class="side-panel">
+          <div class="panel-head">
+            <div class="panel-title">Live Tool Hits</div>
+          </div>
+          <div class="panel-body" id="tool-feed">
+            <div class="empty">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+              </div>
+              <span>Tool calls appear here as AssemblyAI hits your API</span>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ── Dossiers View ───────────────────────────────────────────────── -->
+    <section class="view" id="view-dossiers">
+      <div class="dossiers-view">
+        <div class="view-header">
+          <div class="view-title">Executive Dossiers</div>
+          <div class="view-sub">Post-call intelligence generated by AssemblyAI LeMUR</div>
+        </div>
+        <div class="dossier-grid" id="dossier-grid">
+          <div class="empty" style="grid-column:1/-1">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+            </div>
+            <span>Dossiers appear here after each call. Complete a call to generate one.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Appointments View ───────────────────────────────────────────── -->
+    <section class="view" id="view-appointments">
+      <div class="appointments-view">
+        <div class="view-header" style="margin-bottom:16px">
+          <div class="view-title">Appointments</div>
+          <div class="view-sub">All bookings across all tenants</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Business</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Date & Time</th>
+                <th>Phone</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="appointments-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-3)">No appointments yet. Start a call to book one.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Tenants / Settings View ─────────────────────────────────────── -->
+    <section class="view" id="view-tenants">
+      <div class="tenants-view">
+
+        <!-- Left: existing tenants -->
+        <div>
+          <div class="view-header">
+            <div class="view-title">Tenant Profiles</div>
+            <div class="view-sub">Each profile configures a different business on the same agent</div>
+          </div>
+          <div class="tenant-list" id="settings-tenant-list"></div>
+        </div>
+
+        <!-- Right: add / discord -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+          <!-- Discord -->
+          <div class="settings-card">
+            <div class="settings-card-head">Discord Notifications</div>
+            <div class="settings-card-body">
+              <p style="font-size:12.5px;color:var(--text-2);line-height:1.6">
+                Paste a Discord channel webhook URL below. OmniDesk will post a rich call summary card to that channel every time a call ends. Slack integration is coming soon.
+              </p>
+              <div class="form-group">
+                <label>How to get a webhook URL</label>
+                <p style="font-size:11.5px;color:var(--text-3);line-height:1.6;">
+                  Discord > your server > channel settings > Integrations > Webhooks > New Webhook > Copy URL
+                </p>
+              </div>
+              <div class="discord-row">
+                <div class="form-group">
+                  <label for="discord-url-input">Webhook URL</label>
+                  <input type="url" id="discord-url-input" placeholder="https://discord.com/api/webhooks/…" />
+                </div>
+                <button class="btn btn-secondary" onclick="testDiscord()" id="discord-test-btn">Test</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                <label for="discord-tenant-select" style="white-space:nowrap">Apply to tenant</label>
+                <select id="discord-tenant-select" style="flex:1"></select>
+              </div>
+              <button class="btn btn-primary" onclick="saveDiscordWebhook()">Save webhook</button>
+              <div id="discord-status" style="font-size:12px;color:var(--text-3);min-height:16px;"></div>
+            </div>
+          </div>
+
+          <!-- Add Tenant (simplified) -->
+          <div class="settings-card">
+            <div class="settings-card-head">Add Tenant</div>
+            <div class="settings-card-body">
+              <div class="form-group">
+                <label for="new-tenant-id">ID (slug, no spaces)</label>
+                <input type="text" id="new-tenant-id" placeholder="my-business" />
+              </div>
+              <div class="form-group">
+                <label for="new-tenant-name">Business Name</label>
+                <input type="text" id="new-tenant-name" placeholder="My Business LLC" />
+              </div>
+              <div class="form-group">
+                <label for="new-tenant-greeting">Greeting</label>
+                <input type="text" id="new-tenant-greeting" placeholder="Thanks for calling My Business, how can I help?" />
+              </div>
+              <button class="btn btn-primary" onclick="addTenant()">Add Tenant</button>
+              <div id="tenant-add-status" style="font-size:12px;color:var(--text-3);min-height:16px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+.env
+agent_id.txt
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.idea/
+.vscode/
