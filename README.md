@@ -149,6 +149,7 @@ assemblyai-voice-agent-scheduler/
 - Python 3.10 or higher
 - AssemblyAI API Key ([AssemblyAI Dashboard](https://www.assemblyai.com/dashboard))
 - Resend API Key ([Resend Dashboard](https://resend.com/))
+- Supabase Project URL & Anon Key ([Supabase Dashboard](https://supabase.com/dashboard)) *(Optional: built-in local session fallback enabled if omitted)*
 - Public HTTPS tunnel utility (Cloudflare Tunnel `cloudflared` or `ngrok`)
 
 ---
@@ -177,6 +178,11 @@ PUBLIC_API_BASE_URL=https://your-tunnel-subdomain.trycloudflare.com
 # Resend Transactional Email Credentials
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 RESEND_FROM_EMAIL=onboarding@resend.dev
+
+# Supabase Auth Configuration (Business Owner Authentication)
+# (Optional: defaults to seamless local owner auth session if left blank)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOi...your_anon_key_here
 ```
 
 ---
