@@ -52,6 +52,7 @@ def init_db() -> None:
             slot_minutes INTEGER NOT NULL DEFAULT 30,
             open_hour INTEGER NOT NULL DEFAULT 9,
             close_hour INTEGER NOT NULL DEFAULT 17,
+            operating_days TEXT NOT NULL DEFAULT 'mon-fri',
             keyterms TEXT NOT NULL DEFAULT '[]',
             assemblyai_agent_id TEXT,
             created_at TEXT NOT NULL,
@@ -103,6 +104,12 @@ def init_db() -> None:
             FOREIGN KEY (business_id) REFERENCES businesses (id) ON DELETE CASCADE
         );
     """)
+
+    # Ensure operating_days column exists in existing DBs
+    try:
+        cur.execute("ALTER TABLE businesses ADD COLUMN operating_days TEXT DEFAULT 'mon-fri'")
+    except sqlite3.OperationalError:
+        pass
 
     # Check if demo owner exists
     demo_owner = cur.execute("SELECT id FROM owners WHERE email = 'demo@omnidesk.ai'").fetchone()
@@ -299,6 +306,7 @@ def create_business(
     slot_minutes: int = 30,
     open_hour: int = 9,
     close_hour: int = 17,
+    operating_days: str = "mon-fri",
     keyterms: list[str] | None = None,
     services: list[dict] | None = None,
 ) -> dict:
@@ -312,9 +320,9 @@ def create_business(
         """
         INSERT INTO businesses (
             id, owner_id, name, industry, tone, greeting, system_prompt,
-            voice_id, slot_minutes, open_hour, close_hour, keyterms,
+            voice_id, slot_minutes, open_hour, close_hour, operating_days, keyterms,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             biz_id,
@@ -328,6 +336,7 @@ def create_business(
             slot_minutes,
             open_hour,
             close_hour,
+            operating_days,
             keyterms_json,
             now_str,
             now_str,
@@ -357,7 +366,7 @@ def update_business(business_id: str, updates: dict) -> dict | None:
     values = []
     allowed = [
         "name", "industry", "tone", "greeting", "system_prompt",
-        "voice_id", "slot_minutes", "open_hour", "close_hour", "assemblyai_agent_id"
+        "voice_id", "slot_minutes", "open_hour", "close_hour", "operating_days", "assemblyai_agent_id"
     ]
     for k in allowed:
         if k in updates:

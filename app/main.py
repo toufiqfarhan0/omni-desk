@@ -98,6 +98,7 @@ class CreateBusinessRequest(BaseModel):
     slot_minutes: int = 30
     open_hour: int = 9
     close_hour: int = 17
+    operating_days: str = "mon-fri"
     keyterms: list[str] = []
     services: list[ServiceItem] = []
 
@@ -112,6 +113,7 @@ class UpdateBusinessRequest(BaseModel):
     slot_minutes: int | None = None
     open_hour: int | None = None
     close_hour: int | None = None
+    operating_days: str | None = None
     keyterms: list[str] | None = None
     services: list[ServiceItem] | None = None
 
@@ -369,22 +371,54 @@ def _send_resend_confirmation(record: dict, biz: dict | None = None) -> dict:
 # Multi-Tenant Slot & Booking Core Logic
 # ---------------------------------------------------------------------------
 
+def _biz_is_open_day(biz: dict, day: date) -> bool:
+    op_days = biz.get("operating_days", "mon-fri")
+    wd = day.weekday()  # Monday=0, Sunday=6
+    if op_days == "all-week":
+        return True
+    elif op_days == "mon-sat":
+        return wd <= 5
+    elif op_days == "tue-sat":
+        return 1 <= wd <= 5
+    elif op_days == "thu-sun":
+        return wd in (3, 4, 5, 6)
+    else:  # "mon-fri"
+        return wd < 5
+
+
 def _biz_slots(biz: dict, day: date) -> list[str]:
-    open_h = biz.get("open_hour", 9)
-    close_h = biz.get("close_hour", 17)
-    step = biz.get("slot_minutes", 30)
-    start = datetime.combine(day, datetime.min.time()).replace(hour=open_h)
-    end = datetime.combine(day, datetime.min.time()).replace(hour=close_h)
+    try:
+        open_h = int(biz.get("open_hour", 9))
+    except (ValueError, TypeError):
+        open_h = 9
+    try:
+        close_h = int(biz.get("close_hour", 17))
+    except (ValueError, TypeError):
+        close_h = 17
+    try:
+        step = int(biz.get("slot_minutes", 30))
+    except (ValueError, TypeError):
+        step = 30
+    if step <= 0:
+        step = 30
+
+    start_min = open_h * 60
+    end_min = (24 if close_h in (0, 24) else close_h) * 60
+    if end_min <= start_min:
+        end_min = 24 * 60
+
     slots = []
-    curr = start
-    while curr < end:
-        slots.append(curr.strftime("%H:%M"))
-        curr += timedelta(minutes=step)
+    curr = start_min
+    while curr < end_min:
+        h = (curr // 60) % 24
+        m = curr % 60
+        slots.append(f"{h:02d}:{m:02d}")
+        curr += step
     return slots
 
 
 def _biz_available_slots(biz: dict, day: date, limit: int = 4) -> list[str]:
-    if day.weekday() >= 5:
+    if not _biz_is_open_day(biz, day):
         return []
     all_slots = _biz_slots(biz, day)
     bookings = db.list_bookings_for_business(biz["id"])
@@ -403,7 +437,7 @@ def _biz_next_open_days(biz: dict, after: date, count: int = 2) -> list[date]:
         cursor += timedelta(days=1)
         if (cursor - date.today()).days > 14:
             break
-        if cursor.weekday() < 5 and _biz_available_slots(biz, cursor):
+        if _biz_is_open_day(biz, cursor) and _biz_available_slots(biz, cursor):
             found.append(cursor)
     return found
 
@@ -445,7 +479,7 @@ def _handle_check_availability(req: AvailabilityRequest, biz_id: str | None = No
     if day < date.today():
         return {"ok": False, "reason": "past_date", "message": "That date is in the past."}
 
-    if day.weekday() >= 5:
+    if not _biz_is_open_day(biz, day):
         alternatives = _biz_next_open_days(biz, day)
         nxt = alternatives[0] if alternatives else None
         return {
@@ -453,9 +487,9 @@ def _handle_check_availability(req: AvailabilityRequest, biz_id: str | None = No
             "reason": "closed",
             "suggested_date": nxt.isoformat() if nxt else None,
             "message": (
-                f"We're closed at weekends. The next day we're open is "
+                f"We are closed on that day. The next day we're open is "
                 f"{_speak_day(nxt)}, with {_speak_slots(_biz_available_slots(biz, nxt))}."
-                if nxt else "We're closed at weekends."
+                if nxt else "We are closed on that day."
             ),
         }
 
@@ -703,6 +737,7 @@ def api_create_business(req: CreateBusinessRequest) -> dict:
         slot_minutes=req.slot_minutes,
         open_hour=req.open_hour,
         close_hour=req.close_hour,
+        operating_days=req.operating_days,
         keyterms=req.keyterms,
         services=[s.dict() for s in req.services],
     )

@@ -161,6 +161,7 @@ const els = {
   btnAddServiceRow: document.getElementById("btn-add-service-row"),
   openHourInput: document.getElementById("open-hour-input"),
   closeHourInput: document.getElementById("close-hour-input"),
+  operatingDaysSelect: document.getElementById("operating-days-select"),
 
   // Simulator
   simDot: document.getElementById("sim-dot"),
@@ -203,10 +204,175 @@ const els = {
 };
 
 // ---------------------------------------------------------------------------
+// Cute Custom Dropdown System (Cute rounded popover, soft-gray pills, strictly dropdown / no dropup)
+// ---------------------------------------------------------------------------
+const CuteDropdown = {
+  instances: new Map(),
+
+  initSelect(selectEl) {
+    if (!selectEl || CuteDropdown.instances.has(selectEl)) return;
+
+    selectEl.classList.add("custom-dropdown-native");
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "custom-dropdown" + (selectEl.classList.contains("biz-select") ? " is-biz-select" : "");
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "custom-dropdown-trigger";
+    trigger.tabIndex = 0;
+
+    const label = document.createElement("span");
+    label.className = "custom-dropdown-value";
+
+    const chevron = document.createElement("span");
+    chevron.className = "custom-dropdown-chevron";
+    chevron.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    `;
+
+    trigger.appendChild(label);
+    trigger.appendChild(chevron);
+
+    const menu = document.createElement("div");
+    menu.className = "custom-dropdown-menu";
+
+    selectEl.parentNode.insertBefore(wrapper, selectEl);
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(menu);
+    wrapper.appendChild(selectEl);
+
+    const instance = { wrapper, trigger, label, menu, optionsMap: new Map() };
+    CuteDropdown.instances.set(selectEl, instance);
+
+    CuteDropdown.rebuild(selectEl);
+
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      CuteDropdown.toggle(selectEl);
+    });
+
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        e.preventDefault();
+        CuteDropdown.open(selectEl);
+      } else if (e.key === "Escape") {
+        CuteDropdown.close(selectEl);
+      }
+    });
+
+    return instance;
+  },
+
+  rebuild(selectEl) {
+    const inst = CuteDropdown.instances.get(selectEl);
+    if (!inst) return;
+
+    inst.menu.innerHTML = "";
+    inst.optionsMap.clear();
+
+    Array.from(selectEl.options).forEach((opt) => {
+      const item = document.createElement("div");
+      item.className = "custom-dropdown-option";
+      item.dataset.value = opt.value;
+      item.textContent = opt.textContent;
+
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectEl.value = opt.value;
+        CuteDropdown.sync(selectEl);
+        CuteDropdown.close(selectEl);
+        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      inst.menu.appendChild(item);
+      inst.optionsMap.set(opt.value, item);
+    });
+
+    CuteDropdown.sync(selectEl);
+  },
+
+  sync(selectEl) {
+    const inst = CuteDropdown.instances.get(selectEl);
+    if (!inst) return;
+
+    const selectedOption = selectEl.options[selectEl.selectedIndex];
+    const text = selectedOption ? selectedOption.textContent : "";
+    inst.label.textContent = text || "Select...";
+
+    const currentVal = selectEl.value;
+    inst.optionsMap.forEach((el, val) => {
+      if (String(val) === String(currentVal)) {
+        el.classList.add("is-selected");
+      } else {
+        el.classList.remove("is-selected");
+      }
+    });
+  },
+
+  syncAll() {
+    CuteDropdown.instances.forEach((_, selectEl) => {
+      CuteDropdown.sync(selectEl);
+    });
+  },
+
+  open(selectEl) {
+    const inst = CuteDropdown.instances.get(selectEl);
+    if (!inst) return;
+    CuteDropdown.closeAll();
+    inst.wrapper.classList.add("is-open");
+    const selected = inst.menu.querySelector(".is-selected");
+    if (selected) {
+      selected.scrollIntoView({ block: "nearest" });
+    }
+    const rect = inst.menu.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight) {
+      window.scrollBy({ top: rect.bottom - window.innerHeight + 24, behavior: "smooth" });
+    }
+  },
+
+  close(selectEl) {
+    const inst = CuteDropdown.instances.get(selectEl);
+    if (!inst) return;
+    inst.wrapper.classList.remove("is-open");
+  },
+
+  toggle(selectEl) {
+    const inst = CuteDropdown.instances.get(selectEl);
+    if (!inst) return;
+    if (inst.wrapper.classList.contains("is-open")) {
+      CuteDropdown.close(selectEl);
+    } else {
+      CuteDropdown.open(selectEl);
+    }
+  },
+
+  closeAll() {
+    CuteDropdown.instances.forEach((inst) => {
+      inst.wrapper.classList.remove("is-open");
+    });
+  },
+
+  initAll() {
+    document.querySelectorAll("select.select-input, select.biz-select").forEach((sel) => {
+      CuteDropdown.initSelect(sel);
+    });
+  }
+};
+
+document.addEventListener("click", () => CuteDropdown.closeAll());
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") CuteDropdown.closeAll();
+});
+
+// ---------------------------------------------------------------------------
 // Initialization & Auth
 // ---------------------------------------------------------------------------
 
 async function init() {
+  CuteDropdown.initAll();
   bindTabs();
   bindModals();
   bindBuilderEvents();
@@ -252,6 +418,7 @@ function renderBusinessSelect() {
     opt.textContent = b.name;
     els.bizSelect.appendChild(opt);
   }
+  CuteDropdown.rebuild(els.bizSelect);
 }
 
 async function selectBusiness(bizId) {
@@ -271,6 +438,7 @@ async function selectBusiness(bizId) {
   if (!found) return;
   state.activeBiz = found;
   els.bizSelect.value = found.id;
+  CuteDropdown.sync(els.bizSelect);
 
   populateBuilder(found);
   loadBookings();
@@ -300,6 +468,10 @@ function populateBuilder(biz) {
   els.systemPromptInput.value = biz.system_prompt || "";
   els.openHourInput.value = String(biz.open_hour || 9);
   els.closeHourInput.value = String(biz.close_hour || 17);
+  if (els.operatingDaysSelect) {
+    els.operatingDaysSelect.value = biz.operating_days || "mon-fri";
+  }
+  CuteDropdown.syncAll();
 
   // Keyterms
   state.keyterms = Array.isArray(biz.keyterms) ? [...biz.keyterms] : [];
@@ -368,6 +540,7 @@ function applyIndustryTemplate(industryKeyOrCustom, forcedBizName = null) {
     ];
     renderServicesList();
   }
+  CuteDropdown.syncAll();
 }
 
 function renderKeytermChips() {
@@ -514,6 +687,7 @@ function bindBuilderEvents() {
       slot_minutes: parseInt(els.slotDurationSelect.value, 10),
       open_hour: parseInt(els.openHourInput.value, 10),
       close_hour: parseInt(els.closeHourInput.value, 10),
+      operating_days: els.operatingDaysSelect ? els.operatingDaysSelect.value : "mon-fri",
       keyterms: state.keyterms,
       services: state.services
     };
@@ -610,6 +784,7 @@ function bindModals() {
   // New business modal
   els.btnCreateBiz.addEventListener("click", () => {
     els.newBizModal.hidden = false;
+    CuteDropdown.syncAll();
   });
   els.btnCloseNewBiz.addEventListener("click", () => {
     els.newBizModal.hidden = true;
@@ -621,6 +796,7 @@ function bindModals() {
       const detected = detectIndustryFromText(e.target.value);
       if (detected && PRESETS[detected] && !els.modalBizCustomIndustry.value) {
         els.modalBizIndustry.value = detected;
+        CuteDropdown.sync(els.modalBizIndustry);
       }
     });
   }
@@ -676,6 +852,7 @@ function bindModals() {
       slot_minutes: slotMins,
       open_hour: openH,
       close_hour: closeH,
+      operating_days: "mon-fri",
       keyterms: keyterms,
       services: services
     };

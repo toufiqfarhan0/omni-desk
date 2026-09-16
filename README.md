@@ -53,13 +53,67 @@ The platform includes a curated, light-mode landing page designed under tasteski
 
 ---
 
+## Visual Platform Walkthrough
+
+### 1. Public Landing Page & Voice Interface
+![OmniDesk Public Landing Page](docs/images/landing_page.png)
+
+Designed under anti-slop aesthetic principles with a viewport-fitted hero, interactive live dialogue simulator, architecture bento grid, and direct access to both the interactive live voice console and SaaS Owner Portal.
+
+---
+
+### 2. Multi-Tenant AI Voice Agent & Workflow Builder
+![AI Voice Agent & Workflow Builder](docs/images/agent_builder.png)
+
+Business owners configure custom AI receptionists with industry presets (Dental, MedSpa, Law Firm, Salon, Auto Repair, Real Estate) or any custom enterprise type. Directly tune voice models (AssemblyAI Jessica, George, Alice, River), speaking tones, initial greetings, system prompts, phonetic boost keyterms, and service catalogs.
+
+---
+
+### 3. Dynamic Multi-Tenant Switching (e.g. Apex Legal Group)
+![Apex Legal Group Multi-Tenant Profile](docs/images/multi_tenant_legal.png)
+
+Seamless tenant switching: changing practices dynamically updates industry templates, legal service catalogs, prompt instructions, and caller greetings without state pollution.
+
+---
+
+### 4. Custom Any-Business Provisioning (e.g. Veterinary Clinic)
+![Custom Typed Business: Veterinary Clinic](docs/images/custom_veterinary.png)
+
+Owners can type any custom business (such as a Veterinary Clinic or Fitness Gym) and OmniDesk automatically synthesizes tailored initial greetings, specialized system prompts, consultation service items, and scheduling intervals.
+
+---
+
+### 5. Sheeted Customer Bookings CRM & Real-Time KPIs
+![Customer Bookings CRM & Sheeted Table](docs/images/customer_bookings_crm.png)
+
+Practice owners monitor high-level KPIs (Today's Bookings, Upcoming Appointments, All-Time Totals, Pipeline Revenue) and inspect confirmed appointments with confirmation codes, customer contacts, calendar delivery statuses, and pricing.
+
+---
+
+### 6. Call History Logs & Dialogue Transcripts
+![Call History Logs](docs/images/call_history.png)
+
+![Turn-by-Turn Dialogue Transcript Modal](docs/images/call_transcript_modal.png)
+
+Every inbound call through the AssemblyAI Voice Agent API is logged with caller identity, duration, outcome, and full turn-by-turn conversational dialogue bubbles and server-side HTTP tool execution traces.
+
+---
+
+### 7. Instant Business Creation Modal
+![New Business Modal](docs/images/new_business_modal.png)
+
+Add new business entities with real-time industry detection and automated workflow generation in seconds.
+
+---
+
 ## Key Capabilities
 
+- **Multi-Tenant SaaS Architecture**: Scalable business owner portal with industry presets, custom business builder, and dedicated multi-tenant database persistence.
 - **Server-Side HTTP Tools**: AssemblyAI invokes backend endpoints directly over public HTTPS. The browser does not mediate or execute database transactions.
 - **Sub-300ms Barge-In**: Audio input and output streams are processed concurrently. When the user starts speaking (`input.speech.started`), active playback buffers are discarded instantaneously via Web Audio API scheduling (`playHead = Math.max(playHead, audioCtx.currentTime)`).
 - **Email Verification & Native Calendar Invites**: When a slot is confirmed, OmniDesk generates an RFC 5545 compliant `.ics` calendar invite with a 60-minute pre-appointment alarm notification and dispatches it through the Resend Transactional Email API with a branded HTML receipt.
-- **Tasteskill-Inspired Landing Page**: Viewport-fitted hero with micro-interactions, live dialogue simulator, foundational architecture bento grid, and quick access into the interactive voice console.
-- **Owner Console (Slide-over Sheet)**: Accessible directly from the voice console, providing practice owners with live KPI metrics (today's bookings, upcoming schedule, projected revenue), tabular calendar bookings, customer directory, and clinical service offerings.
+- **Owner Portal & Live Voice Tester**: Embedded 24kHz bidirectional audio stream directly inside the business dashboard with live dialogue transcripts and tool execution inspectors.
+- **Call History & CRM Bookings**: Comprehensive turn-by-turn transcript modals and sheeted appointment management with pipeline revenue and volume KPIs.
 
 ---
 
@@ -69,12 +123,17 @@ The platform includes a curated, light-mode landing page designed under tasteski
 assemblyai-voice-agent-scheduler/
 |-- app/
 |   |-- __init__.py
-|   |-- main.py           # FastAPI application, HTTP tools, Resend email & .ics generation
-|   |-- store.py          # Slot scheduling engine, booking state, and event logger
+|   |-- main.py           # FastAPI application, multi-tenant HTTP tools, Resend email & .ics generation
+|   |-- db.py             # Multi-tenant SQLite database persistence layer (owners, businesses, bookings, logs)
+|   |-- store.py          # Demo scheduling engine, booking state, and event logger
+|-- docs/
+|   |-- images/           # Platform screenshots & UI walkthrough assets
 |-- scripts/
 |   |-- create_agent.py   # Provisions or updates the agent definition on AssemblyAI
 |-- web/
 |   |-- index.html        # Public landing page (tasteskill aesthetic)
+|   |-- dashboard.html    # Business Owner SaaS Portal & Voice Agent Builder
+|   |-- dashboard.js      # Multi-tenant SaaS client, Cute Dropdown system, and live simulator
 |   |-- console.html      # Voice receptionist workspace and Owner Console sheet
 |   |-- app.js            # AudioWorklet client, WebSocket handler, and sheet logic
 |   |-- worklet.js        # PCM16 to Float32 linear audio converter worklet
