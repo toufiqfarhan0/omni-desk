@@ -2,7 +2,7 @@
 
 OmniDesk is an autonomous voice receptionist platform powered by the AssemblyAI Voice Agent API. It utilizes direct server-side HTTP tools to execute real-time calendar availability lookups, deterministic booking validation, and automated customer confirmation dispatches without requiring a persistent client-side tool dispatcher during the call.
 
-The platform includes a curated, light-mode landing page designed under tasteskill.dev anti-slop principles, a live voice console with instant audio barge-in, an interactive tool inspector, and an Owner Console slide-over sheet engineered following Emil Kowalski and Better UI specifications.
+The platform includes a curated, light-mode landing page designed under tasteskill.dev anti-slop principles, a live voice console with instant audio barge-in, an interactive tool inspector, and a comprehensive SaaS Business Owner Portal with fixed sidebar navigation, multi-tenant practice provisioning, real-time voice simulator, and CRM booking analytics.
 
 ---
 
@@ -46,7 +46,7 @@ The platform includes a curated, light-mode landing page designed under tasteski
                       +-----------------------------+-----------------------------+
                       |                                                           |
                       v                                                           v
-             Owner Dashboard Sheet                                      Customer Confirmation
+             Owner Dashboard Portal                                     Customer Confirmation
             (Real-Time Calendar, KPI                                  (Resend Transactional Email
              Metrics, Customer Directory)                               + Attached .ics Invite)
 ```
@@ -65,32 +65,39 @@ Designed under anti-slop aesthetic principles with a viewport-fitted hero, inter
 ### 2. Multi-Tenant AI Voice Agent & Workflow Builder
 ![AI Voice Agent & Workflow Builder](docs/images/agent_builder.png)
 
-Business owners configure custom AI receptionists with industry presets (Dental, MedSpa, Law Firm, Salon, Auto Repair, Real Estate) or any custom enterprise type. Directly tune voice models (AssemblyAI Jessica, George, Alice, River), speaking tones, initial greetings, system prompts, phonetic boost keyterms, and service catalogs.
+Business owners configure custom AI receptionists with industry presets (Dental, MedSpa, Law Firm, Salon, Auto Repair, Real Estate) or any custom enterprise type. Directly tune voice models (AssemblyAI Jessica, George, Alice, River), speaking tones, initial greetings, system prompts, phonetic boost keyterms, and service catalogs with a pinned sidebar navigation.
 
 ---
 
-### 3. Dynamic Multi-Tenant Switching & Custom Workflows
+### 3. Real-Time Voice Simulator & Live Tool Execution Inspector
+![Live Voice Simulator & Real-time Tool Inspector](docs/images/live_voice_tester.png)
+
+Business owners test their tailored voice receptionist directly in the dashboard over a 24kHz bidirectional audio stream. Symmetrical equal-sized cards provide turn-by-turn conversational speech transcripts on the left and live server-side HTTP tool invocations (`/check_availability`, `/book_appointment`, `/send_confirmation`) on the right, accompanied by an interactive email verification fallback system with typo recovery.
+
+---
+
+### 4. Dynamic Multi-Tenant Switching & Custom Workflows
 ![Multi-Tenant Workflow Profile](docs/images/multi_tenant_legal.png)
 
 Seamless tenant switching: switching between practices dynamically updates industry templates, service pricing catalogs, prompt instructions, and caller greetings with zero state collision.
 
 ---
 
-### 4. Custom Any-Business Provisioning (e.g. Veterinary Clinic)
+### 5. Custom Any-Business Provisioning (e.g. Veterinary Clinic)
 ![Custom Typed Business: Veterinary Clinic](docs/images/custom_veterinary.png)
 
 Owners can type any custom business (such as a Veterinary Clinic or Fitness Gym) and OmniDesk automatically synthesizes tailored initial greetings, specialized system prompts, consultation service items, and scheduling intervals.
 
 ---
 
-### 5. Sheeted Customer Bookings CRM & Real-Time KPIs
+### 6. Sheeted Customer Bookings CRM & Real-Time KPIs
 ![Customer Bookings CRM & Sheeted Table](docs/images/customer_bookings_crm.png)
 
 Practice owners monitor high-level KPIs (Today's Bookings, Upcoming Appointments, All-Time Totals, Pipeline Revenue) and inspect confirmed appointments with confirmation codes, customer contacts, calendar delivery statuses, and pricing.
 
 ---
 
-### 6. Call History Logs & Dialogue Transcripts
+### 7. Call History Logs & Dialogue Transcripts
 ![Call History Logs](docs/images/call_history.png)
 
 ![Turn-by-Turn Dialogue Transcript Modal](docs/images/call_transcript_modal.png)
@@ -99,7 +106,7 @@ Every inbound call through the AssemblyAI Voice Agent API is logged with caller 
 
 ---
 
-### 7. Instant Business Creation Modal
+### 8. Instant Business Creation Modal
 ![New Business Modal](docs/images/new_business_modal.png)
 
 Add new business entities with real-time industry detection and automated workflow generation in seconds.

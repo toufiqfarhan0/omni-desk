@@ -500,6 +500,12 @@ async function loadOwnerSession(email, name = "") {
       localStorage.setItem("omnidesk_owner", JSON.stringify(state.owner));
       els.ownerEmailText.textContent = state.owner.email;
 
+      // Update avatar letter
+      const avatarEl = document.getElementById("owner-avatar");
+      if (avatarEl) {
+        avatarEl.textContent = (name || state.owner.email || "O").charAt(0).toUpperCase();
+      }
+
       // Update topbar badges
       const isDemo = state.owner.email === "demo@omnidesk.ai" || state.owner.id === "owner_demo";
       if (els.ownerTypeBadge) {
@@ -1059,6 +1065,25 @@ function switchTab(targetId) {
   els.tabPanes.forEach((p) => p.classList.toggle("active", p.id === targetId));
   state.activeTab = targetId;
 
+  const tabTitles = {
+    "tab-builder": "AI Agent Builder",
+    "tab-simulator": "Live Voice Tester",
+    "tab-bookings": "Customer Bookings",
+    "tab-conversations": "Call History"
+  };
+  const titleEl = document.getElementById("topbar-current-page");
+  if (titleEl && tabTitles[targetId]) {
+    titleEl.textContent = tabTitles[targetId];
+  }
+
+  // Auto close mobile sidebar on navigation
+  const sidebar = document.getElementById("dashboard-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (sidebar && sidebar.classList.contains("is-open")) {
+    sidebar.classList.remove("is-open");
+    if (backdrop) backdrop.classList.remove("is-open");
+  }
+
   if (targetId === "tab-bookings") loadBookings();
   if (targetId === "tab-conversations") loadConversations();
 }
@@ -1075,6 +1100,23 @@ function bindTabs() {
       switchTab(targetId);
     });
   });
+
+  // Mobile sidebar toggle
+  const toggleBtn = document.getElementById("sidebar-toggle-btn");
+  const sidebar = document.getElementById("dashboard-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (toggleBtn && sidebar) {
+    toggleBtn.addEventListener("click", () => {
+      sidebar.classList.toggle("is-open");
+      if (backdrop) backdrop.classList.toggle("is-open");
+    });
+  }
+  if (backdrop && sidebar) {
+    backdrop.addEventListener("click", () => {
+      sidebar.classList.remove("is-open");
+      backdrop.classList.remove("is-open");
+    });
+  }
 }
 
 function bindModals() {
@@ -1549,17 +1591,28 @@ const DOMAIN_TYPOS = {
 function isEmailRequest(text) {
   if (!text) return false;
   const t = text.toLowerCase();
+  // Do NOT trigger if the agent is verifying or confirming an already stated email
+  if (
+    t.includes("is that correct") ||
+    t.includes("is that right") ||
+    t.includes("did i get that") ||
+    t.includes("i have your email") ||
+    t.includes("got your email") ||
+    t.includes("sounds right")
+  ) {
+    return false;
+  }
   return (
-    t.includes("email") ||
-    t.includes("e-mail") ||
-    t.includes("email address") ||
-    t.includes("spell your email") ||
     t.includes("what is your email") ||
     t.includes("what's your email") ||
-    t.includes("have your email") ||
-    t.includes("confirm your email") ||
+    t.includes("what email") ||
+    t.includes("your email address") ||
+    t.includes("email address") ||
+    t.includes("spell your email") ||
+    t.includes("provide your email") ||
+    t.includes("share your email") ||
     t.includes("tell me your email") ||
-    t.includes("repeat your email")
+    t.includes("need your email")
   );
 }
 
@@ -1590,6 +1643,8 @@ function isEmailRejection(userText) {
 let simEmailHideTimer = null;
 
 function showSimEmailBox(customHint) {
+  // If appointment is already booked, never show!
+  if (sim.hasBooked) return;
   if (simEmailHideTimer) {
     clearTimeout(simEmailHideTimer);
     simEmailHideTimer = null;
@@ -1901,6 +1956,10 @@ function handleSimMessage(msg) {
             }
           }));
         }
+      } else if (sim.awaitingEmailConfirmation) {
+        // User confirmed email ("yes", "correct", etc.)
+        hideSimEmailBox();
+        sim.awaitingEmailConfirmation = false;
       }
       break;
 
@@ -1912,11 +1971,13 @@ function handleSimMessage(msg) {
         agentLower.includes("is that correct") ||
         agentLower.includes("is that right") ||
         agentLower.includes("did i get that right") ||
-        agentLower.includes("confirm your email")
+        agentLower.includes("confirm your email") ||
+        agentLower.includes("i have your email") ||
+        agentLower.includes("got your email")
       ) {
         sim.awaitingEmailConfirmation = true;
-      }
-      if (isEmailRequest(msg.text)) {
+        hideSimEmailBox(); // Hide box as agent already has/read back the email
+      } else if (isEmailRequest(msg.text)) {
         showSimEmailBox();
       }
       break;
@@ -1957,16 +2018,25 @@ async function pollSimTools() {
       }
       if (ev.tool === "book_appointment" && ev.arguments) {
         sim.hasBooked = true;
+        hideSimEmailBox();
         if (ev.arguments.customer_name) sim.callerName = ev.arguments.customer_name;
         if (ev.arguments.email) sim.callerEmail = ev.arguments.email;
         loadBookings();
         loadConversations();
+      }
+      if (ev.tool === "send_confirmation") {
+        hideSimEmailBox();
       }
     }
   } catch (_) {}
 }
 
 function renderSimToolItem(ev) {
+  if (els.simToolsFeed) {
+    const emptyMsg = els.simToolsFeed.querySelector(".sim-tools-empty");
+    if (emptyMsg) emptyMsg.remove();
+  }
+
   const card = document.createElement("div");
   card.style.background = "#fafafa";
   card.style.border = "1px solid var(--border)";
