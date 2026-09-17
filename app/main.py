@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Query, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from starlette.responses import FileResponse, Response
+from starlette.responses import FileResponse, RedirectResponse, Response
 
 from . import db, store
 
@@ -1594,12 +1594,18 @@ def api_token() -> dict:
 # ---------------------------------------------------------------------------
 
 @app.get("/console")
+def redirect_console():
+    return RedirectResponse(url="/demo", status_code=307)
+
+
 @app.get("/demo")
-def serve_console():
-    console_file = WEB_DIR / "console.html"
+def serve_demo():
+    demo_file = WEB_DIR / "demo.html"
+    if not demo_file.exists():
+        demo_file = WEB_DIR / "console.html"
     no_cache = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
-    if console_file.exists():
-        return FileResponse(console_file, headers=no_cache)
+    if demo_file.exists():
+        return FileResponse(demo_file, headers=no_cache)
     return FileResponse(WEB_DIR / "index.html", headers=no_cache)
 
 

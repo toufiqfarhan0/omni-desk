@@ -178,7 +178,7 @@ def main():
     print("-" * 65)
     print(f"  Owner Dashboard:    http://localhost:{port}/dashboard")
     print(f"  Public Landing:     http://localhost:{port}/")
-    print(f"  Demo Voice Console: http://localhost:{port}/console")
+    print(f"  Try Salon Demo:     http://localhost:{port}/demo")
     if tunnel_url:
         print(f"  Public Tunnel URL:  {tunnel_url}")
     print("-" * 65)
