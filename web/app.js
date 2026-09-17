@@ -992,7 +992,7 @@ function initLiveEmailBox() {
         if (els.liveEmailFeedback) {
           els.liveEmailFeedback.className = "live-email-feedback success";
           els.liveEmailFeedback.style.display = "block";
-          els.liveEmailFeedback.innerHTML = `✓ Verified email: <strong>${cleanEmail}</strong> ${data.auto_corrected ? '<span style="color:#0284c7; font-size:11px;">(auto-corrected)</span>' : ''} ${data.dns_verified ? '<span style="color:#16a34a; font-size:11px;">• DNS Valid</span>' : ''}`;
+          els.liveEmailFeedback.innerHTML = `✓ Verified email: <strong>${cleanEmail}</strong> ${data.auto_corrected ? '<span style="color:#0284c7; font-size:11px;">(auto-corrected)</span>' : ''} ${data.mailbox_verified ? '<span style="color:#16a34a; font-weight:600; font-size:11px;">• Mailbox Active ✓</span>' : (data.dns_verified ? '<span style="color:#16a34a; font-size:11px;">• DNS Valid</span>' : '')}`;
         }
 
         addLine("user", `My email address is ${cleanEmail}`);

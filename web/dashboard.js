@@ -1719,7 +1719,7 @@ function bindSimulatorEvents() {
         if (els.simEmailFeedback) {
           els.simEmailFeedback.className = "live-email-feedback success";
           els.simEmailFeedback.style.display = "block";
-          els.simEmailFeedback.innerHTML = `✓ Verified email: <strong>${cleanEmail}</strong> ${data.auto_corrected ? '<span style="color:#0284c7; font-size:11px;">(auto-corrected)</span>' : ''} ${data.dns_verified ? '<span style="color:#16a34a; font-size:11px;">• DNS Valid</span>' : ''}`;
+          els.simEmailFeedback.innerHTML = `✓ Verified email: <strong>${cleanEmail}</strong> ${data.auto_corrected ? '<span style="color:#0284c7; font-size:11px;">(auto-corrected)</span>' : ''} ${data.mailbox_verified ? '<span style="color:#16a34a; font-weight:600; font-size:11px;">• Mailbox Active ✓</span>' : (data.dns_verified ? '<span style="color:#16a34a; font-size:11px;">• DNS Valid</span>' : '')}`;
         }
 
         addSimBubble("user", `My email address is ${cleanEmail}`);

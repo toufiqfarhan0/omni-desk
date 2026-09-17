@@ -200,6 +200,25 @@ DISPOSABLE_EMAIL_DOMAINS = {
 _active_verified_emails: dict[str, str] = {}
 
 
+def _check_abstract_reputation(email: str) -> dict | None:
+    """Query Abstract API Email Reputation API for real-time mailbox existence & deliverability."""
+    api_key = os.getenv("ABSTRACT_EMAIL_API_KEY") or os.getenv("ABSTRACT_API_KEY")
+    if not api_key:
+        return None
+    try:
+        resp = httpx.get(
+            "https://emailreputation.abstractapi.com/v1/",
+            params={"api_key": api_key, "email": email},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        logger.warning(f"Abstract API returned {resp.status_code}: {resp.text}")
+    except Exception as exc:
+        logger.warning(f"Abstract API check error: {exc}")
+    return None
+
+
 def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
     """Multi-stage email verification:
     1. Spoken and written format sanitization
@@ -290,6 +309,41 @@ def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
         except Exception:
             dns_verified = False
 
+    # 6. Live Mailbox Existence & Deliverability Check via Abstract API
+    mailbox_verified = False
+    rep = _check_abstract_reputation(s)
+    if rep:
+        deliverability = rep.get("email_deliverability", {})
+        status = str(deliverability.get("status", "")).lower()
+        detail = str(deliverability.get("status_detail", "")).lower()
+        is_smtp_valid = deliverability.get("is_smtp_valid")
+        quality = rep.get("email_quality", {})
+        is_disposable = quality.get("is_disposable")
+
+        if is_disposable:
+            return {
+                "ok": False,
+                "valid": False,
+                "reason": "disposable",
+                "message": "Temporary or disposable email addresses are not accepted. Please provide a standard personal or work email address.",
+            }
+
+        if status == "undeliverable" or detail == "invalid_mailbox" or is_smtp_valid is False:
+            return {
+                "ok": False,
+                "valid": False,
+                "reason": "invalid_mailbox",
+                "message": f"The email address '{s}' does not appear to exist or cannot receive mail. Please check for a spelling mistake and provide an active email.",
+            }
+
+        if status == "deliverable" or is_smtp_valid is True:
+            mailbox_verified = True
+
+        suggested = rep.get("suggested_correction")
+        if suggested and suggested.lower() != s.lower():
+            s = suggested.lower()
+            auto_fixed = True
+
     # Check if this caller has an active verified email that matches
     biz_key = biz_id or "default"
     active_email = _active_verified_emails.get(biz_key) or _active_verified_emails.get("default")
@@ -311,6 +365,7 @@ def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
         "auto_corrected": auto_fixed,
         "original": original_input,
         "dns_verified": dns_verified,
+        "mailbox_verified": mailbox_verified,
         "message": f"Email verified: {s}",
     }
 
@@ -985,11 +1040,12 @@ def tenant_verify_customer_email(business_id: str, req: VerifyCustomerEmailReque
             "auto_corrected": res.get("auto_corrected", False),
             "message": f"Email verified: {res['email']}. Please confirm this with the caller.",
         }
+    msg = res.get("message", "").rstrip(".")
     return {
         "ok": False,
         "valid": False,
         "reason": res.get("reason", "bad_email"),
-        "message": f"Email verification issue: {res.get('message')}. Please ask the caller to clarify or spell their email address.",
+        "message": f"{msg}. Please ask the caller to clarify or provide their correct email address.",
     }
 
 
