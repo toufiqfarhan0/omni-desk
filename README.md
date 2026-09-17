@@ -1,8 +1,10 @@
 # OmniDesk — Autonomous Voice Receptionist & Scheduling Platform
 
-OmniDesk is a modern, full-stack Next.js platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time 24kHz bidirectional Web Audio streaming with server-side webhook tools to execute deterministic appointment availability checks, calendar booking validation, real-time email deliverability verification, and automated RFC 5545 calendar invite dispatch.
+OmniDesk is a modern, full-stack Next.js application powered by the **AssemblyAI Voice Agent API**. It pairs real-time 24kHz bidirectional Web Audio streaming with server-side webhook tools to execute deterministic appointment availability checks, calendar booking validation, real-time email deliverability verification, and automated RFC 5545 calendar invite dispatch.
 
 Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailwind CSS v4**, and **shadcn/ui** components, OmniDesk operates as an enterprise-grade multi-tenant voice receptionist system for salons, wellness medspas, and real estate brokerages.
+
+> **Architecture Guarantee**: OmniDesk is a unified, standalone **Next.js full-stack platform**. All application logic, customer interfaces, backend API routes, database operations, and AssemblyAI voice integrations are developed and maintained **exclusively within the Next.js app (`src/`)**. No external backend service is needed.
 
 ---
 
@@ -62,7 +64,7 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
 - **24kHz Bidirectional Audio**: Low-latency PCM16 audio recording and streaming playback using the Web Audio API (`AudioContext`, `ScriptProcessorNode`).
 - **Dynamic Token Minting**: Session authentication tokens minted securely via server-side `/api/token` route handlers (`GET https://agents.assemblyai.com/v1/token?expires_in_seconds=600`).
 - **Sub-Second Interruption Handling**: Automatically clears audio queues and pauses agent output the millisecond caller speech is detected.
-- **Automated DNS Retry & Provisioning**: Resilient backoff and retry during agent creation to accommodate Cloudflare Tunnel DNS propagation.
+- **Live Tool Event Streaming**: Live UI updates display tool calls, input arguments, and execution results in real time as the caller speaks.
 
 ### 2. Autonomous Server-Side Webhook Tools
 The voice agent executes deterministic server tools during natural speech turns without client-side intervention:
@@ -73,7 +75,7 @@ The voice agent executes deterministic server tools during natural speech turns 
 - **`book_appointment`**: Commits verified reservations, generates a unique 6-character confirmation code, and prevents scheduling conflicts.
 - **`send_confirmation`**: Dispatches a transactional email through Resend with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
 
-### 3. Unified Practice Management Dashboard
+### 3. Unified Practice Management Dashboard (`/dashboard`)
 - **Agent Builder**:
   - Persona & system prompt editor with token counter and live autosave.
   - ElevenLabs voice switcher with speed and pitch controls.
@@ -122,26 +124,26 @@ Embed the voice agent into any external website in seconds:
 
 ```text
 assemblyai-voice-agent-scheduler/
-├── .env                         # API keys & tunnel URLs
-├── .gitignore                   # Ignores build artifacts, databases, and archived legacy code
+├── .env                         # Local environment variables (ASSEMBLYAI_API_KEY, etc.)
+├── .env.example                 # Example template for environment variables
+├── .gitignore                   # Ignores build artifacts, databases, and local secrets
 ├── components.json              # shadcn/ui configuration
 ├── package.json                 # Next.js 16 & React 19 dependencies
 ├── pnpm-lock.yaml               # Deterministic pnpm lockfile
 ├── tsconfig.json                # TypeScript path aliases (@/* -> src/*)
-├── run.py                       # Unified one-command runner (Next.js + Cloudflare)
 ├── public/
 │   ├── widget.js                # Standalone embeddable launcher script
 │   ├── favicon.svg              # OmniDesk brand favicon
 │   └── logo.svg                 # OmniDesk brand logo
 ├── data/
-│   └── omnidesk.db              # Multi-tenant SQLite database
+│   └── omnidesk.db              # Multi-tenant SQLite database (auto-migrated)
 └── src/
     ├── app/
     │   ├── layout.tsx           # Root layout with TooltipProvider & Sonner Toaster
-    │   ├── page.tsx             # High-conversion public landing page
-    │   ├── globals.css          # Tailwind CSS v4 design system tokens
+    │   ├── page.tsx             # Public marketing landing page
+    │   ├── globals.css          # Tailwind CSS v4 design tokens
     │   ├── dashboard/
-    │   │   └── page.tsx         # Full 4-tab SaaS practice management console
+    │   │   └── page.tsx         # Full 4-tab practice management console
     │   ├── demo/
     │   │   └── page.tsx         # Interactive voice showroom with archetype switchers
     │   ├── api/
@@ -170,11 +172,6 @@ assemblyai-voice-agent-scheduler/
         └── utils.ts             # Tailwind class merging utility (clsx + twMerge)
 ```
 
-> [!IMPORTANT]
-> **Independent Next.js Full-Stack Architecture**: OmniDesk solely depends on the Next.js platform located in `src/`. Next.js handles all client interface pages, 24kHz bidirectional Web Audio, multi-tenant SQLite database persistence, AssemblyAI session token minting, and all server-side webhook tools.
-> 
-> All initial prototype files and directories (`web/`, `legacy_app/`, `app/`, `scripts/`, `agent.json`, `requirements.txt`, `public/app.js`, and `public/worklet.js`) are **preserved locally on disk** for your reference, but are registered in [`.gitignore`](.gitignore) so they are never tracked by Git or bundled into production.
-
 ---
 
 ## Getting Started
@@ -182,64 +179,109 @@ assemblyai-voice-agent-scheduler/
 ### Prerequisites
 - **Node.js**: 20.x or 22.x LTS
 - **Package Manager**: `pnpm` (recommended: `npm install -g pnpm`) or `npm`
-- **Python**: 3.10+ (for one-command launcher `run.py`)
-- **AssemblyAI API Key**: Obtain from the [AssemblyAI Console](https://www.assemblyai.com/dashboard)
+- **AssemblyAI API Key**: Free tier available from the [AssemblyAI Dashboard](https://www.assemblyai.com/dashboard)
 
-### 1. Installation
-Clone the repository and install all dependencies:
+---
+
+### Step 1: Install Dependencies
 
 ```bash
 pnpm install
 # or: npm install
 ```
 
-### 2. Environment Configuration
-Create or configure your `.env` file in the project root:
+---
+
+### Step 2: Configure Environment Variables
+
+Create your `.env` file from the provided `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and add your **AssemblyAI API Key**:
 
 ```env
-# Required for Voice Agent WebSocket connection and token minting
+# Required for Voice Agent WebSocket streaming and token minting
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# Filled in automatically or manually from AssemblyAI dashboard
-AGENT_ID=your_assemblyai_agent_id_here
+# Optional: Auto-filled on deploy, or paste your agent ID from AssemblyAI dashboard
+AGENT_ID=
 
-# Public HTTPS URL accessible by AssemblyAI for webhook tools
-# (Updated automatically by run.py when cloudflared is running)
-PUBLIC_API_BASE_URL=https://your-domain.trycloudflare.com
+# Optional: Public HTTPS URL for AssemblyAI to invoke webhook tools
+# (e.g. from Cloudflare Tunnel or your production deployment domain)
+PUBLIC_API_BASE_URL=
 
 # Optional: Resend API key for automated calendar invites (.ics)
-RESEND_API_KEY=re_your_resend_api_key
+RESEND_API_KEY=
 RESEND_FROM_EMAIL=onboarding@resend.dev
 
 # Optional: Abstract API key for live mailbox deliverability checks
-ABSTRACT_EMAIL_API_KEY=your_abstract_api_key
+ABSTRACT_EMAIL_API_KEY=
 
-# Optional: Supabase credentials for cloud backup sync
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key
+# Optional: Supabase cloud backup (Built-in SQLite data/omnidesk.db is used by default)
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
 ```
 
-### 3. Launching the Application
+> **Note**: Only `ASSEMBLYAI_API_KEY` is required to run the application and test live voice interactions in the browser. All other integrations (Resend, Abstract API, Supabase) are optional enhancements.
 
-#### Option A: One-Command Runner (Recommended)
-The runner starts the Next.js development server, automatically launches a Cloudflare Tunnel for AssemblyAI tool webhooks, updates `PUBLIC_API_BASE_URL` in `.env`, syncs the active agent tools, and displays accessible URLs:
+---
 
-```bash
-python run.py
-```
+### Step 3: Run the Development Server
 
-#### Option B: Standard Next.js Development Server
-If you prefer running Next.js directly:
+Start the Next.js development server:
 
 ```bash
 pnpm dev
 # or: npm run dev
 ```
 
-Once running, navigate to:
+The application is now live at:
 - **Public Landing Page**: [http://localhost:3000/](http://localhost:3000/)
-- **Practice Owner Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- **Owner Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 - **Interactive Voice Demo Showroom**: [http://localhost:3000/demo](http://localhost:3000/demo)
+
+---
+
+## How to Test as a Judge
+
+### 1. Test Live Voice Receptionist (`/demo`)
+Navigate to [http://localhost:3000/demo](http://localhost:3000/demo):
+- Select a business archetype (e.g., **Hair Salon**, **Real Estate**, or **Wellness MedSpa**).
+- Click **"Start Voice Call"** and grant microphone permissions.
+- Speak naturally to the receptionist (e.g., *"Hi, what services do you offer and what are your prices?"* or *"Can I book an appointment for tomorrow?"*).
+- Observe sub-second responses and automated tool execution in the live transcript.
+
+### 2. Test Practice Owner Dashboard (`/dashboard`)
+Navigate to [http://localhost:3000/dashboard](http://localhost:3000/dashboard):
+- **Agent Builder Tab**: Customize the business name, prompt instructions, voice persona, and add/remove services and pricing from the live catalog.
+- **Voice Tester Tab**: Test the agent directly with live frequency visualizations, tool trace logs, and copy embeddable widget code.
+- **Bookings CRM Tab**: Inspect customer appointments, check availability statuses, and trigger manual `.ics` calendar invite dispatches.
+- **Call History Tab**: View caller session durations, token consumption metrics, and complete conversation transcripts.
+
+---
+
+## Connecting Webhook Tools to AssemblyAI Cloud
+
+AssemblyAI Voice Agents execute server tools (like `get_today`, `check_availability`, `book_appointment`) via HTTP `POST` requests from AssemblyAI's cloud infrastructure to your server.
+
+When developing locally, expose your local Next.js server to the internet using Cloudflare Tunnel or localtunnel:
+
+```bash
+cloudflared tunnel --url http://localhost:3000
+```
+
+Copy the generated public HTTPS URL (e.g. `https://your-tunnel-name.trycloudflare.com`) and paste it into `PUBLIC_API_BASE_URL` in `.env`:
+
+```env
+PUBLIC_API_BASE_URL=https://your-tunnel-name.trycloudflare.com
+```
+
+Then, click **"Save & Deploy"** in the **Agent Builder** tab on your dashboard. OmniDesk will automatically register all webhook tools with AssemblyAI pointed at your active tunnel URL.
+
+*(Optional convenience helper)*: If you have Python installed, you can also run `python run.py`, which launches the Next.js server and Cloudflare Tunnel simultaneously in one terminal and auto-syncs the tools.
 
 ---
 
