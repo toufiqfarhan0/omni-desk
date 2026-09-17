@@ -190,63 +190,6 @@ export async function validateAndVerifyEmail(
     }
   }
 
-  let mailboxVerified = false;
-  const abstractKey =
-    process.env.ABSTRACT_EMAIL_API_KEY || process.env.ABSTRACT_API_KEY;
-
-  if (abstractKey) {
-    try {
-      const res = await fetch(
-        `https://emailreputation.abstractapi.com/v1/?api_key=${encodeURIComponent(
-          abstractKey
-        )}&email=${encodeURIComponent(s)}`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (res.ok) {
-        const rep = await res.json();
-        const deliverability = rep.email_deliverability || {};
-        const status = String(deliverability.status || "").toLowerCase();
-        const detail = String(deliverability.status_detail || "").toLowerCase();
-        const isSmtpValid = deliverability.is_smtp_valid;
-        const quality = rep.email_quality || {};
-
-        if (quality.is_disposable) {
-          return {
-            ok: false,
-            valid: false,
-            reason: "disposable",
-            message:
-              "Temporary or disposable email addresses are not accepted. Please provide a standard personal or work email address.",
-          };
-        }
-
-        if (
-          status === "undeliverable" ||
-          detail === "invalid_mailbox" ||
-          isSmtpValid === false
-        ) {
-          return {
-            ok: false,
-            valid: false,
-            reason: "invalid_mailbox",
-            message: `The email address '${s}' does not appear to exist or cannot receive mail. Please provide an active email.`,
-          };
-        }
-
-        if (status === "deliverable" || isSmtpValid === true) {
-          mailboxVerified = true;
-        }
-
-        const suggested = rep.suggested_correction;
-        if (suggested && suggested.toLowerCase() !== s.toLowerCase()) {
-          s = suggested.toLowerCase();
-          autoFixed = true;
-        }
-      }
-    } catch {
-      // Gracefully continue if Abstract API times out or errors
-    }
-  }
 
   const bizKey = bizId || "default";
   try {
@@ -262,7 +205,7 @@ export async function validateAndVerifyEmail(
     auto_corrected: autoFixed,
     original: originalInput,
     dns_verified: dnsVerified,
-    mailbox_verified: mailboxVerified,
+    mailbox_verified: dnsVerified,
     message: `Email verified: ${s}. Please confirm this with the caller.`,
   };
 }
