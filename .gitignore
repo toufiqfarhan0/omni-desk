@@ -1,7 +1,30 @@
+# Environment & Secrets
 .env
+agent_id.txt
+
+# Python & Virtual Environments
 __pycache__/
 *.pyc
 .venv/
 venv/
-agent_id.txt
+
+# Database & Runtime Data
 data/*.db
+
+# Node & Next.js Build Outputs
+node_modules/
+.next/
+out/
+build/
+package-lock.json
+*.tsbuildinfo
+
+# Legacy Prototype Code & Scripts (Anchored to root only)
+/web/
+/legacy_app/
+/app/
+/scripts/
+/agent.json
+/requirements.txt
+/public/app.js
+/public/worklet.js

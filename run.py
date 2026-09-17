@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""OmniDesk One-Command Runner
+"""OmniDesk Unified One-Command Runner
 
-Starts Uvicorn server and Cloudflare Tunnel simultaneously,
+Starts Next.js server and Cloudflare Tunnel simultaneously,
 automatically extracts the public HTTPS tunnel URL, updates .env,
-and prints clean clickable URLs.
+syncs AssemblyAI voice agent tools, and prints clean clickable URLs.
 """
 
 from __future__ import annotations
@@ -110,17 +110,16 @@ def sync_agent_tools(tunnel_url: str) -> bool:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="OmniDesk One-Command Runner")
+    parser = argparse.ArgumentParser(description="OmniDesk Next.js Unified Runner")
     parser.add_argument("--no-tunnel", action="store_true", help="Do not start Cloudflare tunnel")
-    parser.add_argument("--port", type=int, default=8000, help="Local port (default: 8000)")
-    parser.add_argument("--host", default="127.0.0.1", help="Local host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=3000, help="Local Next.js port (default: 3000)")
+    parser.add_argument("--host", default="0.0.0.0", help="Local host (default: 0.0.0.0)")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     port = args.port
-    host = args.host
     tunnel_proc = None
     tunnel_url = None
     shutdown_flag = threading.Event()
@@ -128,11 +127,11 @@ def main():
     has_cloudflared = bool(shutil.which("cloudflared"))
 
     print("\n" + "=" * 65)
-    print("                 OMNIDESK PLATFORM LAUNCHER")
+    print("                 OMNIDESK NEXT.JS PLATFORM")
     print("=" * 65)
 
     if not args.no_tunnel and has_cloudflared:
-        print("[*] Starting Cloudflare Tunnel for AssemblyAI tools...")
+        print(f"[*] Starting Cloudflare Tunnel pointing to http://localhost:{port}...")
         try:
             tunnel_proc = subprocess.Popen(
                 ["cloudflared", "tunnel", "--url", f"http://localhost:{port}"],
@@ -178,11 +177,18 @@ def main():
     print("-" * 65)
     print(f"  Owner Dashboard:    http://localhost:{port}/dashboard")
     print(f"  Public Landing:     http://localhost:{port}/")
-    print(f"  Try Demos:          http://localhost:{port}/demo")
+    print(f"  Interactive Demo:   http://localhost:{port}/demo")
     if tunnel_url:
-        print(f"  Public Tunnel URL:  {tunnel_url}")
+        print(f"  Public Webhook URL: {tunnel_url}")
     print("-" * 65)
-    print("Press CTRL+C anytime to stop the server and tunnel.\n")
+    print("Press CTRL+C anytime to stop the Next.js server and tunnel.\n")
+
+    pkg_mgr = "pnpm" if shutil.which("pnpm") else ("npm" if shutil.which("npm") else "npx")
+    cmd = [pkg_mgr, "run", "dev", "--", "-p", str(port)]
+    if sys.platform == "win32":
+        cmd = ["cmd", "/c"] + cmd
+
+    next_proc = subprocess.Popen(cmd, cwd=str(ROOT))
 
     def cleanup(sig=None, frame=None):
         shutdown_flag.set()
@@ -193,6 +199,13 @@ def main():
                 tunnel_proc.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 tunnel_proc.kill()
+        if next_proc and next_proc.poll() is None:
+            print("[*] Stopping Next.js dev server...")
+            next_proc.terminate()
+            try:
+                next_proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                next_proc.kill()
         print("[*] OmniDesk stopped cleanly.")
         sys.exit(0)
 
@@ -200,15 +213,7 @@ def main():
     signal.signal(signal.SIGTERM, cleanup)
 
     try:
-        import uvicorn
-        uvicorn.run(
-            "app.main:app",
-            host=host,
-            port=port,
-            reload=True,
-            reload_dirs=[str(ROOT / "app"), str(ROOT / "web")],
-            reload_excludes=[".env", "*.txt", "*.db", "data/*", "*.json"],
-        )
+        next_proc.wait()
     except KeyboardInterrupt:
         pass
     finally:
