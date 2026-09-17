@@ -6,7 +6,10 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>OmniDesk Dental Clinic — Autonomous Voice Receptionist</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>OmniDesk Hair Salon & Studio — Autonomous Voice Receptionist</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -544,6 +547,175 @@
         background: var(--warn-soft);
         border: 1px solid var(--warn-border);
         padding: 2px 6px;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
+      /* Live Email Input Box in Console */
+      .live-email-box {
+        background: #ffffff;
+        border-top: 1px solid #e5e5e5;
+        padding: 12px 16px;
+        box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05);
+        animation: fadeIn 0.18s ease;
+        flex: none;
+      }
+
+      .live-email-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        gap: 8px;
+      }
+
+      .live-email-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .pulse-dot {
+        width: 6px;
+        height: 6px;
+        background: #16a34a;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.8; }
+      }
+
+      .live-email-guide {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .live-email-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .live-email-input-wrapper {
+        position: relative;
+        flex: 1;
+      }
+
+      .live-email-input {
+        width: 100%;
+        padding: 9px 12px 9px 34px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        font-family: var(--font);
+        font-size: 13.5px;
+        outline: none;
+        box-sizing: border-box;
+        transition: all 0.15s ease;
+        background: #ffffff;
+      }
+
+      .live-email-input:focus {
+        border-color: #000000;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+      }
+
+      .live-email-input.valid {
+        border-color: #22c55e;
+        background: #f0fdf4;
+      }
+
+      .live-email-input.invalid {
+        border-color: #ef4444;
+        background: #fef2f2;
+      }
+
+      .live-email-icon {
+        position: absolute;
+        left: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .live-email-check-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .btn-live-email-send {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 16px;
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+      }
+
+      .btn-live-email-send:hover {
+        background: #262626;
+      }
+
+      .btn-live-email-send:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .live-email-feedback {
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .live-email-feedback.success {
+        color: #16a34a;
+        font-weight: 500;
+      }
+
+      .live-email-feedback.error {
+        color: #dc2626;
+        font-weight: 500;
+      }
+
+      .live-email-feedback.suggestion {
+        color: #d97706;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+
+      .verified-email-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #86efac;
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 1px 6px;
         border-radius: 4px;
         margin-top: 4px;
       }
@@ -1126,7 +1298,7 @@
         </div>
         <div class="brand-text">
           <div class="brand-title-row">
-            <h1>OmniDesk Dental Clinic</h1>
+            <h1>OmniDesk Hair Salon & Studio</h1>
             <span class="tenant-badge">Autonomous Receptionist</span>
           </div>
           <p>Autonomous Voice Receptionist &middot; AssemblyAI Voice Agent API</p>
@@ -1183,8 +1355,42 @@
               </svg>
             </div>
             <strong>Ready for incoming caller</strong>
-            <p>Start the call and ask to schedule a dental cleaning or checkup next week.</p>
+            <p>Start the call and ask to schedule a haircut, styling, or coloring next week.</p>
           </div>
+        </div>
+
+        <!-- LIVE CUSTOMER EMAIL INPUT BAR -->
+        <div class="live-email-box" id="live-email-box" style="display: none;">
+          <div class="live-email-head">
+            <div class="live-email-badge">
+              <span class="pulse-dot"></span>
+              <span>Agent Asking for Email</span>
+            </div>
+            <span class="live-email-guide">Type email to verify directly without voice spelling errors</span>
+          </div>
+          <form class="live-email-form" id="live-email-form">
+            <div class="live-email-input-wrapper">
+              <span class="live-email-icon">✉️</span>
+              <input
+                type="email"
+                id="live-email-input"
+                class="live-email-input"
+                placeholder="e.g. name@gmail.com"
+                autocomplete="email"
+                spellcheck="false"
+                required
+              />
+              <span id="live-email-check" class="live-email-check-icon"></span>
+            </div>
+            <button type="submit" id="btn-send-email" class="btn-live-email-send">
+              <span>Verify &amp; Send</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+          <div id="live-email-feedback" class="live-email-feedback" style="display: none;"></div>
         </div>
       </section>
 
@@ -1244,7 +1450,7 @@
             <rect width="18" height="18" x="3" y="3" rx="2"/>
             <path d="M9 3v18"/>
           </svg>
-          <h2 id="sheet-title">OmniDesk Dental Clinic &mdash; Owner Console</h2>
+          <h2 id="sheet-title">OmniDesk Hair Salon & Studio &mdash; Owner Console</h2>
         </div>
         <button class="sheet-close-btn" id="sheet-close-btn" type="button" aria-label="Close sheet">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1385,7 +1591,7 @@
         <!-- TAB 6: SETTINGS -->
         <div class="tab-pane" id="tab-settings">
           <div class="kpi-card">
-            <div class="kpi-label">Practice Operating Hours</div>
+            <div class="kpi-label">Salon Operating Hours</div>
             <div style="font-weight: 600; font-size: 14px;">Monday to Friday &middot; 9:00 AM &ndash; 5:00 PM</div>
             <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Slots automatically generated at 30-minute intervals.</div>
           </div>
@@ -1417,6 +1623,6 @@
       </div>
     </div>
 
-    <script src="/app.js"></script>
+    <script src="/app.js?v=salon2"></script>
   </body>
 </html>

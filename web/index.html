@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>OmniDesk — Autonomous Voice Receptionist & Booking Platform</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta
@@ -15,6 +18,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
     />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
       :root {
         --bg: #ffffff;
@@ -723,6 +727,293 @@
         font-size: 12px;
         color: var(--text-muted);
       }
+
+      /* Modal & Supabase Auth Styles */
+      .auth-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: grid;
+        place-items: center;
+        z-index: 1000;
+        padding: 16px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      .auth-modal.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .auth-modal-box {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        max-width: 480px;
+        width: 100%;
+        padding: 32px;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        transform: translateY(12px) scale(0.98);
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .auth-modal.is-open .auth-modal-box {
+        transform: translateY(0) scale(1);
+      }
+
+      .auth-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .auth-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 4px;
+        color: var(--text);
+      }
+
+      .auth-sub {
+        font-size: 13.5px;
+        color: var(--text-muted);
+        margin: 0;
+        line-height: 1.45;
+      }
+
+      .btn-close-modal {
+        background: transparent;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 20px;
+        line-height: 1;
+        transition: all 0.15s;
+        flex: none;
+      }
+
+      .btn-close-modal:hover {
+        background: var(--surface-card);
+        color: var(--text);
+      }
+
+      /* 1-Click Judge & Demo Bypass Card */
+      .demo-bypass-card {
+        background: #fafafa;
+        border: 1.5px solid #000000;
+        border-radius: var(--radius-lg);
+        padding: 18px;
+        margin-bottom: 20px;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      .demo-bypass-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: #000000;
+        color: #ffffff;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+
+      .demo-bypass-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: var(--text);
+      }
+
+      .demo-bypass-desc {
+        font-size: 12.5px;
+        color: var(--text-muted);
+        line-height: 1.45;
+        margin-bottom: 12px;
+      }
+
+      .btn-demo-signin {
+        width: 100%;
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 9px 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.15s;
+      }
+
+      .btn-demo-signin:hover {
+        background: #262626;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Divider */
+      .auth-divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 20px 0;
+        color: var(--text-dimmer);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .auth-divider::before,
+      .auth-divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .auth-divider span {
+        padding: 0 12px;
+      }
+
+      /* Tabs */
+      .auth-tabs {
+        display: flex;
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 3px;
+        margin-bottom: 18px;
+      }
+
+      .auth-tab-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: transparent;
+        font-family: var(--font);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .auth-tab-btn.active {
+        background: #ffffff;
+        color: var(--text);
+        box-shadow: var(--shadow-xs);
+      }
+
+      /* Form */
+      .auth-form-group {
+        margin-bottom: 14px;
+      }
+
+      .auth-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: var(--text);
+      }
+
+      .auth-input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-family: var(--font);
+        font-size: 13.5px;
+        background: #ffffff;
+        color: var(--text);
+        outline: none;
+        transition: all 0.15s;
+      }
+
+      .auth-input:focus {
+        border-color: #000000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+      }
+
+      .auth-alert {
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        font-size: 12.5px;
+        margin-bottom: 14px;
+        display: none;
+      }
+
+      .auth-alert.error {
+        background: #fef2f2;
+        border: 1px solid #fee2e2;
+        color: #991b1b;
+        display: block;
+      }
+
+      .auth-alert.success {
+        background: #f0fdf4;
+        border: 1px solid #dcfce7;
+        color: #166534;
+        display: block;
+      }
+
+      .btn-submit-auth {
+        width: 100%;
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        border-radius: var(--radius-md);
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 11px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.15s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-submit-auth:hover {
+        background: #262626;
+      }
+
+      .btn-submit-auth:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .auth-footer-note {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        text-align: center;
+        margin-top: 14px;
+      }
     </style>
   </head>
   <body>
@@ -742,23 +1033,23 @@
           <div class="nav-links">
             <a href="#features" class="nav-link">Capabilities</a>
             <a href="#architecture" class="nav-link">Architecture</a>
-            <a href="/console" class="nav-link">Dental Demo</a>
-            <a href="/dashboard" class="nav-link">Owner Portal</a>
+            <a href="/console" class="nav-link">Salon Demo</a>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
           </div>
 
           <div class="nav-actions">
             <a href="/console" class="btn btn-outline" style="font-size: 13px; padding: 7px 14px;">
-              Try Dental Demo
+              Try Salon Demo
             </a>
-            <a href="/dashboard" class="btn btn-primary" style="font-size: 13px; padding: 7px 16px;">
+            <button type="button" class="btn btn-primary" id="btn-open-auth-nav" style="font-size: 13px; padding: 7px 16px; cursor: pointer;">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                 <circle cx="9" cy="7" r="4"/>
                 <line x1="19" x2="19" y1="8" y2="14"/>
                 <line x1="22" x2="16" y1="11" y2="11"/>
               </svg>
-              Owner Portal
-            </a>
+              Sign In / Sign Up
+            </button>
           </div>
         </nav>
       </div>
@@ -783,15 +1074,15 @@
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                 <line x1="12" x2="12" y1="19" y2="22"/>
               </svg>
-              Try Live Dental Demo
+              Try Live Salon Demo
             </a>
-            <a href="/dashboard" class="btn btn-outline btn-lg">
+            <button type="button" class="btn btn-outline btn-lg" id="btn-hero-auth" style="cursor: pointer;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="18" height="18" x="3" y="3" rx="2"/>
                 <path d="M9 3v18"/>
               </svg>
               Create Voice Agent &rarr;
-            </a>
+            </button>
           </div>
         </div>
 
@@ -800,7 +1091,7 @@
           <div class="preview-bar">
             <div class="preview-tenant">
               <span class="live-dot"></span>
-              OmniDesk Dental Clinic &mdash; Live Inbound Stream
+              OmniDesk Hair Salon &amp; Studio &mdash; Live Inbound Stream
             </div>
             <span style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted);">Latency: 280ms &middot; 24kHz PCM16</span>
           </div>
@@ -809,7 +1100,7 @@
             <div class="preview-pane">
               <div class="preview-label">Live Caller & Assistant Dialog</div>
               <div class="preview-bubble caller">
-                "Hi, I want to book a routine dental cleaning for tomorrow morning."
+                "Hi, I want to book a haircut and blowout for tomorrow morning."
               </div>
               <div class="preview-bubble agent">
                 "Tomorrow on Thursday September 17, we have openings at 9:00 am, 9:30 am, and 10:30 am. Which time works best for you?"
@@ -824,7 +1115,7 @@
                   <span style="font-family: var(--mono); font-size: 11px; color: var(--accent-text);">200 OK</span>
                 </div>
                 <div style="font-family: var(--mono); font-size: 11.5px; color: var(--text-muted); background: #ffffff; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
-                  service: "cleaning"<br />
+                  service: "haircut"<br />
                   date: "2026-09-17"<br />
                   slots: ["09:00", "09:30", "10:30"]
                 </div>
@@ -958,27 +1249,27 @@
         <div class="featurette">
           <div>
             <div class="section-tag">Flagship Deployment</div>
-            <h3>OmniDesk Dental Clinic</h3>
+            <h3>OmniDesk Hair Salon &amp; Studio</h3>
             <p>
-              Experience OmniDesk configured as an autonomous dental receptionist managing four core clinical procedures: cleaning, routine checkups, teeth whitening, and root canals.
+              Experience OmniDesk configured as an autonomous salon receptionist managing four core styling services: signature haircuts, full color &amp; gloss, artisan balayage, and blowout treatments.
             </p>
             <div class="feature-list">
               <div class="feature-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                <span><strong>Multi-Procedure Slot Logic:</strong> 30m cleanings to 90m root canals.</span>
+                <span><strong>Multi-Service Slot Logic:</strong> 45m haircuts to 120m artisan balayage.</span>
               </div>
               <div class="feature-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                <span><strong>Resend Email & .ics Invites:</strong> Sends instant booking confirmations with 1-tap calendar invites.</span>
+                <span><strong>Resend Email &amp; .ics Invites:</strong> Sends instant booking confirmations with 1-tap calendar invites.</span>
               </div>
               <div class="feature-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                <span><strong>Phonetic Keyterm Boost:</strong> Transcribes dental terms (hygienist, root canal) with precision.</span>
+                <span><strong>Phonetic Keyterm Boost:</strong> Transcribes salon terms (balayage, blowout, esthetician) with precision.</span>
               </div>
             </div>
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
               <a href="/console" class="btn btn-primary btn-lg">
-                Launch Dental Demo Console &rarr;
+                Launch Salon Demo Console &rarr;
               </a>
               <a href="/dashboard" class="btn btn-outline btn-lg">
                 Build Custom Workflow &rarr;
@@ -998,7 +1289,7 @@
                 <div class="sheet-mini-lbl">Bookings</div>
               </div>
               <div class="sheet-mini-kpi">
-                <div class="sheet-mini-val">$1,105</div>
+                <div class="sheet-mini-val">$615</div>
                 <div class="sheet-mini-lbl">Revenue</div>
               </div>
               <div class="sheet-mini-kpi">
@@ -1009,10 +1300,10 @@
             <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: 12.5px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                 <strong>Eleanor Vance</strong>
-                <span style="color: var(--accent-text); font-weight: 600;">Dental Cleaning</span>
+                <span style="color: var(--accent-text); font-weight: 600;">Signature Haircut &amp; Styling</span>
               </div>
               <div style="color: var(--text-muted); font-size: 11.5px; font-family: var(--mono);">
-                Thursday Sep 17 &middot; 10:00 AM &middot; Code #LCOIHQ
+                Thursday Sep 17 &middot; 10:00 AM &middot; Code #7JFREK
               </div>
             </div>
           </div>
@@ -1046,5 +1337,275 @@
         </div>
       </div>
     </footer>
+    <!-- AUTH MODAL (SUPABASE + 1-CLICK DEMO BYPASS) -->
+    <div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="auth-modal-box">
+        <div class="auth-head">
+          <div>
+            <h3 class="auth-title" id="auth-modal-title">OmniDesk Portal Access</h3>
+            <p class="auth-sub">Manage your AI voice receptionist, customize prompts, and inspect live customer call logs.</p>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-auth-modal" aria-label="Close modal">&times;</button>
+        </div>
+
+        <!-- Demo Account Card -->
+        <div class="demo-bypass-card">
+          <div class="demo-bypass-title" style="margin-bottom: 10px;">Don't want to sign in? Use Demo Account</div>
+          <button type="button" class="btn-demo-signin" id="btn-instant-demo">
+            <span>Enter as Demo Account</span>
+          </button>
+        </div>
+
+        <!-- Divider -->
+        <div class="auth-divider">
+          <span>Or Continue with Email</span>
+        </div>
+
+        <!-- Tabs: Sign In / Create Account -->
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tab-btn-signin">Sign In</button>
+          <button type="button" class="auth-tab-btn" id="tab-btn-signup">Create Account</button>
+        </div>
+
+        <!-- Alert box -->
+        <div class="auth-alert" id="auth-alert"></div>
+
+        <!-- Auth Form -->
+        <form id="supabase-auth-form">
+          <div class="auth-form-group" id="group-fullname" style="display: none;">
+            <label class="auth-label" for="auth-fullname">Full Name</label>
+            <input type="text" id="auth-fullname" class="auth-input" placeholder="e.g. Eleanor Vance" autocomplete="name" />
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" class="auth-input" placeholder="you@business.com" required autocomplete="email" />
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="auth-input" placeholder="At least 6 characters" required autocomplete="current-password" minlength="6" />
+          </div>
+
+          <button type="submit" class="btn-submit-auth" id="btn-auth-submit">
+            <span id="auth-submit-label">Sign In</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- CLIENT SCRIPT -->
+    <script>
+      (function() {
+        let supabase = null;
+
+        async function getSupabase() {
+          if (supabase) return supabase;
+          try {
+            const res = await fetch("/api/config");
+            const cfg = await res.json();
+            if (window.supabase && window.supabase.createClient && cfg.supabase_url && cfg.supabase_anon_key) {
+              supabase = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+            }
+          } catch (err) {
+            console.warn("Could not load Supabase client config from /api/config:", err);
+          }
+          return supabase;
+        }
+
+        getSupabase();
+
+        const modal = document.getElementById("auth-modal");
+        const btnOpenNav = document.getElementById("btn-open-auth-nav");
+        const btnHero = document.getElementById("btn-hero-auth");
+        const btnClose = document.getElementById("btn-close-auth-modal");
+        const btnInstantDemo = document.getElementById("btn-instant-demo");
+        const tabSignIn = document.getElementById("tab-btn-signin");
+        const tabSignUp = document.getElementById("tab-btn-signup");
+        const form = document.getElementById("supabase-auth-form");
+        const inputName = document.getElementById("auth-fullname");
+        const inputEmail = document.getElementById("auth-email");
+        const inputPassword = document.getElementById("auth-password");
+        const groupName = document.getElementById("group-fullname");
+        const submitLabel = document.getElementById("auth-submit-label");
+        const alertBox = document.getElementById("auth-alert");
+        const submitBtn = document.getElementById("btn-auth-submit");
+
+        let mode = "signin"; // 'signin' | 'signup'
+
+        function showAlert(msg, type = "error") {
+          alertBox.className = "auth-alert " + type;
+          alertBox.textContent = msg;
+        }
+
+        function clearAlert() {
+          alertBox.className = "auth-alert";
+          alertBox.textContent = "";
+        }
+
+        function openModal(defaultMode = "signin") {
+          clearAlert();
+          setMode(defaultMode);
+          modal.classList.add("is-open");
+          inputEmail.focus();
+        }
+
+        function closeModal() {
+          modal.classList.remove("is-open");
+          clearAlert();
+        }
+
+        function setMode(newMode) {
+          mode = newMode;
+          clearAlert();
+          if (mode === "signin") {
+            tabSignIn.classList.add("active");
+            tabSignUp.classList.remove("active");
+            groupName.style.display = "none";
+            submitLabel.textContent = "Sign In";
+            inputPassword.autocomplete = "current-password";
+          } else {
+            tabSignUp.classList.add("active");
+            tabSignIn.classList.remove("active");
+            groupName.style.display = "block";
+            submitLabel.textContent = "Create Account";
+            inputPassword.autocomplete = "new-password";
+          }
+        }
+
+        if (btnOpenNav) btnOpenNav.addEventListener("click", () => openModal("signin"));
+        if (btnHero) btnHero.addEventListener("click", () => openModal("signin"));
+        if (btnClose) btnClose.addEventListener("click", closeModal);
+
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) closeModal();
+        });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && modal.classList.contains("is-open")) {
+            closeModal();
+          }
+        });
+
+        tabSignIn.addEventListener("click", () => setMode("signin"));
+        tabSignUp.addEventListener("click", () => setMode("signup"));
+
+        // 1-Click Demo Bypass handler
+        btnInstantDemo.addEventListener("click", () => {
+          const demoOwner = {
+            id: "owner_demo",
+            email: "demo@omnidesk.ai",
+            name: "OmniDesk Demo Operator"
+          };
+          localStorage.setItem("omnidesk_owner", JSON.stringify(demoOwner));
+          window.location.href = "/dashboard";
+        });
+
+        // Supabase Auth Form Submit
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          clearAlert();
+
+          const email = inputEmail.value.trim();
+          const password = inputPassword.value;
+          const fullName = inputName.value.trim();
+
+          if (!email || !password) {
+            showAlert("Please provide both email and password.");
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitLabel.textContent = mode === "signin" ? "Signing In..." : "Creating Account...";
+
+          try {
+            const sb = await getSupabase();
+            if (!sb) {
+              // Fallback to local server auth if Supabase script failed to load
+              const res = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name: fullName })
+              });
+              const data = await res.json();
+              if (data.ok) {
+                localStorage.setItem("omnidesk_owner", JSON.stringify(data.owner));
+                window.location.href = "/dashboard";
+                return;
+              }
+              throw new Error(data.detail || "Authentication failed");
+            }
+
+            if (mode === "signin") {
+              const { data, error } = await sb.auth.signInWithPassword({
+                email: email,
+                password: password,
+              });
+
+              if (error) {
+                throw error;
+              }
+
+              // Sync with backend SQLite
+              const syncRes = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: data.user.email,
+                  name: (data.user.user_metadata && data.user.user_metadata.full_name) || email.split("@")[0]
+                })
+              });
+              const syncData = await syncRes.json();
+              if (syncData.ok) {
+                localStorage.setItem("omnidesk_owner", JSON.stringify(syncData.owner));
+              }
+
+              window.location.href = "/dashboard";
+            } else {
+              // Sign up
+              const { data, error } = await sb.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                  data: {
+                    full_name: fullName || email.split("@")[0]
+                  }
+                }
+              });
+
+              if (error) {
+                throw error;
+              }
+
+              // If session was returned immediately or user confirmed
+              const syncRes = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: email,
+                  name: fullName || email.split("@")[0]
+                })
+              });
+              const syncData = await syncRes.json();
+              if (syncData.ok) {
+                localStorage.setItem("omnidesk_owner", JSON.stringify(syncData.owner));
+              }
+
+              if (data.session) {
+                window.location.href = "/dashboard";
+              } else {
+                showAlert("Account created! Please check your email inbox to verify your address, or click Demo Account to explore immediately.", "success");
+                submitBtn.disabled = false;
+                submitLabel.textContent = "Account Created";
+              }
+            }
+          } catch (err) {
+            showAlert(err.message || "Authentication error. Please check your credentials.");
+            submitBtn.disabled = false;
+            submitLabel.textContent = mode === "signin" ? "Sign In" : "Create Account";
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

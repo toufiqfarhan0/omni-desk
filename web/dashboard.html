@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>OmniDesk — Business Owner Portal & Voice Agent Builder</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -757,6 +760,176 @@
         opacity: 0.7;
       }
 
+      /* Live Email Input Box */
+      .live-email-box {
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        animation: fadeIn 0.18s ease;
+      }
+
+      .live-email-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        gap: 8px;
+      }
+
+      .live-email-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .pulse-dot {
+        width: 6px;
+        height: 6px;
+        background: #16a34a;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.8; }
+      }
+
+      .live-email-guide {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .live-email-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .live-email-input-wrapper {
+        position: relative;
+        flex: 1;
+      }
+
+      .live-email-input {
+        width: 100%;
+        padding: 9px 12px 9px 34px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        font-family: var(--font);
+        font-size: 13.5px;
+        outline: none;
+        box-sizing: border-box;
+        transition: all 0.15s ease;
+        background: #ffffff;
+      }
+
+      .live-email-input:focus {
+        border-color: #000000;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+      }
+
+      .live-email-input.valid {
+        border-color: #22c55e;
+        background: #f0fdf4;
+      }
+
+      .live-email-input.invalid {
+        border-color: #ef4444;
+        background: #fef2f2;
+      }
+
+      .live-email-icon {
+        position: absolute;
+        left: 11px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .live-email-check-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .btn-live-email-send {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 16px;
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+      }
+
+      .btn-live-email-send:hover {
+        background: #262626;
+      }
+
+      .btn-live-email-send:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .live-email-feedback {
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .live-email-feedback.success {
+        color: #16a34a;
+        font-weight: 500;
+      }
+
+      .live-email-feedback.error {
+        color: #dc2626;
+        font-weight: 500;
+      }
+
+      .live-email-feedback.suggestion {
+        color: #d97706;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+
+      .verified-email-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #86efac;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
       .sim-controls {
         display: flex;
         align-items: center;
@@ -892,6 +1065,25 @@
         border-color: #000000;
       }
 
+      .badge-tag.pending-btn {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 500;
+      }
+
+      .badge-tag.pending-btn:hover {
+        background: #fde68a;
+        color: #78350f;
+        transform: translateY(-1px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
       /* Modals */
       .modal {
         position: fixed;
@@ -935,6 +1127,241 @@
       .btn-close:hover {
         color: var(--text);
       }
+
+      /* AI Agent Persona Showcase Styles */
+      .agent-persona-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .agent-persona-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #000000, #71717a, #000000);
+      }
+
+      .persona-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .persona-avatar-group {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .persona-avatar-wrap {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #000000;
+        color: #ffffff;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        flex: none;
+      }
+
+      .persona-wave-ring {
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1.5px dashed rgba(0, 0, 0, 0.25);
+        animation: pulse-ring 2.5s infinite linear;
+      }
+
+      @keyframes pulse-ring {
+        0% { transform: rotate(0deg) scale(0.98); opacity: 0.8; }
+        50% { transform: rotate(180deg) scale(1.05); opacity: 0.4; }
+        100% { transform: rotate(360deg) scale(0.98); opacity: 0.8; }
+      }
+
+      .persona-meta h3 {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-bottom: 3px;
+      }
+
+      .persona-tags {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .persona-tag {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 4px;
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+
+      .persona-tag.highlight {
+        background: #000000;
+        color: #ffffff;
+        border-color: #000000;
+        font-weight: 600;
+      }
+
+      /* Animated Waveform Indicator */
+      .audio-waveform-bars {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        height: 14px;
+      }
+
+      .audio-waveform-bars span {
+        display: block;
+        width: 2.5px;
+        background: #000000;
+        border-radius: 1px;
+        animation: wave-bar 1.2s ease-in-out infinite alternate;
+      }
+
+      .audio-waveform-bars span:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+      .audio-waveform-bars span:nth-child(2) { height: 12px; animation-delay: 0.3s; }
+      .audio-waveform-bars span:nth-child(3) { height: 8px; animation-delay: 0.15s; }
+      .audio-waveform-bars span:nth-child(4) { height: 14px; animation-delay: 0.4s; }
+      .audio-waveform-bars span:nth-child(5) { height: 7px; animation-delay: 0.25s; }
+
+      @keyframes wave-bar {
+        0% { height: 3px; }
+        100% { height: 14px; }
+      }
+
+      /* Speech bubble for initial greeting */
+      .persona-bubble {
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        border-radius: 12px 12px 12px 2px;
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text);
+        position: relative;
+        margin: 12px 0;
+      }
+
+      .persona-bubble-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+
+      .persona-bubble-badge {
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+      }
+
+      .persona-bubble-text {
+        font-size: 13px;
+        font-style: italic;
+        color: #18181b;
+      }
+
+      /* Connected Tools Grid */
+      .persona-tools-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      @media (max-width: 600px) {
+        .persona-tools-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .persona-tool-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        font-family: var(--mono);
+        background: #fafafa;
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+
+      .persona-tool-pill .dot-live {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #16a34a;
+        box-shadow: 0 0 4px rgba(22, 163, 74, 0.4);
+      }
+
+      .persona-services-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .persona-srv-pill {
+        font-size: 11px;
+        font-weight: 500;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        padding: 3px 8px;
+        border-radius: 4px;
+        color: var(--text);
+      }
+
+      /* Modal Auth Tabs & Bypass in Dashboard */
+      .dash-auth-tabs {
+        display: flex;
+        background: #f4f4f5;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 3px;
+        margin-bottom: 16px;
+      }
+
+      .dash-auth-tab {
+        flex: 1;
+        padding: 7px 10px;
+        border: none;
+        background: transparent;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s;
+      }
+
+      .dash-auth-tab.active {
+        background: #ffffff;
+        color: var(--text);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
     </style>
   </head>
   <body>
@@ -955,7 +1382,7 @@
         <!-- Business Switcher -->
         <div class="biz-selector-wrap">
           <select id="biz-select" class="biz-select">
-            <option value="biz_demo_dental">OmniDesk Dental Clinic</option>
+            <option value="biz_demo_dental">OmniDesk Hair Salon & Studio</option>
           </select>
           <button id="btn-create-biz" class="btn-new-biz" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -972,11 +1399,12 @@
           Open Demo Console &nearr;
         </a>
         <div id="owner-badge" class="owner-badge">
-          <span class="dot"></span>
+          <span class="dot" id="owner-badge-dot"></span>
+          <span id="owner-type-badge" style="font-size: 10px; font-weight: 700; background: #000000; color: #ffffff; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.04em;">DEMO</span>
           <span id="owner-email-text">demo@omnidesk.ai</span>
         </div>
-        <button id="btn-auth-switch" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">
-          Switch Account
+        <button id="btn-sign-out" class="btn-secondary" style="padding: 6px 12px; font-size: 12px; display: none;">
+          Sign Out
         </button>
       </div>
     </header>
@@ -1002,22 +1430,22 @@
 
     <!-- Main Workspace -->
     <main class="container">
-      <!-- Status Banner -->
-      <div class="banner">
-        <div class="banner-info">
-          <span class="agent-status-pill" id="banner-agent-pill">AssemblyAI Provisioned</span>
-          <span id="banner-agent-desc">Voice Agent active on AssemblyAI Voice Agent API with live bidirectional tools.</span>
-        </div>
-        <button id="btn-deploy-agent" class="btn-primary" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          Save & Deploy Voice Agent
-        </button>
-      </div>
-
       <!-- TAB 1: AI AGENT & WORKFLOW BUILDER -->
       <section class="tab-pane active" id="tab-builder">
+        <!-- Status Banner & Save/Deploy Agent (Scoped strictly to Builder) -->
+        <div class="banner">
+          <div class="banner-info">
+            <span class="agent-status-pill" id="banner-agent-pill">AssemblyAI Provisioned</span>
+            <span id="banner-agent-desc">Voice Receptionist active with live calendar booking tools.</span>
+          </div>
+          <button id="btn-deploy-agent" class="btn-primary" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Save & Deploy Voice Agent
+          </button>
+        </div>
+
         <div class="grid-2">
           <!-- Left Column: Workflow Configuration -->
           <div class="card">
@@ -1034,10 +1462,10 @@
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 <select id="preset-industry" class="select-input">
                   <option value="" disabled selected>-- Select from popular presets --</option>
+                  <option value="salon">Hair Salon &amp; Studio (Haircuts, Coloring, Balayage, Blowouts)</option>
+                  <option value="medspa">MedSpa &amp; Aesthetics (Botox, Facials, Laser Resurfacing)</option>
+                  <option value="legal">Law Firm &amp; Legal Advisory (Consultations, Retainers, Contracts)</option>
                   <option value="dental">Dental Clinic (Cleanings, Checkups, Root Canals, Whitening)</option>
-                  <option value="medspa">MedSpa & Aesthetics (Botox, Facials, Laser Resurfacing)</option>
-                  <option value="legal">Law Firm & Legal Advisory (Consultations, Retainers, Contracts)</option>
-                  <option value="salon">Salon, Spa & Barber (Haircuts, Coloring, Styling)</option>
                   <option value="auto">Automotive Repair (Oil Change, Brake Inspection, Diagnostics)</option>
                   <option value="realestate">Real Estate Agency (Property Tour, Appraisal, Consultation)</option>
                 </select>
@@ -1053,45 +1481,37 @@
 
             <div class="row-2">
               <div class="form-group">
-                <label class="form-label" for="biz-name-input">Practice / Business Name</label>
-                <input type="text" id="biz-name-input" class="input-text" value="OmniDesk Dental Clinic" />
+                <label class="form-label" for="biz-name-input">Business Name</label>
+                <input type="text" id="biz-name-input" class="input-text" value="OmniDesk Hair Salon & Studio" />
               </div>
               <div class="form-group">
-                <label class="form-label" for="voice-tone-select">Speaking Tone & Style</label>
-                <select id="voice-tone-select" class="select-input">
-                  <option value="warm">Warm, Friendly & Empathetic</option>
-                  <option value="professional">Professional, Polished & Formal</option>
-                  <option value="efficient">Fast, Crisp & Direct</option>
-                  <option value="reassuring">Calm, Clinical & Reassuring</option>
+                <label class="form-label" for="voice-model-select">Voice Model</label>
+                <select id="voice-model-select" class="select-input">
+                  <option value="alba" selected>Alba — Warm, Natural Female (US)</option>
+                  <option value="eve">Eve — Clear, Professional Female (US)</option>
+                  <option value="jane">Jane — Friendly, Expressive Female (US)</option>
+                  <option value="anna">Anna — Polished, Refined Female (GB)</option>
+                  <option value="george">George — Deep, Professional Male (US)</option>
+                  <option value="michael">Michael — Crisp, Confident Male (US)</option>
+                  <option value="charles">Charles — Distinguished Male (GB)</option>
                 </select>
               </div>
             </div>
 
-            <div class="row-2">
-              <div class="form-group">
-                <label class="form-label" for="voice-model-select">Voice Model</label>
-                <select id="voice-model-select" class="select-input">
-                  <option value="131a436c-0fc4-4797-90f7-d0e515d18b06">Jessica — Clear, Natural Female</option>
-                  <option value="098b63e0-3273-47a2-9694-de982d618991">George — Deep, Professional Male</option>
-                  <option value="b7d50908-b17c-442d-ad8d-810c63997ed9">Alice — Engaging, Friendly Female</option>
-                  <option value="79a125e8-cd45-4c13-8a67-188112f4dd22">River — Relaxed, Natural Neutral</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="slot-duration-select">Slot Interval</label>
-                <select id="slot-duration-select" class="select-input">
-                  <option value="15">15 Minutes</option>
-                  <option value="30" selected>30 Minutes</option>
-                  <option value="45">45 Minutes</option>
-                  <option value="60">60 Minutes</option>
-                </select>
-              </div>
+            <div class="form-group">
+              <label class="form-label" for="slot-duration-select">Slot Interval</label>
+              <select id="slot-duration-select" class="select-input">
+                <option value="15">15 Minutes</option>
+                <option value="30" selected>30 Minutes</option>
+                <option value="45">45 Minutes</option>
+                <option value="60">60 Minutes</option>
+              </select>
             </div>
 
             <!-- Initial Spoken Greeting -->
             <div class="form-group">
               <label class="form-label" for="greeting-input">Spoken Initial Greeting</label>
-              <input type="text" id="greeting-input" class="input-text" value="Thanks for calling OmniDesk Dental Clinic. Are you looking to book an appointment?" />
+              <input type="text" id="greeting-input" class="input-text" value="Thanks for calling OmniDesk Hair Salon & Studio. Are you looking to book a haircut, styling, or coloring appointment?" />
               <p class="form-hint">The first sentence the AI receptionist speaks when the caller connects.</p>
             </div>
 
@@ -1115,6 +1535,104 @@
 
           <!-- Right Column: Services Catalog & Operating Hours -->
           <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- AI Agent Persona Showcase ("How Your Created AI Agent Looks") -->
+            <div class="agent-persona-card" id="agent-persona-card">
+              <div class="persona-head">
+                <div class="persona-avatar-group">
+                  <div class="persona-avatar-wrap">
+                    <span id="persona-avatar-letter">J</span>
+                    <div class="persona-wave-ring"></div>
+                  </div>
+                  <div class="persona-meta">
+                    <h3 id="persona-voice-name">Jessica — Clear, Natural Female</h3>
+                    <div class="persona-tags">
+                      <span class="persona-tag highlight">AssemblyAI Voice API</span>
+                      <span class="persona-tag">24kHz Audio</span>
+                      <span class="persona-tag">&lt; 300ms Latency</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="audio-waveform-bars" title="Audio Activity Simulator">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+
+              <!-- First Spoken Greeting Preview Bubble -->
+              <div class="persona-bubble">
+                <div class="persona-bubble-header">
+                  <span class="persona-bubble-badge">First Spoken Greeting Preview</span>
+                  <span style="font-size: 11px; font-family: var(--mono); color: var(--text-muted);">Plays on Call Connect</span>
+                </div>
+                <div class="persona-bubble-text" id="persona-greeting-text">
+                  "Thanks for calling OmniDesk Hair Salon &amp; Studio. Are you looking to book a haircut, styling, or coloring appointment today?"
+                </div>
+              </div>
+
+              <!-- Connected Server-Side Tools -->
+              <div style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-top: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <span>Active Server-Side HTTP Tools</span>
+                <span style="font-family: var(--mono); color: #16a34a; font-size: 11px;">4 Tools Ready</span>
+              </div>
+              <div class="persona-tools-grid">
+                <div class="persona-tool-pill">
+                  <span class="dot-live"></span>
+                  <span>check_availability</span>
+                </div>
+                <div class="persona-tool-pill">
+                  <span class="dot-live"></span>
+                  <span>book_appointment</span>
+                </div>
+                <div class="persona-tool-pill">
+                  <span class="dot-live"></span>
+                  <span>send_confirmation</span>
+                </div>
+                <div class="persona-tool-pill">
+                  <span class="dot-live"></span>
+                  <span>get_today</span>
+                </div>
+              </div>
+
+              <!-- Configured Services Catalog Pills -->
+              <div style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-top: 12px;">
+                <span>Services Configured For This Agent</span>
+              </div>
+              <div class="persona-services-row" id="persona-services-preview">
+                <!-- Populated dynamically -->
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px;">
+                <button type="button" id="btn-persona-test-call" class="btn-primary" style="width: 100%; font-size: 12.5px; padding: 8px 12px; justify-content: center;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                  </svg>
+                  Test Voice Agent Live &rarr;
+                </button>
+
+                <!-- Inline Red Warning when unsaved modifications exist -->
+                <div id="persona-test-warning" style="display: none; padding: 10px 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 12px; line-height: 1.45;">
+                  <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <div style="flex: 1;">
+                      <div style="font-weight: 600; color: #b91c1c;">Before testing, please save and deploy to reflect changes in your AI voice agent.</div>
+                      <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button type="button" id="btn-warning-deploy" style="background: #dc2626; color: #ffffff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                          Save &amp; Deploy Now
+                        </button>
+                        <button type="button" id="btn-warning-continue" style="background: transparent; color: #7f1d1d; border: 1px solid #fca5a5; padding: 3px 9px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                          Test Previous Version
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Services Catalog -->
             <div class="card">
               <div class="card-head">
@@ -1227,6 +1745,40 @@
                 </div>
               </div>
 
+              <!-- LIVE CUSTOMER EMAIL INPUT BAR -->
+              <div class="live-email-box" id="sim-email-box" style="display: none;">
+                <div class="live-email-head">
+                  <div class="live-email-badge">
+                    <span class="pulse-dot"></span>
+                    <span>Agent Asking for Email</span>
+                  </div>
+                  <span class="live-email-guide">Type email to verify directly without voice mistakes</span>
+                </div>
+                <form class="live-email-form" id="sim-email-form">
+                  <div class="live-email-input-wrapper">
+                    <span class="live-email-icon">✉️</span>
+                    <input
+                      type="email"
+                      id="sim-email-input"
+                      class="live-email-input"
+                      placeholder="e.g. name@gmail.com"
+                      autocomplete="email"
+                      spellcheck="false"
+                      required
+                    />
+                    <span id="sim-email-check" class="live-email-check-icon"></span>
+                  </div>
+                  <button type="submit" id="btn-sim-send-email" class="btn-live-email-send">
+                    <span>Verify &amp; Send</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </form>
+                <div id="sim-email-feedback" class="live-email-feedback" style="display: none;"></div>
+              </div>
+
               <div class="sim-controls">
                 <button id="btn-start-sim" class="btn-call" type="button">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1331,30 +1883,58 @@
       </section>
     </main>
 
-    <!-- AUTH MODAL (SUPABASE EMAIL AUTH) -->
+    <!-- AUTH MODAL (SUPABASE + 1-CLICK DEMO BYPASS) -->
     <div class="modal" id="auth-modal" hidden>
       <div class="modal-box">
         <div class="modal-head">
           <h2 style="font-size: 18px; font-weight: 700;">Owner Authentication</h2>
           <button type="button" class="btn-close" id="btn-close-auth">&times;</button>
         </div>
-        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
-          Sign in with your email to manage your AI voice receptionist, customize prompts, and inspect live customer call logs.
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px;">
+          Sign in to manage your AI voice receptionist, customize prompts, and inspect live customer call logs.
         </p>
 
+        <!-- Demo Account -->
+        <div style="background: #fafafa; border: 1.5px solid #000000; border-radius: var(--radius); padding: 14px; margin-bottom: 16px;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Don't want to sign in? Use Demo Account</div>
+          <button type="button" id="btn-dash-instant-demo" class="btn-primary" style="width: 100%; font-size: 12.5px; padding: 8px 12px;">
+            Enter as Demo Account
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; text-align: center; margin: 16px 0; color: var(--text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;">
+          <span style="flex: 1; border-bottom: 1px solid var(--border);"></span>
+          <span style="padding: 0 10px;">Or Continue with Email</span>
+          <span style="flex: 1; border-bottom: 1px solid var(--border);"></span>
+        </div>
+
+        <!-- Supabase Tabs -->
+        <div class="dash-auth-tabs">
+          <button type="button" class="dash-auth-tab active" id="dash-tab-signin">Sign In</button>
+          <button type="button" class="dash-auth-tab" id="dash-tab-signup">Create Account</button>
+        </div>
+
+        <div id="dash-auth-alert" style="display: none; padding: 9px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 12px;"></div>
+
         <form id="auth-form">
-          <div class="form-group">
-            <label class="form-label" for="auth-email-input">Business Email Address</label>
-            <input type="email" id="auth-email-input" class="input-text" placeholder="owner@practice.com" required />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="auth-name-input">Full Name (Optional)</label>
-            <input type="text" id="auth-name-input" class="input-text" placeholder="Dr. Jane Doe" />
+          <div class="form-group" id="dash-group-name" style="display: none;">
+            <label class="form-label" for="auth-name-input">Full Name</label>
+            <input type="text" id="auth-name-input" class="input-text" placeholder="Eleanor Vance" />
           </div>
 
-          <div style="display: flex; gap: 10px; margin-top: 24px;">
-            <button type="submit" class="btn-primary" style="flex: 1;">
-              Continue to Dashboard
+          <div class="form-group">
+            <label class="form-label" for="auth-email-input">Email Address</label>
+            <input type="email" id="auth-email-input" class="input-text" placeholder="you@business.com" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="auth-password-input">Password</label>
+            <input type="password" id="auth-password-input" class="input-text" placeholder="At least 6 characters" required minlength="6" />
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="submit" class="btn-primary" id="btn-dash-auth-submit" style="flex: 1;">
+              Sign In
             </button>
           </div>
         </form>
@@ -1372,17 +1952,17 @@
         <form id="new-biz-form">
           <div class="form-group">
             <label class="form-label" for="modal-biz-name">Business Name</label>
-            <input type="text" id="modal-biz-name" class="input-text" placeholder="e.g. Apex Legal Group" required />
+            <input type="text" id="modal-biz-name" class="input-text" placeholder="e.g. Lumina MedSpa, Vanguard Advisory, City Clinic" required />
           </div>
           <div class="form-group">
             <label class="form-label" for="modal-biz-industry">Industry / Business Type</label>
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <select id="modal-biz-industry" class="select-input">
-                <option value="" disabled selected>-- Select from popular presets --</option>
+                <option value="" disabled selected>-- Select an industry preset --</option>
+                <option value="salon">Hair Salon &amp; Studio</option>
+                <option value="medspa">MedSpa &amp; Aesthetics</option>
+                <option value="legal">Law Firm &amp; Legal Services</option>
                 <option value="dental">Dental Clinic</option>
-                <option value="medspa">MedSpa & Aesthetics</option>
-                <option value="legal">Law Firm & Legal Advisory</option>
-                <option value="salon">Salon & Spa</option>
                 <option value="auto">Automotive Repair</option>
                 <option value="realestate">Real Estate</option>
               </select>
@@ -1397,6 +1977,77 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- CELEBRATORY AGENT SHOWCASE MODAL ("HOW YOUR CREATED AI AGENT LOOKS") -->
+    <div class="modal" id="agent-showcase-modal" hidden>
+      <div class="modal-box" style="max-width: 580px;">
+        <div class="modal-head">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">🎉</span>
+            <div>
+              <h2 style="font-size: 17px; font-weight: 700; margin: 0;">Your AI Voice Agent is Ready!</h2>
+              <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0;">Configured for AssemblyAI Voice Agent API with live bidirectional tools.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="btn-close-showcase">&times;</button>
+        </div>
+
+        <div style="background: #fafafa; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin: 16px 0;">
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+            <div class="persona-avatar-wrap" style="width: 52px; height: 52px; font-size: 20px;">
+              <span id="showcase-avatar-letter">A</span>
+              <div class="persona-wave-ring"></div>
+            </div>
+            <div>
+              <div style="font-size: 16px; font-weight: 700;" id="showcase-biz-name">My New Business</div>
+              <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                <span class="persona-tag" id="showcase-voice-name">Jessica</span>
+                <span class="persona-tag" style="background: #e0f2fe; border-color: #bae6fd; color: #0369a1; font-weight: 600;">AssemblyAI Voice API</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="persona-bubble" style="margin: 12px 0;">
+            <div class="persona-bubble-header">
+              <span class="persona-bubble-badge">Initial Spoken Greeting</span>
+              <span style="font-size: 11px; font-family: var(--mono); color: var(--text-muted);">Caller Hears First</span>
+            </div>
+            <div class="persona-bubble-text" id="showcase-greeting-text">
+              "Thanks for calling. How can I assist you today?"
+            </div>
+          </div>
+
+          <div style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+            Services &amp; Pricing Configured
+          </div>
+          <div class="persona-services-row" id="showcase-services-list">
+            <!-- Dynamic pills -->
+          </div>
+
+          <div style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 6px;">
+            Active Autonomous Tools
+          </div>
+          <div class="persona-tools-grid">
+            <div class="persona-tool-pill"><span class="dot-live"></span><span>check_availability</span></div>
+            <div class="persona-tool-pill"><span class="dot-live"></span><span>book_appointment</span></div>
+            <div class="persona-tool-pill"><span class="dot-live"></span><span>send_confirmation</span></div>
+            <div class="persona-tool-pill"><span class="dot-live"></span><span>get_today</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <button type="button" id="btn-showcase-call-now" class="btn-primary" style="flex: 1; padding: 11px 16px; font-size: 13.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            Test Call Your Agent Now &rarr;
+          </button>
+          <button type="button" id="btn-showcase-inspect" class="btn-secondary" style="padding: 11px 16px; font-size: 13.5px;">
+            Customize in Builder
+          </button>
+        </div>
       </div>
     </div>
 

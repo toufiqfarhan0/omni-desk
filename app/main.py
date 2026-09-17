@@ -5,8 +5,9 @@ Features:
 - Dynamic AssemblyAI Voice Agent provisioning & real-time modification
 - Interactive live agent testing with AssemblyAI session tokens
 - Call history logging & conversation transcript tracking
-- Sheeted customer bookings & CRM dashboard
-- 100% backward compatible with the flagship dental receptionist demo (/console)
+- Multi-tenant architecture supporting custom AI voice agents per business
+- 100% backward compatible with the flagship hair salon receptionist demo (/console)
+- Industry presets (Salon, MedSpa, Law Firm, Barber, Dental, Auto, Real Estate)
 """
 
 from __future__ import annotations
@@ -15,9 +16,13 @@ import base64
 import json
 import os
 import re
+import socket
+import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger("omnidesk")
 
 import httpx
 from dotenv import load_dotenv
@@ -90,11 +95,11 @@ class ServiceItem(BaseModel):
 class CreateBusinessRequest(BaseModel):
     owner_id: str
     name: str
-    industry: str = "dental"
-    tone: str = "professional"
+    industry: str = "salon"
+    tone: str = "warm"
     greeting: str
     system_prompt: str
-    voice_id: str = "131a436c-0fc4-4797-90f7-d0e515d18b06"
+    voice_id: str = "alba"
     slot_minutes: int = 30
     open_hour: int = 9
     close_hour: int = 17
@@ -122,7 +127,7 @@ class SaveConversationRequest(BaseModel):
     business_id: str
     caller_name: str = ""
     caller_email: str = ""
-    started_at: str
+    started_at: str = ""
     ended_at: str = ""
     duration_seconds: int = 0
     status: str = "completed"
@@ -131,20 +136,207 @@ class SaveConversationRequest(BaseModel):
     tool_calls: list[dict] = []
 
 
+class VerifyEmailRequest(BaseModel):
+    email: str
+    business_id: str | None = None
+
+
+class VerifyCustomerEmailRequest(BaseModel):
+    email: str
+
+
 # ---------------------------------------------------------------------------
 # Utility Helpers
 # ---------------------------------------------------------------------------
 
-def _normalize_email(raw: str) -> tuple[str | None, str]:
-    """Sanitize and validate spoken or transcribed email address."""
-    s = raw.strip().lower()
+COMMON_DOMAIN_FIXES = {
+    "gmai.com": "gmail.com",
+    "gamil.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gnail.com": "gmail.com",
+    "gmaill.com": "gmail.com",
+    "gmaik.com": "gmail.com",
+    "yaho.com": "yahoo.com",
+    "yahooo.com": "yahoo.com",
+    "yaho.co": "yahoo.com",
+    "yaho.con": "yahoo.com",
+    "hotmial.com": "hotmail.com",
+    "hotmai.com": "hotmail.com",
+    "hotmsil.com": "hotmail.com",
+    "outlok.com": "outlook.com",
+    "outloo.com": "outlook.com",
+    "outllook.com": "outlook.com",
+    "iclud.com": "icloud.com",
+    "icoud.com": "icloud.com",
+    "icloud.con": "icloud.com",
+    "protonmai.com": "protonmail.com",
+    "protnmail.com": "protonmail.com",
+}
+
+COMMON_TLD_FIXES = {
+    "con": "com",
+    "cmo": "com",
+    "comm": "com",
+    "coom": "com",
+    "ogr": "org",
+    "nte": "net",
+}
+
+DISPOSABLE_EMAIL_DOMAINS = {
+    "mailinator.com",
+    "tempmail.com",
+    "10minutemail.com",
+    "guerrillamail.com",
+    "throwawaymail.com",
+    "yopmail.com",
+    "sharklasers.com",
+    "getairmail.com",
+    "temp-mail.org",
+    "fakeinbox.com",
+    "trashmail.com",
+    "dispostable.com",
+}
+
+_active_verified_emails: dict[str, str] = {}
+
+
+def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
+    """Multi-stage email verification:
+    1. Spoken and written format sanitization
+    2. RFC 5322 structure and character checks
+    3. Common domain & TLD typo auto-correction
+    4. Disposable/temporary domain blocking
+    5. Real-time DNS host verification
+    6. Active session caching
+    """
+    cleaned = raw.strip()
+    if not cleaned:
+        return {"ok": False, "valid": False, "reason": "empty", "message": "Email address cannot be empty."}
+
+    # Normalize spoken patterns: "alex dot smith at gmail dot com"
+    s = cleaned.lower()
     s = re.sub(r"\s+at\s+", "@", s)
     s = re.sub(r"\s+dot\s+", ".", s)
+    s = re.sub(r"\s+underscore\s+", "_", s)
+    s = re.sub(r"\s+dash\s+|\s+hyphen\s+", "-", s)
     s = re.sub(r"\s+", "", s)
+
+    if "@" not in s or s.count("@") != 1:
+        return {
+            "ok": False,
+            "valid": False,
+            "reason": "missing_at",
+            "message": "Email address must contain exactly one '@' symbol (e.g. name@gmail.com).",
+        }
+
+    user_part, domain_part = s.split("@", 1)
+    if not user_part:
+        return {"ok": False, "valid": False, "reason": "missing_user", "message": "Missing username before '@' in email address."}
+    if not domain_part or "." not in domain_part:
+        return {"ok": False, "valid": False, "reason": "missing_domain", "message": "Missing domain in email address (e.g. @gmail.com)."}
+
+    # Username checks: cannot start or end with dot, no consecutive dots
+    if user_part.startswith(".") or user_part.endswith(".") or ".." in user_part:
+        return {"ok": False, "valid": False, "reason": "invalid_user", "message": "Email username cannot start, end with, or contain consecutive dots."}
+
+    auto_fixed = False
+    original_input = cleaned
+
+    # Check common domain typos
+    if domain_part in COMMON_DOMAIN_FIXES:
+        domain_part = COMMON_DOMAIN_FIXES[domain_part]
+        s = f"{user_part}@{domain_part}"
+        auto_fixed = True
+    else:
+        # Check TLD typos
+        parts = domain_part.split(".")
+        tld = parts[-1]
+        if tld in COMMON_TLD_FIXES:
+            parts[-1] = COMMON_TLD_FIXES[tld]
+            domain_part = ".".join(parts)
+            s = f"{user_part}@{domain_part}"
+            auto_fixed = True
+
     pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
-    if re.match(pattern, s):
-        return s, ""
-    return None, "bad_email"
+    if not re.match(pattern, s):
+        return {"ok": False, "valid": False, "reason": "invalid_chars", "message": "Email address contains invalid characters."}
+
+    tld = domain_part.split(".")[-1]
+    if len(tld) < 2 or not tld.isalpha():
+        return {"ok": False, "valid": False, "reason": "invalid_tld", "message": "Please enter a valid domain extension (e.g. .com, .org)."}
+
+    # Check disposable emails
+    if domain_part in DISPOSABLE_EMAIL_DOMAINS:
+        return {
+            "ok": False,
+            "valid": False,
+            "reason": "disposable",
+            "message": "Temporary or disposable email addresses are not accepted. Please provide a standard email address to receive your calendar invite.",
+        }
+
+    # Live DNS host resolution check
+    dns_verified = True
+    if domain_part not in {"localhost", "example.com", "test.com"}:
+        try:
+            socket.setdefaulttimeout(2.5)
+            socket.getaddrinfo(domain_part, None)
+        except socket.gaierror:
+            return {
+                "ok": False,
+                "valid": False,
+                "reason": "domain_not_found",
+                "message": f"The domain '@{domain_part}' does not exist on the internet. Please check for a spelling mistake.",
+            }
+        except Exception:
+            dns_verified = False
+
+    # Check if this caller has an active verified email that matches
+    biz_key = biz_id or "default"
+    active_email = _active_verified_emails.get(biz_key) or _active_verified_emails.get("default")
+    if active_email and (active_email == s or active_email in s or s in active_email or active_email.split("@")[0] in s):
+        s = active_email
+
+    _active_verified_emails[biz_key] = s
+    _active_verified_emails["default"] = s
+    try:
+        db.set_active_verified_email(biz_key, s)
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "valid": True,
+        "email": s,
+        "domain": domain_part,
+        "auto_corrected": auto_fixed,
+        "original": original_input,
+        "dns_verified": dns_verified,
+        "message": f"Email verified: {s}",
+    }
+
+
+def _normalize_email(raw: str, biz_id: str | None = None) -> tuple[str | None, str]:
+    """Sanitize and validate spoken or transcribed email address, with typo correction."""
+    biz_key = biz_id or "default"
+    active_email = (
+        _active_verified_emails.get(biz_key)
+        or _active_verified_emails.get("default")
+        or db.get_active_verified_email(biz_key)
+    )
+
+    # If caller/agent passed 'unknown' or empty, but we already have an active verified email, use it!
+    if (not raw or raw.strip().lower() in ("unknown", "unknown@unknown.com", "none", "null")) and active_email:
+        return active_email, ""
+
+    res = _validate_and_verify_email(raw, biz_id=biz_id)
+    if res["ok"]:
+        return res["email"], ""
+
+    # Fallback to active verified email if available for this session
+    if active_email:
+        return active_email, ""
+
+    return None, res.get("reason", "bad_email")
 
 
 def _parse_day(value: str) -> date | None:
@@ -183,7 +375,7 @@ def _get_business_or_demo(business_id: str | None) -> dict:
         return demo
     return {
         "id": "biz_demo_dental",
-        "name": "OmniDesk Dental Clinic",
+        "name": "OmniDesk Hair Salon & Studio",
         "open_hour": 9,
         "close_hour": 17,
         "slot_minutes": 30,
@@ -196,22 +388,23 @@ def _get_business_or_demo(business_id: str | None) -> dict:
 
 def _generate_ics(record: dict, biz: dict | None = None) -> str:
     """Generate an RFC 5545 iCalendar string with a 1-hour alarm notification."""
-    day_str = record.get("date", "")
-    time_str = record.get("time", "")
+    day_str = record.get("date") or record.get("appointment_date", "")
+    time_str = record.get("time") or record.get("appointment_time", "")
     service_label = record.get("service_label", "Appointment")
     name = record.get("customer_name", "Valued Client")
     code = record.get("confirmation_code", "")
-    biz_name = biz["name"] if biz else "OmniDesk Dental Clinic"
-    biz_id = biz["id"] if biz else "dental"
+    biz_name = biz["name"] if biz else "OmniDesk Hair Salon & Studio"
+    biz_id = biz["id"] if biz else "salon"
 
     minutes = 30
+    s_key = record.get("service") or record.get("service_key")
     if biz and "services" in biz:
         for s in biz["services"]:
-            if s["key"] == record.get("service"):
+            if s.get("key") == s_key:
                 minutes = s.get("minutes", 30)
                 break
-    elif record.get("service") in store.SERVICES:
-        minutes = store.SERVICES[record["service"]]["minutes"]
+    elif s_key in store.SERVICES:
+        minutes = store.SERVICES[s_key]["minutes"]
 
     try:
         start_dt = datetime.strptime(f"{day_str} {time_str}", "%Y-%m-%d %H:%M")
@@ -256,18 +449,25 @@ def _send_resend_confirmation(record: dict, biz: dict | None = None) -> dict:
     """Send confirmation email via Resend with attached .ics calendar invite."""
     resend_api_key = os.getenv("RESEND_API_KEY")
     if not resend_api_key:
+        logger.error("RESEND_API_KEY is not configured")
         return {"sent": False, "reason": "no_api_key"}
 
     from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-    to_email = record.get("email")
+    to_email = record.get("email") or record.get("customer_email")
     if not to_email:
+        active_email = db.get_active_verified_email(biz.get("id") if biz else "default")
+        if active_email:
+            to_email = active_email
+
+    if not to_email:
+        logger.error(f"Cannot send Resend email: record has no email address: {record}")
         return {"sent": False, "reason": "no_email"}
 
-    biz_name = biz["name"] if biz else "OmniDesk Dental Clinic"
+    biz_name = biz["name"] if biz else "OmniDesk Hair Salon & Studio"
     service_label = record.get("service_label", "Appointment")
     name = record.get("customer_name", "Valued Client")
-    day_str = record.get("date", "")
-    time_str = record.get("time", "")
+    day_str = record.get("date") or record.get("appointment_date", "")
+    time_str = record.get("time") or record.get("appointment_time", "")
     code = record.get("confirmation_code", "")
     price = record.get("price", 0)
 
@@ -362,6 +562,42 @@ def _send_resend_confirmation(record: dict, biz: dict | None = None) -> dict:
         )
         if resp.status_code in (200, 201):
             return {"sent": True, "id": resp.json().get("id")}
+
+        # Handle Resend free tier sandbox restriction (403 on external emails when using onboarding@resend.dev)
+        if resp.status_code == 403 and "only send testing emails to your own email address" in resp.text:
+            owner_email = "toufiqfarhan0@gmail.com"
+            match = re.search(r"\(([^)]+@[^)]+)\)", resp.text)
+            if match:
+                owner_email = match.group(1).strip()
+            
+            logger.info(f"Resend sandbox restriction active. Forwarding calendar invite for '{to_email}' to owner '{owner_email}'.")
+            sandbox_banner = f"""<div style="background:#fef3c7; border:1px solid #f59e0b; padding:12px 16px; border-radius:8px; font-size:13px; color:#92400e; margin-bottom:20px;">
+  <strong>Resend Sandbox Notice:</strong> This appointment was scheduled for <strong>{to_email}</strong>. In Resend development mode (<code>onboarding@resend.dev</code>), test emails can only be delivered to your registered email (<code>{owner_email}</code>). A native <code>.ics</code> calendar invite is attached below. To send directly to customer emails, verify your domain at <a href="https://resend.com/domains" style="color:#b45309; text-decoration:underline;">resend.com/domains</a>.
+</div>"""
+            forwarded_html = html_content.replace('<div style="padding: 28px;">', f'<div style="padding: 28px;">\n{sandbox_banner}')
+            resp_fallback = httpx.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": f"{biz_name} <{from_email}>",
+                    "to": [owner_email],
+                    "subject": f"[Dev Test for {to_email}] Appointment Confirmed: {service_label} - {biz_name}",
+                    "html": forwarded_html,
+                    "attachments": [
+                        {
+                            "filename": "appointment.ics",
+                            "content": ics_b64,
+                        }
+                    ],
+                },
+                timeout=10,
+            )
+            if resp_fallback.status_code in (200, 201):
+                return {"sent": True, "id": resp_fallback.json().get("id"), "sandbox_fallback": True, "delivered_to": owner_email}
+
         return {"sent": False, "reason": resp.text}
     except Exception as exc:
         return {"sent": False, "reason": str(exc)}
@@ -493,13 +729,21 @@ def _handle_check_availability(req: AvailabilityRequest, biz_id: str | None = No
             ),
         }
 
+    service_info = services_map.get(req.service, {})
+    service_label = service_info.get("label", req.service.capitalize())
+    price = service_info.get("price", 0.0)
+    minutes = service_info.get("minutes", 30)
+
     slots = _biz_available_slots(biz, day)
     if slots:
         return {
             "ok": True,
             "date": day.isoformat(),
+            "service": service_label,
+            "price": price,
+            "duration_minutes": minutes,
             "slots": slots,
-            "message": f"On {_speak_day(day)} we have {_speak_slots(slots)}.",
+            "message": f"On {_speak_day(day)} for {service_label} (${price}, {minutes} mins), we have open times at {_speak_slots(slots)}.",
         }
 
     alternatives = _biz_next_open_days(biz, day)
@@ -517,7 +761,7 @@ def _handle_check_availability(req: AvailabilityRequest, biz_id: str | None = No
         "suggested_date": alt.isoformat(),
         "suggested_slots": _biz_available_slots(biz, alt),
         "message": (
-            f"{_speak_day(day)} is fully booked. "
+            f"{_speak_day(day)} is fully booked for {service_label}. "
             f"The next opening is {_speak_day(alt)} at "
             f"{_speak_slots(_biz_available_slots(biz, alt))}."
         ),
@@ -537,13 +781,22 @@ def _handle_book_appointment(req: BookingRequest, biz_id: str | None = None) -> 
     if day is None:
         return {"ok": False, "reason": "bad_date", "message": "Date must be in YYYY-MM-DD form."}
 
-    email, problem = _normalize_email(req.email)
+    email, problem = _normalize_email(req.email, biz_id=biz["id"])
     if problem:
-        return {
-            "ok": False,
-            "reason": "bad_email",
-            "message": "That email address doesn't look valid. Ask the caller to repeat their email address clearly.",
-        }
+        active_email = (
+            _active_verified_emails.get(biz["id"])
+            or _active_verified_emails.get("default")
+            or db.get_active_verified_email(biz["id"])
+        )
+        if active_email:
+            email = active_email
+            problem = ""
+        else:
+            return {
+                "ok": False,
+                "reason": "bad_email",
+                "message": "That email address doesn't look valid. Could you please confirm your email address clearly?",
+            }
 
     # Verify slot availability
     available = _biz_available_slots(biz, day, limit=99)
@@ -700,6 +953,70 @@ def legacy_send_confirmation(req: ConfirmationRequest) -> dict:
     return _handle_send_confirmation(req, "biz_demo_dental")
 
 
+@app.post("/tools/{business_id}/get_services_and_pricing")
+def tenant_get_services_and_pricing(business_id: str) -> dict:
+    biz = _get_business_or_demo(business_id)
+    services = biz.get("services", [])
+    pricing_list = [
+        f"{s['label']} (${s.get('price', 0)}, {s.get('minutes', 30)} mins): {s.get('description', '')}"
+        for s in services
+    ]
+    return {
+        "ok": True,
+        "business": biz["name"],
+        "services": services,
+        "message": f"Our available services and pricing are: {'; '.join(pricing_list)}.",
+    }
+
+
+@app.post("/tools/get_services_and_pricing")
+def legacy_get_services_and_pricing() -> dict:
+    return tenant_get_services_and_pricing("biz_demo_dental")
+
+
+@app.post("/tools/{business_id}/verify_customer_email")
+def tenant_verify_customer_email(business_id: str, req: VerifyCustomerEmailRequest) -> dict:
+    res = _validate_and_verify_email(req.email, biz_id=business_id)
+    if res["ok"]:
+        return {
+            "ok": True,
+            "valid": True,
+            "email": res["email"],
+            "auto_corrected": res.get("auto_corrected", False),
+            "message": f"Email verified: {res['email']}. Please confirm this with the caller.",
+        }
+    return {
+        "ok": False,
+        "valid": False,
+        "reason": res.get("reason", "bad_email"),
+        "message": f"Email verification issue: {res.get('message')}. Please ask the caller to clarify or spell their email address.",
+    }
+
+
+@app.post("/tools/verify_customer_email")
+def legacy_verify_customer_email(req: VerifyCustomerEmailRequest) -> dict:
+    return tenant_verify_customer_email("biz_demo_dental", req)
+
+
+@app.post("/api/verify-email")
+def api_verify_email(req: VerifyEmailRequest) -> dict:
+    return _validate_and_verify_email(req.email, biz_id=req.business_id)
+
+
+@app.post("/api/verify-email/reset")
+def api_verify_email_reset(req: VerifyEmailRequest) -> dict:
+    biz_id = req.business_id or "default"
+    _active_verified_emails.pop(biz_id, None)
+    _active_verified_emails.pop("default", None)
+    try:
+        db.clear_active_verified_email(biz_id)
+    except Exception:
+        pass
+    return {"ok": True, "message": "Cleared session verified email."}
+
+
+
+
 # ---------------------------------------------------------------------------
 # SaaS Owner Authentication & Business APIs
 # ---------------------------------------------------------------------------
@@ -708,6 +1025,29 @@ def legacy_send_confirmation(req: ConfirmationRequest) -> dict:
 def api_auth_owner(req: OwnerAuthRequest) -> dict:
     owner = db.get_or_create_owner(email=req.email, name=req.name)
     businesses = db.list_businesses_for_owner(owner["id"])
+    if not businesses and owner["id"] != "owner_demo":
+        # Create an initial starter business for this new owner so their dashboard is ready
+        biz_name = f"{owner['name']}'s Salon & Studio" if owner.get("name") else "My Business Studio"
+        starter = db.create_business(
+            owner_id=owner["id"],
+            name=biz_name,
+            industry="salon",
+            tone="warm",
+            greeting=f"Thanks for calling {biz_name}. Are you looking to book a haircut, styling, or coloring appointment today?",
+            system_prompt=f"You are an autonomous receptionist for {biz_name}. You speak in a warm, welcoming tone. You answer questions about salon services, check real calendar slots using your tools, and book appointments for clients.",
+            voice_id="alba",
+            slot_minutes=30,
+            open_hour=9,
+            close_hour=17,
+            operating_days="mon-fri",
+            keyterms=[biz_name, "appointment", "booking", "haircut", "styling", "balayage", "coloring"],
+            services=[
+                {"key": "haircut", "label": "Signature Haircut & Styling", "minutes": 45, "price": 85.0, "description": "Custom consultation, precision cut, wash, and luxury blowout."},
+                {"key": "coloring", "label": "Full Color & Gloss", "minutes": 90, "price": 185.0, "description": "All-over single process coloring, custom formulation, and blowout."},
+                {"key": "balayage", "label": "Artisan Balayage & Highlights", "minutes": 120, "price": 280.0, "description": "Hand-painted dimensional highlights, toner formulation, and style."},
+            ],
+        )
+        businesses = [starter]
     return {"ok": True, "owner": owner, "businesses": businesses}
 
 
@@ -715,6 +1055,28 @@ def api_auth_owner(req: OwnerAuthRequest) -> dict:
 def api_auth_session(email: str = Query(default="demo@omnidesk.ai")) -> dict:
     owner = db.get_or_create_owner(email=email)
     businesses = db.list_businesses_for_owner(owner["id"])
+    if not businesses and owner["id"] != "owner_demo":
+        biz_name = f"{owner['name']}'s Salon & Studio" if owner.get("name") else "My Business Studio"
+        starter = db.create_business(
+            owner_id=owner["id"],
+            name=biz_name,
+            industry="salon",
+            tone="warm",
+            greeting=f"Thanks for calling {biz_name}. Are you looking to book a haircut, styling, or coloring appointment today?",
+            system_prompt=f"You are an autonomous receptionist for {biz_name}. You speak in a warm, welcoming tone. You answer questions about salon services, check real calendar slots using your tools, and book appointments for clients.",
+            voice_id="alba",
+            slot_minutes=30,
+            open_hour=9,
+            close_hour=17,
+            operating_days="mon-fri",
+            keyterms=[biz_name, "appointment", "booking", "haircut", "styling", "balayage", "coloring"],
+            services=[
+                {"key": "haircut", "label": "Signature Haircut & Styling", "minutes": 45, "price": 85.0, "description": "Custom consultation, precision cut, wash, and luxury blowout."},
+                {"key": "coloring", "label": "Full Color & Gloss", "minutes": 90, "price": 185.0, "description": "All-over single process coloring, custom formulation, and blowout."},
+                {"key": "balayage", "label": "Artisan Balayage & Highlights", "minutes": 120, "price": 280.0, "description": "Hand-painted dimensional highlights, toner formulation, and style."},
+            ],
+        )
+        businesses = [starter]
     return {"ok": True, "owner": owner, "businesses": businesses}
 
 
@@ -772,48 +1134,95 @@ def api_deploy_business_agent(business_id: str) -> dict:
 
     base_url = os.getenv("PUBLIC_API_BASE_URL", "http://localhost:8000").rstrip("/")
 
-    # Build services prompt summary
-    service_lines = []
+    # Build comprehensive services & pricing menu
+    days_map = {
+        "mon-fri": "Monday through Friday (5 days a week)",
+        "mon-sat": "Monday through Saturday (6 days a week)",
+        "all-week": "Monday through Sunday (All 7 days a week, including weekends)",
+    }
+    days_label = days_map.get(biz.get("operating_days", "mon-fri"), "Monday through Friday")
+    slot_mins = biz.get("slot_minutes", 30)
+    open_str = _speak_time(f"{biz.get('open_hour', 9):02d}:00")
+    close_str = _speak_time(f"{biz.get('close_hour', 17):02d}:00")
+
+    pricing_lines = []
     service_keys = []
     for s in biz.get("services", []):
-        service_lines.append(f"- {s['label']} ({s['minutes']} mins, ${s.get('price', 0)}): {s.get('description', '')}")
-        service_keys.append(s["key"])
+        k = s.get("key") or s.get("label", "").lower().replace(" ", "_")
+        service_keys.append(k)
+        p = s.get("price", 0)
+        m = s.get("minutes", 30)
+        desc = f" — {s['description']}" if s.get("description") else ""
+        pricing_lines.append(f"• {s['label']} (${p}, {m} minutes){desc}")
 
-    services_block = "\n".join(service_lines) if service_lines else "- General Appointment (30 mins)"
     if not service_keys:
         service_keys = ["general"]
+        pricing_lines = ["• General Consultation: $50 (30 minutes)"]
+
+    services_block = "\n".join(pricing_lines)
 
     system_prompt = (
+        f"You are the autonomous voice receptionist for {biz['name']}.\n\n"
         f"{biz['system_prompt']}\n\n"
-        f"Business Name: {biz['name']}\n"
-        f"Operating Hours: Monday to Friday from {biz['open_hour']}:00 to {biz['close_hour']}:00 (30-minute slots).\n"
-        f"Available Services & Pricing:\n{services_block}\n\n"
-        f"Voice Persona & Tone: {biz['tone']}.\n\n"
-        "Strict Execution Rules:\n"
-        "1. Answer caller questions pleasantly and confirm what service they need.\n"
-        "2. When they ask for a date or slot, ALWAYS call check_availability to confirm open slots before promising.\n"
-        "3. Collect the caller's full name and their email address clearly.\n"
-        "4. Call book_appointment with service, date, time, customer_name, and email.\n"
-        "5. Call send_confirmation with the generated confirmation_code to email them the calendar invite (.ics).\n"
-        "6. Do not invent confirmation codes or available slots."
+        f"BUSINESS DETAILS & CALENDAR:\n"
+        f"• Business Name: {biz['name']}\n"
+        f"• Operating Days: {days_label}\n"
+        f"• Business Hours: {open_str} to {close_str} ({slot_mins}-minute booking slots)\n\n"
+        f"OFFICIAL SERVICES & PRICING MENU:\n"
+        f"{services_block}\n\n"
+        "STRICT EXECUTION & CONVERSATIONAL RULES:\n"
+        "1. PRICING & INQUIRIES: When a caller asks about prices, fees, costs, or what services are offered, ALWAYS answer immediately and clearly with the exact price and duration directly from the OFFICIAL SERVICES & PRICING MENU above (e.g., 'Our Signature Haircut & Styling is $85 for 45 minutes', 'Full Color & Gloss is $185'). Never say you do not know the price or that pricing is unavailable. All official prices are listed on your menu above.\n"
+        "2. DATES & CALENDAR: You have no internal clock. When the caller mentions any date or day ('today', 'tomorrow', 'Friday', 'next week'), ALWAYS call get_today first to understand the current date, and ALWAYS call check_availability to see real open slots before offering times.\n"
+        "3. AVAILABILITY: Only offer open slots that check_availability returns.\n"
+        "4. CALLER DETAILS & EMAIL: Collect the caller's full name, then their email address. When the caller states or types their email, immediately accept it, call verify_customer_email, and ask: 'I have your email as <email>, is that correct?' and wait for their confirmation. If they say no, apologize and ask for their email again. Never call book_appointment before the caller confirms their email address.\n"
+        "5. BOOKING: Once the caller confirms their email address and you have service, date, time, and full name, immediately call book_appointment with those exact parameters. Never call book_appointment with 'unknown' or a guessed email.\n"
+        "6. CONFIRMATION & CALENDAR INVITE: Immediately after book_appointment succeeds, call send_confirmation with the generated confirmation_code to email them the calendar invite (.ics). Then let the customer know that their appointment is booked and their calendar invite has been sent to their email.\n"
+        "7. ACCURACY: Do not invent confirmation codes, prices, or unavailable slots."
     )
 
     tools_def = [
         {
             "name": "get_today",
-            "description": "Returns current date, day of week, and upcoming open clinic days.",
+            "description": "Returns current date, day of week, and upcoming open clinic days. Call this before interpreting any relative day the caller mentions.",
             "http": {
                 "url": f"{base_url}/tools/{business_id}/get_today",
-                "method": "POST",
+                "http_method": "POST",
                 "headers": {"Content-Type": "application/json"},
+            },
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+        {
+            "name": "get_services_and_pricing",
+            "description": "Returns the complete catalog of offered services, appointment durations, and exact prices. Call this whenever a customer asks about prices, fees, costs, or available services.",
+            "http": {
+                "url": f"{base_url}/tools/{business_id}/get_services_and_pricing",
+                "http_method": "POST",
+                "headers": {"Content-Type": "application/json"},
+            },
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+        {
+            "name": "verify_customer_email",
+            "description": "Verifies whether the customer's email address is valid, correctly formatted, and has an existing domain on the internet. Call this whenever the caller gives their email address.",
+            "http": {
+                "url": f"{base_url}/tools/{business_id}/verify_customer_email",
+                "http_method": "POST",
+                "headers": {"Content-Type": "application/json"},
+            },
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string", "description": "The customer's email address as heard or spelled."},
+                },
+                "required": ["email"],
             },
         },
         {
             "name": "check_availability",
-            "description": "Check open appointment slots for a specific service and date (YYYY-MM-DD).",
+            "description": "Check open appointment slots and pricing for a specific service and date (YYYY-MM-DD).",
             "http": {
                 "url": f"{base_url}/tools/{business_id}/check_availability",
-                "method": "POST",
+                "http_method": "POST",
                 "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
@@ -827,10 +1236,10 @@ def api_deploy_business_agent(business_id: str) -> dict:
         },
         {
             "name": "book_appointment",
-            "description": "Reserve an appointment slot for a customer.",
+            "description": "Reserve an appointment slot for a customer. Only call when you have confirmed service, date, time, customer_name, and valid email.",
             "http": {
                 "url": f"{base_url}/tools/{business_id}/book_appointment",
-                "method": "POST",
+                "http_method": "POST",
                 "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
@@ -840,7 +1249,12 @@ def api_deploy_business_agent(business_id: str) -> dict:
                     "date": {"type": "string", "description": "YYYY-MM-DD"},
                     "time": {"type": "string", "description": "HH:MM (24h)"},
                     "customer_name": {"type": "string"},
-                    "email": {"type": "string"},
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Valid customer email address (e.g. name@gmail.com). Never call with unknown.",
+                        "examples": ["farhan@gmail.com", "client@example.com"],
+                    },
                 },
                 "required": ["service", "date", "time", "customer_name", "email"],
             },
@@ -850,7 +1264,7 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "description": "Send confirmation email with calendar invite (.ics) to customer.",
             "http": {
                 "url": f"{base_url}/tools/{business_id}/send_confirmation",
-                "method": "POST",
+                "http_method": "POST",
                 "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
@@ -863,11 +1277,19 @@ def api_deploy_business_agent(business_id: str) -> dict:
         },
     ]
 
+    raw_voice = biz.get("voice_id", "alba")
+    voice_map = {
+        "131a436c-0fc4-4797-90f7-d0e515d18b06": "alba",
+        "098b63e0-3273-47a2-9694-de982d618991": "george",
+        "b7d50908-b17c-442d-ad8d-810c63997ed9": "jane",
+        "79a125e8-cd45-4c13-8a67-188112f4dd22": "eve",
+    }
+    voice_id = voice_map.get(raw_voice, raw_voice) or "alba"
+
     agent_definition = {
         "name": f"{biz['name']} Voice Receptionist",
         "voice": {
-            "provider": "assemblyai",
-            "voice_id": biz.get("voice_id", "131a436c-0fc4-4797-90f7-d0e515d18b06"),
+            "voice_id": voice_id,
         },
         "greeting": biz.get("greeting", f"Thanks for calling {biz['name']}. How can I help you today?"),
         "system_prompt": system_prompt,
@@ -895,6 +1317,44 @@ def api_deploy_business_agent(business_id: str) -> dict:
         raise HTTPException(502, f"Failed to provision agent on AssemblyAI: {exc}")
 
     db.update_business_agent_id(business_id, agent_id)
+
+    # Synchronize agent_id.txt so demo console immediately uses the newly deployed agent
+    try:
+        Path("agent_id.txt").write_text(agent_id, encoding="utf-8")
+    except Exception:
+        pass
+
+    # Synchronize agent.json for repository alignment
+    try:
+        agent_json_file = Path("agent.json")
+        if agent_json_file.exists():
+            agent_json_data = json.loads(agent_json_file.read_text(encoding="utf-8"))
+            agent_json_data["name"] = f"{biz['name']} Scheduler"
+            agent_json_data["greeting"] = biz.get("greeting", "")
+            agent_json_data["system_prompt"] = system_prompt
+            agent_json_data["keyterms"] = (biz.get("keyterms") or []) + [biz["name"]]
+            agent_json_file.write_text(json.dumps(agent_json_data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+    # Synchronize store.py in-memory variables and demo tenant
+    try:
+        store.OPEN_HOUR = biz.get("open_hour", 9)
+        store.CLOSE_HOUR = biz.get("close_hour", 17)
+        store.SLOT_MINUTES = biz.get("slot_minutes", 30)
+        new_services = {}
+        for s in biz.get("services", []):
+            new_services[s["key"]] = {
+                "label": s["label"],
+                "minutes": s.get("minutes", 30),
+                "price": s.get("price", 0),
+                "description": s.get("description", ""),
+            }
+        if new_services:
+            store.SERVICES = new_services
+    except Exception:
+        pass
+
     updated_biz = db.get_business(business_id)
     return {"ok": True, "agent_id": agent_id, "business": updated_biz}
 
@@ -959,6 +1419,18 @@ def api_get_bookings(business_id: str) -> dict:
     return {"bookings": bookings}
 
 
+@app.post("/api/owner/businesses/{business_id}/bookings/{confirmation_code}/send-invite")
+def api_send_booking_invite(business_id: str, confirmation_code: str) -> dict:
+    """Manually dispatch calendar invite email via Resend from the dashboard."""
+    return _handle_send_confirmation(ConfirmationRequest(confirmation_code=confirmation_code), business_id)
+
+
+@app.post("/api/owner/bookings/{confirmation_code}/send-invite")
+def api_send_booking_invite_root(confirmation_code: str) -> dict:
+    """Legacy/global dispatch endpoint."""
+    return _handle_send_confirmation(ConfirmationRequest(confirmation_code=confirmation_code), "biz_demo_dental")
+
+
 # ---------------------------------------------------------------------------
 # Legacy Demo & Stats Endpoints (Preserved for Demo Console)
 # ---------------------------------------------------------------------------
@@ -1008,7 +1480,7 @@ def api_owner_stats() -> dict:
             for k, v in sorted(store.SERVICES.items())
         ],
         "business": {
-            "name": "OmniDesk Dental Clinic",
+            "name": "OmniDesk Hair Salon & Studio",
             "hours": f"Monday to Friday, {_speak_time(f'{store.OPEN_HOUR:02d}:00')} – {_speak_time(f'{store.CLOSE_HOUR:02d}:00')}",
             "slot_minutes": store.SLOT_MINUTES,
             "voice_agent": "AssemblyAI Voice Agent API",
@@ -1029,7 +1501,18 @@ def api_config() -> dict:
     agent_id = os.getenv("AGENT_ID") or (
         agent_id_file.read_text(encoding="utf-8").strip() if agent_id_file.exists() else ""
     )
-    return {"agent_id": agent_id, "services": sorted(store.SERVICES)}
+    definition = {}
+    try:
+        definition = json.loads((ROOT / "agent.json").read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {
+        "agent_id": agent_id,
+        "services": sorted(store.SERVICES),
+        "system_prompt": definition.get("system_prompt", ""),
+        "supabase_url": os.getenv("SUPABASE_URL", ""),
+        "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
+    }
 
 
 @app.get("/api/demo-info")
@@ -1098,18 +1581,20 @@ def api_token() -> dict:
 @app.get("/demo")
 def serve_console():
     console_file = WEB_DIR / "console.html"
+    no_cache = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
     if console_file.exists():
-        return FileResponse(console_file)
-    return FileResponse(WEB_DIR / "index.html")
+        return FileResponse(console_file, headers=no_cache)
+    return FileResponse(WEB_DIR / "index.html", headers=no_cache)
 
 
 @app.get("/dashboard")
 @app.get("/builder")
 def serve_dashboard():
     dashboard_file = WEB_DIR / "dashboard.html"
+    no_cache = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
     if dashboard_file.exists():
-        return FileResponse(dashboard_file)
-    return FileResponse(WEB_DIR / "index.html")
+        return FileResponse(dashboard_file, headers=no_cache)
+    return FileResponse(WEB_DIR / "index.html", headers=no_cache)
 
 
 if WEB_DIR.exists():

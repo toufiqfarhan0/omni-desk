@@ -1,16 +1,19 @@
 {
-  "name": "OmniDesk Dental Clinic Scheduler",
-  "greeting": "Thanks for calling OmniDesk Dental Clinic. Are you looking to book an appointment?",
+  "name": "OmniDesk Hair Salon & Studio Scheduler",
+  "greeting": "Thanks for calling OmniDesk Hair Salon & Studio. Are you looking to book an appointment or styling session?",
   "voice": { "voice_id": "alba" },
-  "system_prompt": "You are the scheduling assistant for OmniDesk Dental Clinic. Keep every reply under two sentences and speak naturally, like a receptionist on the phone.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself. The clinic is open Monday to Friday only.\n\nBooking sequence:\n1. Find out which service they want. Offered: cleaning, checkup, whitening, root-canal. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their email address. Ask for them one at a time.\n4. Call book_appointment only when you have all five: service, date, time, full name, and a valid email address. Never call it with a field still missing or guessed.\n5. Call send_confirmation with the confirmation code, then let the caller know that their confirmation email with a calendar invite has been sent.\n\nEmail addresses: convert spoken email addresses to standard format (e.g. 'john dot doe at gmail dot com' becomes john.doe@gmail.com, or 'alex smith 12 at yahoo dot com' becomes alexsmith12@yahoo.com). Read the email address back to confirm before you book.\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'bad_email' means ask for the email again, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
+  "system_prompt": "You are the scheduling assistant for OmniDesk Hair Salon & Studio. Keep every reply under two sentences and speak naturally in a warm, welcoming tone, like a front-desk receptionist.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself.\n\nBooking sequence:\n1. Find out which service they want. Offered: haircut, coloring, balayage, blowout. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their email address. Ask for them one at a time.\n4. When caller provides their email (spoken or typed), immediately accept it and call verify_customer_email. Then ask: 'I have your email as <email>, is that correct?' and wait for the caller's verbal confirmation. If they say no, apologize and ask for their email again. Never call book_appointment before the caller confirms their email address.\n5. Once the caller confirms their email address and you have service, date, time, and customer full name, immediately call book_appointment with those exact parameters. Never call it with 'unknown' or a guessed email.\n6. Call send_confirmation with the confirmation code, then let the caller know that their confirmation email with a calendar invite has been sent.\n\nEmail addresses: convert spoken email addresses to standard format (e.g. 'john dot doe at gmail dot com' becomes john.doe@gmail.com, or 'alex smith 12 at yahoo dot com' becomes alexsmith12@yahoo.com).\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'bad_email' means ask for the email again, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
   "keyterms": [
     "OmniDesk",
-    "OmniDesk Dental Clinic",
-    "cleaning",
-    "checkup",
-    "whitening",
-    "root canal",
-    "hygienist",
+    "OmniDesk Hair Salon",
+    "haircut",
+    "styling",
+    "balayage",
+    "hair coloring",
+    "blowout",
+    "highlights",
+    "scalp treatment",
+    "stylist",
     "reschedule",
     "confirmation code",
     "calendar invite",
@@ -19,21 +22,44 @@
   "tools": [
     {
       "name": "get_today",
-      "description": "Get today's date and the next open clinic days. Call this before interpreting any relative day the caller mentions.",
+      "description": "Get today's date and the next open salon days. Call this before interpreting any relative day the caller mentions.",
       "parameters": { "type": "object", "properties": {}, "required": [] },
       "http": { "url": "{{BASE_URL}}/tools/get_today", "http_method": "POST" },
       "timeout_seconds": 10
     },
     {
+      "name": "get_services_and_pricing",
+      "description": "Returns the complete catalog of offered services, appointment durations, and exact prices. Call this whenever a customer asks about prices, fees, costs, or available services.",
+      "parameters": { "type": "object", "properties": {}, "required": [] },
+      "http": { "url": "{{BASE_URL}}/tools/get_services_and_pricing", "http_method": "POST" },
+      "timeout_seconds": 10
+    },
+    {
+      "name": "verify_customer_email",
+      "description": "Verifies whether the customer's email address is valid, correctly formatted, and has a legitimate domain on the internet. Call this whenever the caller provides their email address.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The customer's email address as spoken or typed."
+          }
+        },
+        "required": ["email"]
+      },
+      "http": { "url": "{{BASE_URL}}/tools/verify_customer_email", "http_method": "POST" },
+      "timeout_seconds": 10
+    },
+    {
       "name": "check_availability",
-      "description": "List open appointment times for a service on a specific date. The clinic is closed at weekends.",
+      "description": "List open appointment times for a service on a specific date.",
       "parameters": {
         "type": "object",
         "properties": {
           "service": {
             "type": "string",
-            "description": "The service the caller wants.",
-            "enum": ["cleaning", "checkup", "whitening", "root-canal"]
+            "description": "The salon service the caller wants.",
+            "enum": ["haircut", "coloring", "balayage", "blowout"]
           },
           "date": {
             "type": "string",
@@ -55,7 +81,7 @@
         "properties": {
           "service": {
             "type": "string",
-            "enum": ["cleaning", "checkup", "whitening", "root-canal"]
+            "enum": ["haircut", "coloring", "balayage", "blowout"]
           },
           "date": {
             "type": "string",
@@ -74,9 +100,9 @@
           },
           "email": {
             "type": "string",
-            "description": "The caller's email address in standard format (e.g. 'alex@gmail.com'). Convert spoken forms like 'alex dot smith at gmail dot com' to standard format.",
-            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
-            "examples": ["alex.smith@gmail.com", "patient@yahoo.com"]
+            "format": "email",
+            "description": "The customer's email address in standard format (e.g. 'alex@gmail.com'). Never call book_appointment with 'unknown'.",
+            "examples": ["alex.smith@gmail.com", "farhan@gmail.com"]
           }
         },
         "required": ["service", "date", "time", "customer_name", "email"]
@@ -92,15 +118,13 @@
         "properties": {
           "confirmation_code": {
             "type": "string",
-            "description": "The code returned by book_appointment.",
-            "pattern": "^[A-Z0-9]{6}$",
-            "examples": ["KGLDA4"]
+            "description": "The 6-character confirmation code returned by book_appointment."
           }
         },
         "required": ["confirmation_code"]
       },
       "http": { "url": "{{BASE_URL}}/tools/send_confirmation", "http_method": "POST" },
-      "timeout_seconds": 15
+      "timeout_seconds": 10
     }
   ]
 }

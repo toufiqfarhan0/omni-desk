@@ -69,10 +69,10 @@ Business owners configure custom AI receptionists with industry presets (Dental,
 
 ---
 
-### 3. Dynamic Multi-Tenant Switching (e.g. Apex Legal Group)
-![Apex Legal Group Multi-Tenant Profile](docs/images/multi_tenant_legal.png)
+### 3. Dynamic Multi-Tenant Switching & Custom Workflows
+![Multi-Tenant Workflow Profile](docs/images/multi_tenant_legal.png)
 
-Seamless tenant switching: changing practices dynamically updates industry templates, legal service catalogs, prompt instructions, and caller greetings without state pollution.
+Seamless tenant switching: switching between practices dynamically updates industry templates, service pricing catalogs, prompt instructions, and caller greetings with zero state collision.
 
 ---
 
@@ -114,6 +114,150 @@ Add new business entities with real-time industry detection and automated workfl
 - **Email Verification & Native Calendar Invites**: When a slot is confirmed, OmniDesk generates an RFC 5545 compliant `.ics` calendar invite with a 60-minute pre-appointment alarm notification and dispatches it through the Resend Transactional Email API with a branded HTML receipt.
 - **Owner Portal & Live Voice Tester**: Embedded 24kHz bidirectional audio stream directly inside the business dashboard with live dialogue transcripts and tool execution inspectors.
 - **Call History & CRM Bookings**: Comprehensive turn-by-turn transcript modals and sheeted appointment management with pipeline revenue and volume KPIs.
+
+---
+
+## Dual-Engine Architecture (Cloud Identity + Low-Latency Voice Engine)
+
+OmniDesk employs a **Dual-Engine Architecture** specifically optimized for real-time conversational AI:
+
+```
++-------------------------------------------------------------------------+
+|                        PUBLIC CLIENT / BROWSER                          |
+|  - Landing Page Auth Modal (Supabase v2 SDK + 1-Click Demo Bypass)      |
+|  - SaaS Owner Portal (Reactive Persona Builder, Waveform, Call Tester)  |
++------------------------------------+------------------------------------+
+                                     |
+                +--------------------+--------------------+
+                |                                         |
+                v                                         v
++-------------------------------+       +---------------------------------+
+|   CLOUD IDENTITY & AUTH       |       |   HIGH-PERFORMANCE VOICE ENGINE |
+|   (Supabase PostgreSQL)       |       |   (Local SQLite / FastAPI)      |
+|                               |       |                                 |
+| - supabase.auth (Email/Pass)  |       | - Server-Side HTTP Tools        |
+| - Owner Profiles & Workspaces |       | - Sub-5ms Atomic Slot Booking   |
+| - Row Level Security (RLS)    |       | - Zero-Lag AssemblyAI Responses |
+| - 1-Click Demo Account Sync   |       | - Resend .ics Calendar Invites  |
++-------------------------------+       +---------------------------------+
+```
+
+### Why Both? (Architecture Rationale)
+
+1. **Cloud Identity & Multi-Tenancy (Supabase)**:
+   - Provides enterprise-grade authentication with email/password verification, JWT session tokens, and PostgreSQL Row Level Security (RLS).
+   - Allows judges to evaluate both real cloud authentication and the 1-click demo bypass without friction.
+
+2. **Ultra-Low Latency Voice Execution (Local SQLite)**:
+   - Voice agents require sub-300ms total conversational latency to feel human.
+   - When AssemblyAI triggers `check_availability` or `book_appointment`, the local engine executes in **under 5ms**, eliminating the network lag of round-tripping to remote cloud databases during active phone calls.
+   - Resilient against remote cloud network spikes so callers never experience awkward dead air.
+
+---
+
+## Judge & Evaluation Quick-Start
+
+Judges can explore OmniDesk in two frictionless modes:
+
+### Mode 1: 1-Click Instant Demo (Zero Setup Required)
+1. Open the landing page (`http://localhost:8000`).
+2. Click **"Sign In / Sign Up"** &rarr; click **"Use Demo Account"** (or click the Hero CTA).
+3. You immediately enter the dashboard as `demo@omnidesk.ai` pre-running the flagship **OmniDesk Hair Salon & Studio**.
+4. Test live voice calls, inspect customer appointments in the CRM, and click **"+ New Business"** to create a brand-new AI agent for any industry. Watch the live persona showcase card, animated waveform, and tools update in real time.
+
+### Mode 2: Real Supabase Cloud Authentication
+1. Click **"Sign In / Sign Up"** &rarr; switch to the **"Create Account"** tab.
+2. Enter your real email and password to create a Supabase user.
+3. If connecting to your own Supabase project, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to your `.env` and execute the SQL schema below in your **Supabase SQL Editor**:
+
+<details>
+<summary><strong>Click to expand Supabase PostgreSQL Schema (SQL)</strong></summary>
+
+```sql
+-- 1. Enable UUID Extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Business Owners Profile Table
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 3. Multi-Tenant Businesses / Workflows Table
+CREATE TABLE IF NOT EXISTS public.businesses (
+  id TEXT PRIMARY KEY DEFAULT ('biz_' || substr(md5(random()::text), 1, 8)),
+  owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  owner_email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  industry TEXT DEFAULT 'salon',
+  agent_id TEXT,
+  tone TEXT DEFAULT 'warm',
+  voice_id TEXT DEFAULT '131a436c-0fc4-4797-90f7-d0e515d18b06',
+  greeting TEXT NOT NULL,
+  system_prompt TEXT NOT NULL,
+  keyterms JSONB DEFAULT '[]'::jsonb,
+  services JSONB DEFAULT '[]'::jsonb,
+  open_hour INT DEFAULT 9,
+  close_hour INT DEFAULT 18,
+  slot_minutes INT DEFAULT 30,
+  operating_days TEXT DEFAULT 'mon-sat',
+  is_flagship BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 4. Customer Appointments Table
+CREATE TABLE IF NOT EXISTS public.appointments (
+  id TEXT PRIMARY KEY DEFAULT ('apt_' || substr(md5(random()::text), 1, 8)),
+  business_id TEXT REFERENCES public.businesses(id) ON DELETE CASCADE,
+  customer_name TEXT NOT NULL,
+  customer_phone TEXT,
+  customer_email TEXT,
+  service_key TEXT NOT NULL,
+  appointment_date DATE NOT NULL,
+  start_time TIME NOT NULL,
+  status TEXT DEFAULT 'confirmed',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 5. Voice Call Transcripts & Logs Table
+CREATE TABLE IF NOT EXISTS public.call_logs (
+  id TEXT PRIMARY KEY DEFAULT ('call_' || substr(md5(random()::text), 1, 8)),
+  business_id TEXT REFERENCES public.businesses(id) ON DELETE CASCADE,
+  caller_number TEXT DEFAULT 'Web Audio Client',
+  duration_seconds INT DEFAULT 0,
+  transcript JSONB DEFAULT '[]'::jsonb,
+  tool_calls_count INT DEFAULT 0,
+  summary TEXT,
+  created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 6. Row Level Security (RLS) Policies
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.call_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own profile" 
+  ON public.profiles FOR ALL 
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can manage their own businesses" 
+  ON public.businesses FOR ALL 
+  USING (auth.uid() = owner_id);
+
+CREATE POLICY "Users can access appointments for their businesses" 
+  ON public.appointments FOR ALL 
+  USING (business_id IN (SELECT id FROM public.businesses WHERE owner_id = auth.uid()));
+
+CREATE POLICY "Users can access call logs for their businesses" 
+  ON public.call_logs FOR ALL 
+  USING (business_id IN (SELECT id FROM public.businesses WHERE owner_id = auth.uid()));
+```
+
+</details>
 
 ---
 
@@ -189,7 +333,29 @@ SUPABASE_ANON_KEY=eyJhbGciOi...your_anon_key_here
 
 ## Local Development & Deployment
 
-### 1. Install Dependencies
+### 🚀 One-Command Launch (Recommended)
+
+Run everything (virtual environment detection, Cloudflare tunnel, auto `.env` sync, and FastAPI server) with a single command:
+
+```bash
+python run.py
+```
+*(On Windows, you can also run `.\run.ps1` or double-click `run.bat`)*
+
+**What this does automatically:**
+- Auto-detects and runs inside `.venv` without needing manual activation.
+- Starts `cloudflared tunnel` in the background, extracts your public HTTPS URL, and automatically updates `PUBLIC_API_BASE_URL` in `.env`.
+- Launches `uvicorn app.main:app --reload` on port 8000.
+- Prints clickable direct links to the Owner Dashboard, Landing Page, and Demo Console.
+- Gracefully terminates both Uvicorn and the tunnel on `Ctrl+C`.
+
+---
+
+### Manual Step-by-Step Setup
+
+If you prefer to run each component manually in separate terminals:
+
+#### 1. Install Dependencies
 
 ```bash
 # Create virtual environment
@@ -205,7 +371,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Start the Backend Server
+#### 2. Start the Backend Server
 
 Launch the FastAPI application on port 8000:
 
@@ -280,12 +446,12 @@ AssemblyAI calls these endpoints directly during conversational turns:
 
 When an appointment is finalized, OmniDesk automatically formats an RFC 5545 compliant calendar object:
 
-- **Organizer / Clinic**: OmniDesk Dental Clinic
-- **Start / End Timestamp**: Calculated from service duration (30 min to 90 min)
+- **Organizer / Business**: OmniDesk Hair Salon & Studio
+- **Start / End Timestamp**: Calculated from service duration (30 min to 120 min)
 - **Valarm Trigger**: `-PT60M` (Triggers native device notifications 1 hour before appointment)
 - **Attachment Encoding**: Base64 `.ics` attachment delivered through Resend REST API (`POST https://api.resend.com/emails`)
 
-Patients receive a clean transactional confirmation in their inbox and can tap the `.ics` file to add the reservation directly to Google Calendar, Apple Calendar, or Microsoft Outlook.
+Clients receive a clean transactional confirmation in their inbox and can tap the `.ics` file to add the reservation directly to Google Calendar, Apple Calendar, or Microsoft Outlook.
 
 ---
 

@@ -8,29 +8,29 @@ import string
 from datetime import date, datetime, timedelta
 
 SERVICES = {
-    "cleaning": {
-        "label": "Dental Cleaning",
-        "minutes": 30,
-        "price": 120,
-        "description": "Full dental hygiene cleaning, ultrasonic plaque removal and enamel polish.",
-    },
-    "checkup": {
-        "label": "Routine Checkup",
-        "minutes": 30,
+    "haircut": {
+        "label": "Signature Haircut & Styling",
+        "minutes": 45,
         "price": 85,
-        "description": "Comprehensive dental examination, gum health check and preventive evaluation.",
+        "description": "Custom consultation, precision shear or razor cut, wash, and luxury blowout.",
     },
-    "whitening": {
-        "label": "Teeth Whitening",
-        "minutes": 60,
-        "price": 250,
-        "description": "Professional clinical teeth whitening for stain removal and enamel brightening.",
-    },
-    "root-canal": {
-        "label": "Root Canal",
+    "coloring": {
+        "label": "Full Color & Gloss",
         "minutes": 90,
-        "price": 650,
-        "description": "Specialized endodontic therapy, pulp restoration and tooth preservation.",
+        "price": 185,
+        "description": "All-over single process coloring, custom formulation, nourishing gloss, and blowout.",
+    },
+    "balayage": {
+        "label": "Artisan Balayage & Highlights",
+        "minutes": 120,
+        "price": 280,
+        "description": "Hand-painted dimensional highlights, toner formulation, deep conditioning mask, and style.",
+    },
+    "blowout": {
+        "label": "Signature Blowout & Treatment",
+        "minutes": 45,
+        "price": 65,
+        "description": "Revitalizing scalp massage, clarifying shampoo, hydrating mask, and voluminous blowout styling.",
     },
 }
 
@@ -67,10 +67,10 @@ def _seed_existing_bookings() -> None:
 
     # Seed 4 realistic appointments for the Owner Dashboard
     seed_data = [
-        ("cleaning", 0, "10:00", "Eleanor Vance", "eleanor.vance@gmail.com", True),
-        ("checkup", 0, "14:30", "Marcus Sterling", "marcus.sterling@gmail.com", True),
-        ("whitening", 1, "11:00", "Sophia Al-Mansoor", "sophia.mansoor@gmail.com", False),
-        ("root-canal", 2, "09:30", "James Thornton", "james.thornton@gmail.com", True),
+        ("haircut", 0, "10:00", "Eleanor Vance", "eleanor.vance@gmail.com", True),
+        ("blowout", 0, "14:30", "Marcus Sterling", "marcus.sterling@gmail.com", True),
+        ("coloring", 1, "11:00", "Sophia Al-Mansoor", "sophia.mansoor@gmail.com", False),
+        ("balayage", 2, "09:30", "James Thornton", "james.thornton@gmail.com", True),
     ]
     for service, offset, time_str, name, email, confirmed in seed_data:
         target_day = date.today() + timedelta(days=offset)

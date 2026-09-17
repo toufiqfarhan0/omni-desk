@@ -10,6 +10,13 @@ const els = {
   count: document.getElementById("call-count"),
   agentId: document.getElementById("agent-id"),
   timer: document.getElementById("timer"),
+  liveEmailBox: document.getElementById("live-email-box"),
+  liveEmailForm: document.getElementById("live-email-form"),
+  liveEmailInput: document.getElementById("live-email-input"),
+  liveEmailCheck: document.getElementById("live-email-check"),
+  liveEmailFeedback: document.getElementById("live-email-feedback"),
+  btnSendEmail: document.getElementById("btn-send-email"),
+  btnToggleEmail: document.getElementById("btn-toggle-email"),
 };
 
 let ws = null;
@@ -28,6 +35,14 @@ let eventCursor = 0;
 let pollTimer = null;
 let pending = [];
 let callTotal = 0;
+
+let appCallTranscript = [];
+let appCallToolEvents = [];
+let appCallerName = "";
+let appCallerEmail = "";
+let appHasBooked = false;
+let awaitingEmailConfirmation = false;
+let appBasePrompt = "";
 
 // ---------------------------------------------------------------- helpers
 
@@ -94,6 +109,102 @@ function clearEmpty(node) {
   if (empty) empty.remove();
 }
 
+// -------------------------------------------------------- email verification
+const EMAIL_REGEX = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+const DOMAIN_TYPOS = {
+  "gmai.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gmial.com": "gmail.com",
+  "gnail.com": "gmail.com",
+  "gmaill.com": "gmail.com",
+  "gmaik.com": "gmail.com",
+  "yaho.com": "yahoo.com",
+  "yahooo.com": "yahoo.com",
+  "yaho.co": "yahoo.com",
+  "hotmial.com": "hotmail.com",
+  "hotmai.com": "hotmail.com",
+  "outlok.com": "outlook.com",
+  "outloo.com": "outlook.com",
+  "iclud.com": "icloud.com",
+  "icoud.com": "icloud.com",
+};
+
+function isEmailRequest(text) {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  if (t.includes("is that correct") || t.includes("is that right") || t.includes("did i get that")) {
+    return false;
+  }
+  return (
+    t.includes("email address") ||
+    t.includes("your email") ||
+    t.includes("what's your email") ||
+    t.includes("what is your email") ||
+    t.includes("spell your email") ||
+    t.includes("have your email") ||
+    t.includes("provide your email") ||
+    t.includes("share your email") ||
+    t.includes("tell me your email") ||
+    t.includes("need your email")
+  );
+}
+
+function isEmailRejection(userText) {
+  if (!userText) return false;
+  const t = userText.trim().toLowerCase();
+  return (
+    t === "no" ||
+    t === "nope" ||
+    t === "nah" ||
+    t.startsWith("no ") ||
+    t.startsWith("no,") ||
+    t.startsWith("nope") ||
+    t.includes("wrong") ||
+    t.includes("incorrect") ||
+    t.includes("not correct") ||
+    t.includes("not right") ||
+    t.includes("change my email") ||
+    t.includes("change email") ||
+    t.includes("different email") ||
+    t.includes("that's not my email") ||
+    t.includes("that is not my email") ||
+    t.includes("spelled wrong") ||
+    t.includes("spelled incorrectly")
+  );
+}
+
+let appEmailHideTimer = null;
+
+function showLiveEmailBox(customHint) {
+  if (appEmailHideTimer) {
+    clearTimeout(appEmailHideTimer);
+    appEmailHideTimer = null;
+  }
+  if (!els.liveEmailBox) return;
+  els.liveEmailBox.style.display = "block";
+  if (customHint && els.liveEmailBox.querySelector(".live-email-guide")) {
+    els.liveEmailBox.querySelector(".live-email-guide").textContent = customHint;
+  }
+  if (els.liveEmailInput) {
+    els.liveEmailInput.focus();
+  }
+}
+
+function hideLiveEmailBox() {
+  if (appEmailHideTimer) {
+    clearTimeout(appEmailHideTimer);
+    appEmailHideTimer = null;
+  }
+  if (els.liveEmailBox) {
+    els.liveEmailBox.style.display = "none";
+  }
+  if (els.liveEmailFeedback) {
+    els.liveEmailFeedback.style.display = "none";
+    els.liveEmailFeedback.innerHTML = "";
+  }
+}
+
+
 // ------------------------------------------------------------ transcript
 
 function addLine(who, text) {
@@ -104,7 +215,7 @@ function addLine(who, text) {
 
   const label = document.createElement("span");
   label.className = "who";
-  label.textContent = who === "agent" ? "OmniDesk Dental Assistant" : "You";
+  label.textContent = who === "agent" ? "OmniDesk Salon Assistant" : "You";
 
   const body = document.createElement("p");
   body.textContent = text;
@@ -195,9 +306,24 @@ function renderCall(event) {
   callTotal += 1;
   els.count.textContent = `${callTotal} call${callTotal === 1 ? "" : "s"}`;
 
+  // Track tool calls for conversation history
+  appCallToolEvents.push(event);
+  if (event.tool === "book_appointment" && event.arguments) {
+    appHasBooked = true;
+    if (event.arguments.customer_name) appCallerName = event.arguments.customer_name;
+    if (event.arguments.email) appCallerEmail = event.arguments.email;
+  }
+
   // Refresh owner stats if a booking tool was executed
   if (event.tool === "book_appointment" || event.tool === "send_confirmation") {
     loadOwnerStats();
+  }
+
+  // If email was reported as invalid or agent is verifying email, surface the live email input
+  if (event.tool === "verify_customer_email" && failed) {
+    showLiveEmailBox("The agent couldn't verify the email domain. Please type your correct email below:");
+  } else if (failed && event.result && event.result.reason === "bad_email") {
+    showLiveEmailBox("The agent couldn't verify your email. Please type your correct email below:");
   }
 }
 
@@ -286,6 +412,7 @@ async function start() {
     return;
   }
   els.agentId.textContent = config.agent_id;
+  appBasePrompt = config.system_prompt || "";
 
   try {
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -324,6 +451,8 @@ async function start() {
       case "session.ready":
         live = true;
         setStatus("Live", "live");
+        if (els.btnToggleEmail) els.btnToggleEmail.style.display = "inline-flex";
+        hideLiveEmailBox();
         els.talk.disabled = false;
         els.talk.innerHTML = `
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -334,6 +463,12 @@ async function start() {
         els.talk.classList.add("ending");
         startTimer();
         pollTimer = setInterval(pollEvents, POLL_MS);
+        appCallTranscript = [];
+        appCallToolEvents = [];
+        appCallerName = "";
+        appCallerEmail = "";
+        appHasBooked = false;
+        awaitingEmailConfirmation = false;
         break;
 
       case "input.speech.started":
@@ -342,10 +477,53 @@ async function start() {
 
       case "transcript.user":
         addLine("user", msg.text);
+        appCallTranscript.push({ who: "user", text: msg.text });
+        if (isEmailRejection(msg.text) && (awaitingEmailConfirmation || appCallerEmail)) {
+          if (appEmailHideTimer) {
+            clearTimeout(appEmailHideTimer);
+            appEmailHideTimer = null;
+          }
+          showLiveEmailBox("Email not confirmed. Please type your correct email below to fix it:");
+          if (els.liveEmailInput) {
+            els.liveEmailInput.value = "";
+            els.liveEmailInput.focus();
+          }
+          const rejectedEmail = appCallerEmail || "";
+          appCallerEmail = "";
+          awaitingEmailConfirmation = false;
+          fetch("/api/verify-email/reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: "", business_id: "biz_demo_dental" })
+          }).catch(() => {});
+
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const promptPrefix = appBasePrompt ? `${appBasePrompt}\n\n` : "";
+            ws.send(JSON.stringify({
+              type: "session.update",
+              session: {
+                system_prompt: `${promptPrefix}[CALLER REJECTED EMAIL] The caller stated that the previous email ("${rejectedEmail}") was NOT correct. Do NOT book with that address. Apologize politely (e.g. "My apologies! What is your correct email address?") and wait for the caller to provide or type their corrected email address.`
+              }
+            }));
+          }
+        }
         break;
 
       case "transcript.agent":
         addLine("agent", msg.text);
+        appCallTranscript.push({ who: "agent", text: msg.text });
+        const agentLower = (msg.text || "").toLowerCase();
+        if (
+          agentLower.includes("is that correct") ||
+          agentLower.includes("is that right") ||
+          agentLower.includes("did i get that right") ||
+          agentLower.includes("confirm your email")
+        ) {
+          awaitingEmailConfirmation = true;
+        }
+        if (isEmailRequest(msg.text)) {
+          showLiveEmailBox();
+        }
         break;
 
       case "reply.audio":
@@ -396,7 +574,35 @@ function cleanup() {
   live = false;
   stopTimer();
 
+  if (els.btnToggleEmail) els.btnToggleEmail.style.display = "none";
+  hideLiveEmailBox();
+
   clearInterval(pollTimer);
+  pollTimer = null;
+  stopPlayback();
+
+  const elapsed = timerStart > 0 ? Math.max(1, Math.floor((Date.now() - timerStart) / 1000)) : 25;
+  const startIso = timerStart > 0
+    ? new Date(timerStart).toISOString().replace("T", " ").slice(0, 19)
+    : new Date(Date.now() - elapsed * 1000).toISOString().replace("T", " ").slice(0, 19);
+  const endIso = new Date().toISOString().replace("T", " ").slice(0, 19);
+
+  fetch("/api/conversations/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      business_id: "biz_demo_dental",
+      caller_name: appCallerName || "Demo Caller",
+      caller_email: appCallerEmail || "caller@example.com",
+      started_at: startIso,
+      ended_at: endIso,
+      duration_seconds: elapsed,
+      status: "completed",
+      outcome: appHasBooked ? "booked" : "inquiry",
+      transcript: appCallTranscript.length > 0 ? appCallTranscript : [{ who: "agent", text: "Demo voice call ended." }],
+      tool_calls: appCallToolEvents
+    })
+  }).then(() => loadOwnerStats()).catch(() => {});
   pollTimer = null;
   stopPlayback();
 
@@ -526,7 +732,7 @@ async function loadOwnerStats() {
           <td><strong>${a.date}</strong> &middot; ${a.time}</td>
           <td>${a.customer_name}</td>
           <td>${a.service_label} <span style="color: var(--text-muted); font-size: 11.5px;">($${a.price})</span></td>
-          <td><span style="font-family: var(--mono); font-size: 12px; color: var(--text-secondary);">${a.email || "—"}</span></td>
+          <td><span style="font-family: var(--mono); font-size: 12px; color: var(--text-secondary);">${a.email ? `${a.email} <span style="color:#16a34a; font-weight:600; font-size:10px;">✓ Verified</span>` : "—"}</span></td>
         </tr>`
         )
         .join("");
@@ -541,9 +747,9 @@ async function loadOwnerStats() {
           (c) => `
         <tr>
           <td><strong>${c.name}</strong></td>
-          <td><span style="font-family: var(--mono); font-size: 12px;">${c.email || "—"}</span></td>
+          <td><span style="font-family: var(--mono); font-size: 12px;">${c.email ? `${c.email} <span style="color:#16a34a; font-weight:600; font-size:10px;">✓ Verified</span>` : "—"}</span></td>
           <td><span class="tenant-badge">${c.appointments_count} visit${c.appointments_count === 1 ? "" : "s"}</span></td>
-          <td>${c.last_service || "Dental Checkup"} <span style="color: var(--text-muted); font-size: 11px;">(${c.last_date})</span></td>
+          <td>${c.last_service || "Signature Haircut"} <span style="color: var(--text-muted); font-size: 11px;">(${c.last_date})</span></td>
         </tr>`
         )
         .join("");
@@ -561,7 +767,7 @@ async function loadOwnerStats() {
             <span class="service-name">${s.label}</span>
             <span class="service-price">$${s.price}</span>
           </div>
-          <p class="service-desc">${s.description || "Clinical service offering for oral health and patient care."}</p>
+          <p class="service-desc">${s.description || "Salon service offering for luxury hair styling and care."}</p>
           <span class="service-dur">Duration: ${s.minutes} minutes</span>
         </div>`
         )
@@ -654,7 +860,7 @@ function renderInfo(data) {
       ["Slots", `${data.hours.slot_minutes} minutes long`],
     ])
   );
-  live.append(el("p", "block-note", "Available Dental Services:"));
+  live.append(el("p", "block-note", "Available Hair Salon Services:"));
   live.append(pills(data.services.map((s) => s.key)));
   live.append(el("p", "block-note", "Upcoming open days & live availability:"));
   for (const day of data.days) {
@@ -698,3 +904,136 @@ infoEls.btn.addEventListener("click", openInfo);
 for (const node of infoEls.modal.querySelectorAll("[data-close]")) {
   node.addEventListener("click", closeInfo);
 }
+
+// -------------------------------------------------------- live email form init
+function initLiveEmailBox() {
+  if (els.btnToggleEmail) {
+    els.btnToggleEmail.addEventListener("click", () => {
+      if (!els.liveEmailBox) return;
+      if (els.liveEmailBox.style.display === "none") {
+        showLiveEmailBox();
+      } else {
+        hideLiveEmailBox();
+      }
+    });
+  }
+
+  if (els.liveEmailInput) {
+    els.liveEmailInput.addEventListener("input", () => {
+      const val = els.liveEmailInput.value.trim();
+      if (!val) {
+        els.liveEmailInput.className = "live-email-input";
+        if (els.liveEmailCheck) els.liveEmailCheck.textContent = "";
+        if (els.liveEmailFeedback) els.liveEmailFeedback.style.display = "none";
+        return;
+      }
+      const clean = val.replace(/\s+/g, "").toLowerCase();
+      const parts = clean.split("@");
+      if (parts.length === 2 && DOMAIN_TYPOS[parts[1]]) {
+        const fixed = `${parts[0]}@${DOMAIN_TYPOS[parts[1]]}`;
+        els.liveEmailFeedback.className = "live-email-feedback suggestion";
+        els.liveEmailFeedback.style.display = "block";
+        els.liveEmailFeedback.innerHTML = `Did you mean <strong>${fixed}</strong>? <span style="text-decoration:underline; cursor:pointer;">Click to apply</span>`;
+        els.liveEmailFeedback.onclick = () => {
+          els.liveEmailInput.value = fixed;
+          els.liveEmailInput.dispatchEvent(new Event("input"));
+        };
+        return;
+      }
+      if (EMAIL_REGEX.test(clean)) {
+        els.liveEmailInput.className = "live-email-input valid";
+        if (els.liveEmailCheck) {
+          els.liveEmailCheck.textContent = "✓";
+          els.liveEmailCheck.style.color = "#16a34a";
+        }
+        if (els.liveEmailFeedback) els.liveEmailFeedback.style.display = "none";
+      } else {
+        els.liveEmailInput.className = "live-email-input invalid";
+        if (els.liveEmailCheck) {
+          els.liveEmailCheck.textContent = "•";
+          els.liveEmailCheck.style.color = "#ef4444";
+        }
+        if (els.liveEmailFeedback) {
+          els.liveEmailFeedback.className = "live-email-feedback error";
+          els.liveEmailFeedback.style.display = "block";
+          els.liveEmailFeedback.textContent = "Incomplete email address (e.g. name@gmail.com)";
+          els.liveEmailFeedback.onclick = null;
+        }
+      }
+    });
+  }
+
+  if (els.liveEmailForm) {
+    els.liveEmailForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const raw = els.liveEmailInput.value.trim();
+      if (!raw) return;
+
+      if (els.btnSendEmail) {
+        els.btnSendEmail.disabled = true;
+        els.btnSendEmail.textContent = "Verifying...";
+      }
+
+      try {
+        const res = await fetch("/api/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: raw, business_id: "biz_demo_dental" })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          throw new Error(data.message || "Invalid email address");
+        }
+
+        const cleanEmail = data.email;
+        els.liveEmailInput.value = cleanEmail;
+        els.liveEmailInput.className = "live-email-input valid";
+        if (els.liveEmailCheck) els.liveEmailCheck.textContent = "✓";
+        if (els.liveEmailFeedback) {
+          els.liveEmailFeedback.className = "live-email-feedback success";
+          els.liveEmailFeedback.style.display = "block";
+          els.liveEmailFeedback.innerHTML = `✓ Verified email: <strong>${cleanEmail}</strong> ${data.auto_corrected ? '<span style="color:#0284c7; font-size:11px;">(auto-corrected)</span>' : ''} ${data.dns_verified ? '<span style="color:#16a34a; font-size:11px;">• DNS Valid</span>' : ''}`;
+        }
+
+        addLine("user", `My email address is ${cleanEmail}`);
+        appCallerEmail = cleanEmail;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const promptPrefix = appBasePrompt ? `${appBasePrompt}\n\n` : "";
+          // 1. Update mutable system_prompt with customer email and require verbal confirmation
+          ws.send(JSON.stringify({
+            type: "session.update",
+            session: {
+              system_prompt: `${promptPrefix}[CUSTOMER EMAIL PROVIDED: "${cleanEmail}"] The caller provided their email: "${cleanEmail}". Say: "Thank you. I have your email as ${cleanEmail}, is that correct?" and WAIT for the caller's verbal confirmation. Do NOT call book_appointment until the caller confirms yes. If caller says no, apologize and ask for the corrected email.`
+            }
+          }));
+
+          // 2. Trigger agent's verbal turn to confirm the email
+          ws.send(JSON.stringify({
+            type: "reply.create",
+            instructions: `The caller provided their email: "${cleanEmail}". Say warmly: "Thank you. I have your email as ${cleanEmail}, is that correct?" and wait for the caller to confirm.`
+          }));
+        }
+
+        if (appEmailHideTimer) clearTimeout(appEmailHideTimer);
+        appEmailHideTimer = setTimeout(() => {
+          hideLiveEmailBox();
+        }, 4000);
+
+      } catch (err) {
+        if (els.liveEmailFeedback) {
+          els.liveEmailFeedback.className = "live-email-feedback error";
+          els.liveEmailFeedback.style.display = "block";
+          els.liveEmailFeedback.textContent = err.message;
+        }
+      } finally {
+        if (els.btnSendEmail) {
+          els.btnSendEmail.disabled = false;
+          els.btnSendEmail.innerHTML = `<span>Verify &amp; Send</span> <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+        }
+      }
+    });
+  }
+}
+
+initLiveEmailBox();
