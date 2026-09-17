@@ -26,5 +26,6 @@ package-lock.json
 /scripts/
 /agent.json
 /requirements.txt
+/run.py
 /public/app.js
 /public/worklet.js

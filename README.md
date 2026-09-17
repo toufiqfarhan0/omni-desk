@@ -281,8 +281,6 @@ PUBLIC_API_BASE_URL=https://your-tunnel-name.trycloudflare.com
 
 Then, click **"Save & Deploy"** in the **Agent Builder** tab on your dashboard. OmniDesk will automatically register all webhook tools with AssemblyAI pointed at your active tunnel URL.
 
-*(Optional convenience helper)*: If you have Python installed, you can also run `python run.py`, which launches the Next.js server and Cloudflare Tunnel simultaneously in one terminal and auto-syncs the tools.
-
 ---
 
 ## Tool API Specifications
