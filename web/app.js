@@ -678,9 +678,9 @@ function onSheetKey(e) {
   if (e.key === "Escape") closeSheet();
 }
 
-sheet.btn.addEventListener("click", openSheet);
-sheet.closeBtn.addEventListener("click", closeSheet);
-sheet.backdrop.addEventListener("click", closeSheet);
+if (sheet.btn) sheet.btn.addEventListener("click", openSheet);
+if (sheet.closeBtn) sheet.closeBtn.addEventListener("click", closeSheet);
+if (sheet.backdrop) sheet.backdrop.addEventListener("click", closeSheet);
 
 // Tab switching
 sheet.tabs.forEach((tab) => {
@@ -900,9 +900,11 @@ function closeInfo() {
   infoEls.btn.focus();
 }
 
-infoEls.btn.addEventListener("click", openInfo);
-for (const node of infoEls.modal.querySelectorAll("[data-close]")) {
-  node.addEventListener("click", closeInfo);
+if (infoEls.btn) infoEls.btn.addEventListener("click", openInfo);
+if (infoEls.modal) {
+  for (const node of infoEls.modal.querySelectorAll("[data-close]")) {
+    node.addEventListener("click", closeInfo);
+  }
 }
 
 // -------------------------------------------------------- live email form init

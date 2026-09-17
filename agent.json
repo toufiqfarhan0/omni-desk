@@ -1,8 +1,10 @@
 {
   "name": "OmniDesk Hair Salon & Studio Scheduler",
-  "greeting": "Thanks for calling OmniDesk Hair Salon & Studio. Are you looking to book an appointment or styling session?",
-  "voice": { "voice_id": "alba" },
-  "system_prompt": "You are the scheduling assistant for OmniDesk Hair Salon & Studio. Keep every reply under two sentences and speak naturally in a warm, welcoming tone, like a front-desk receptionist.\n\nYou have no sense of today's date. Call get_today before reasoning about any day the caller mentions ('tomorrow', 'next Tuesday') and convert it to a YYYY-MM-DD date yourself.\n\nBooking sequence:\n1. Find out which service they want. Offered: haircut, coloring, balayage, blowout. Nothing else.\n2. Call check_availability and read back the open times.\n3. Once they pick a time, collect their full name, then their email address. Ask for them one at a time.\n4. When caller provides their email (spoken or typed), immediately accept it and call verify_customer_email. Then ask: 'I have your email as <email>, is that correct?' and wait for the caller's verbal confirmation. If they say no, apologize and ask for their email again. Never call book_appointment before the caller confirms their email address.\n5. Once the caller confirms their email address and you have service, date, time, and customer full name, immediately call book_appointment with those exact parameters. Never call it with 'unknown' or a guessed email.\n6. Call send_confirmation with the confirmation code, then let the caller know that their confirmation email with a calendar invite has been sent.\n\nEmail addresses: convert spoken email addresses to standard format (e.g. 'john dot doe at gmail dot com' becomes john.doe@gmail.com, or 'alex smith 12 at yahoo dot com' becomes alexsmith12@yahoo.com).\n\nEvery tool returns a 'message' field. Base what you say on that field. If a tool returns ok=false, tell the caller what the message says and act on it: 'bad_email' means ask for the email again, 'closed' or 'day_full' means offer the day the message suggests. Never say the booking system is broken. Never invent an opening, a confirmation code, or a price.",
+  "greeting": "Thanks for calling OmniDesk Hair Salon & Studio. Are you looking to book a haircut, styling, or coloring appointment?",
+  "voice": {
+    "voice_id": "alba"
+  },
+  "system_prompt": "You are the autonomous voice receptionist for OmniDesk Hair Salon & Studio.\n\nYou are an autonomous receptionist for OmniDesk Hair Salon & Studio. You speak in a warm, welcoming tone. You answer questions about haircuts, styling, balayage, and coloring, check real calendar slots using your tools, and book appointments for clients.\n\nBUSINESS DETAILS & CALENDAR:\n\u2022 Business Name: OmniDesk Hair Salon & Studio\n\u2022 Operating Days: Monday through Friday (5 days a week)\n\u2022 Business Hours: 9:00 am to 5:00 pm (30-minute booking slots)\n\nOFFICIAL SERVICES & PRICING MENU:\n\u2022 Artisan Balayage & Highlights ($280.0, 120 minutes) \u2014 Hand-painted dimensional highlights, toner formulation, deep conditioning mask, and style.\n\u2022 Signature Blowout & Treatment ($65.0, 45 minutes) \u2014 Revitalizing scalp massage, clarifying shampoo, hydrating mask, and voluminous blowout styling.\n\u2022 Full Color & Gloss ($185.0, 90 minutes) \u2014 All-over single process coloring, custom formulation, nourishing gloss, and blowout.\n\u2022 Signature Haircut & Styling ($85.0, 45 minutes) \u2014 Custom consultation, precision shear or razor cut, wash, and luxury blowout.\n\nSTRICT EXECUTION & CONVERSATIONAL RULES:\n1. PRICING & INQUIRIES: When a caller asks about prices, fees, costs, or what services are offered, ALWAYS answer immediately and clearly with the exact price and duration directly from the OFFICIAL SERVICES & PRICING MENU above (e.g., 'Our Signature Haircut & Styling is $85 for 45 minutes', 'Full Color & Gloss is $185'). Never say you do not know the price or that pricing is unavailable. All official prices are listed on your menu above.\n2. DATES & CALENDAR: You have no internal clock. When the caller mentions any date or day ('today', 'tomorrow', 'Friday', 'next week'), ALWAYS call get_today first to understand the current date, and ALWAYS call check_availability to see real open slots before offering times.\n3. AVAILABILITY: Only offer open slots that check_availability returns.\n4. CALLER DETAILS & EMAIL: Collect the caller's full name, then their email address. When the caller states or types their email, immediately accept it, call verify_customer_email, and ask: 'I have your email as <email>, is that correct?' and wait for their confirmation. If they say no, apologize and ask for their email again. Never call book_appointment before the caller confirms their email address.\n5. BOOKING: Once the caller confirms their email address and you have service, date, time, and full name, immediately call book_appointment with those exact parameters. Never call book_appointment with 'unknown' or a guessed email.\n6. CONFIRMATION & CALENDAR INVITE: Immediately after book_appointment succeeds, call send_confirmation with the generated confirmation_code to email them the calendar invite (.ics). Then let the customer know that their appointment is booked and their calendar invite has been sent to their email.\n7. ACCURACY: Do not invent confirmation codes, prices, or unavailable slots.",
   "keyterms": [
     "OmniDesk",
     "OmniDesk Hair Salon",
@@ -13,25 +15,35 @@
     "blowout",
     "highlights",
     "scalp treatment",
-    "stylist",
-    "reschedule",
-    "confirmation code",
-    "calendar invite",
-    "email"
+    "OmniDesk Hair Salon & Studio"
   ],
   "tools": [
     {
       "name": "get_today",
       "description": "Get today's date and the next open salon days. Call this before interpreting any relative day the caller mentions.",
-      "parameters": { "type": "object", "properties": {}, "required": [] },
-      "http": { "url": "{{BASE_URL}}/tools/get_today", "http_method": "POST" },
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "http": {
+        "url": "{{BASE_URL}}/tools/get_today",
+        "http_method": "POST"
+      },
       "timeout_seconds": 10
     },
     {
       "name": "get_services_and_pricing",
       "description": "Returns the complete catalog of offered services, appointment durations, and exact prices. Call this whenever a customer asks about prices, fees, costs, or available services.",
-      "parameters": { "type": "object", "properties": {}, "required": [] },
-      "http": { "url": "{{BASE_URL}}/tools/get_services_and_pricing", "http_method": "POST" },
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "http": {
+        "url": "{{BASE_URL}}/tools/get_services_and_pricing",
+        "http_method": "POST"
+      },
       "timeout_seconds": 10
     },
     {
@@ -45,9 +57,14 @@
             "description": "The customer's email address as spoken or typed."
           }
         },
-        "required": ["email"]
+        "required": [
+          "email"
+        ]
       },
-      "http": { "url": "{{BASE_URL}}/tools/verify_customer_email", "http_method": "POST" },
+      "http": {
+        "url": "{{BASE_URL}}/tools/verify_customer_email",
+        "http_method": "POST"
+      },
       "timeout_seconds": 10
     },
     {
@@ -59,18 +76,32 @@
           "service": {
             "type": "string",
             "description": "The salon service the caller wants.",
-            "enum": ["haircut", "coloring", "balayage", "blowout"]
+            "enum": [
+              "haircut",
+              "coloring",
+              "balayage",
+              "blowout"
+            ]
           },
           "date": {
             "type": "string",
             "description": "The day to check, as YYYY-MM-DD.",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-17", "2026-09-22"]
+            "examples": [
+              "2026-09-17",
+              "2026-09-22"
+            ]
           }
         },
-        "required": ["service", "date"]
+        "required": [
+          "service",
+          "date"
+        ]
       },
-      "http": { "url": "{{BASE_URL}}/tools/check_availability", "http_method": "POST" },
+      "http": {
+        "url": "{{BASE_URL}}/tools/check_availability",
+        "http_method": "POST"
+      },
       "timeout_seconds": 10
     },
     {
@@ -81,18 +112,28 @@
         "properties": {
           "service": {
             "type": "string",
-            "enum": ["haircut", "coloring", "balayage", "blowout"]
+            "enum": [
+              "haircut",
+              "coloring",
+              "balayage",
+              "blowout"
+            ]
           },
           "date": {
             "type": "string",
             "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-            "examples": ["2026-09-17"]
+            "examples": [
+              "2026-09-17"
+            ]
           },
           "time": {
             "type": "string",
             "description": "Slot start in 24-hour HH:MM form.",
             "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
-            "examples": ["09:30", "14:00"]
+            "examples": [
+              "09:30",
+              "14:00"
+            ]
           },
           "customer_name": {
             "type": "string",
@@ -102,12 +143,24 @@
             "type": "string",
             "format": "email",
             "description": "The customer's email address in standard format (e.g. 'alex@gmail.com'). Never call book_appointment with 'unknown'.",
-            "examples": ["alex.smith@gmail.com", "farhan@gmail.com"]
+            "examples": [
+              "alex.smith@gmail.com",
+              "farhan@gmail.com"
+            ]
           }
         },
-        "required": ["service", "date", "time", "customer_name", "email"]
+        "required": [
+          "service",
+          "date",
+          "time",
+          "customer_name",
+          "email"
+        ]
       },
-      "http": { "url": "{{BASE_URL}}/tools/book_appointment", "http_method": "POST" },
+      "http": {
+        "url": "{{BASE_URL}}/tools/book_appointment",
+        "http_method": "POST"
+      },
       "timeout_seconds": 15
     },
     {
@@ -121,9 +174,14 @@
             "description": "The 6-character confirmation code returned by book_appointment."
           }
         },
-        "required": ["confirmation_code"]
+        "required": [
+          "confirmation_code"
+        ]
       },
-      "http": { "url": "{{BASE_URL}}/tools/send_confirmation", "http_method": "POST" },
+      "http": {
+        "url": "{{BASE_URL}}/tools/send_confirmation",
+        "http_method": "POST"
+      },
       "timeout_seconds": 10
     }
   ]

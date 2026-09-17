@@ -1206,7 +1206,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/get_today",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -1216,7 +1215,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/get_services_and_pricing",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
@@ -1226,7 +1224,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/verify_customer_email",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
                 "type": "object",
@@ -1242,7 +1239,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/check_availability",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
                 "type": "object",
@@ -1259,7 +1255,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/book_appointment",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
                 "type": "object",
@@ -1284,7 +1279,6 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "http": {
                 "url": f"{base_url}/tools/{business_id}/send_confirmation",
                 "http_method": "POST",
-                "headers": {"Content-Type": "application/json"},
             },
             "parameters": {
                 "type": "object",
@@ -1333,7 +1327,10 @@ def api_deploy_business_agent(business_id: str) -> dict:
             post_resp.raise_for_status()
             agent_id = post_resp.json().get("id")
     except Exception as exc:
-        raise HTTPException(502, f"Failed to provision agent on AssemblyAI: {exc}")
+        err_msg = str(exc)
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+            err_msg = f"{exc.response.status_code}: {exc.response.text}"
+        raise HTTPException(502, f"Failed to provision agent on AssemblyAI: {err_msg}")
 
     db.update_business_agent_id(business_id, agent_id)
 
