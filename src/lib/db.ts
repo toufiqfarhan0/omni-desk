@@ -3,12 +3,14 @@ import path from "node:path";
 import fs from "node:fs";
 
 const ROOT = process.cwd();
-const DB_DIR = path.join(ROOT, "data");
+const DB_DIR = process.env.VERCEL ? "/tmp" : path.join(ROOT, "data");
 const DB_PATH = path.join(DB_DIR, "omnidesk.db");
 
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
-}
+try {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+} catch {}
 
 let dbInstance: Database.Database | null = null;
 
