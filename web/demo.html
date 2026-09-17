@@ -2,14 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>OmniDesk Hair Salon & Studio — Autonomous Voice Receptionist</title>
+    <title>OmniDesk — Autonomous Voice Receptionist Widget & Embed Showcase</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,51 +14,54 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
       :root {
         --bg: #ffffff;
         --surface: #ffffff;
         --surface-subtle: #fafafa;
+        --surface-muted: #f4f4f5;
         --surface-hover: #f5f5f5;
-        --border: #e5e5e5;
-        --border-subtle: #f0f0f0;
-        --border-hover: #171717;
-        --text: #000000;
-        --text-secondary: #262626;
-        --text-muted: #737373;
-        --text-dimmer: #a3a3a3;
-        --accent: #000000;
-        --accent-hover: #262626;
-        --accent-soft: #f5f5f5;
-        --accent-border: #e5e5e5;
-        --accent-text: #000000;
-        --warn: #262626;
-        --warn-soft: #f5f5f5;
-        --warn-border: #e5e5e5;
-        --err: #000000;
-        --err-soft: #f5f5f5;
-        --err-border: #262626;
+        --border: #e4e4e7;
+        --border-subtle: #f0f0f2;
+        --border-hover: #18181b;
+        --text: #09090b;
+        --text-secondary: #27272a;
+        --text-muted: #71717a;
+        --text-dimmer: #a1a1aa;
+        --accent: #18181b;
+        --accent-hover: #27272a;
+        --accent-soft: #f4f4f5;
+        --accent-border: #e4e4e7;
+        --accent-text: #18181b;
         --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         --radius-sm: 6px;
         --radius-md: 10px;
         --radius-lg: 14px;
         --radius-xl: 18px;
+        --radius-2xl: 22px;
         --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
         --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-        --shadow-sheet: -10px 0 30px -5px rgba(0, 0, 0, 0.12), -2px 0 8px -2px rgba(0, 0, 0, 0.06);
-        --bar-h: 74px;
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        --shadow-widget: 0 24px 48px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+        /* Widget dynamic theme vars */
+        --widget-header-bg: #18181b;
+        --widget-header-text: #ffffff;
+        --widget-user-bubble-bg: #18181b;
+        --widget-user-bubble-text: #ffffff;
       }
 
       * {
         box-sizing: border-box;
       }
 
-      html,
-      body {
-        height: 100%;
+      html, body {
         margin: 0;
+        padding: 0;
         background: var(--bg);
         color: var(--text);
         font-family: var(--font);
@@ -70,299 +70,364 @@
         letter-spacing: -0.011em;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        overflow: hidden;
+        min-height: 100vh;
       }
 
-      /* ------------------------------------------------------------ TOP NAVIGATION */
-      .top {
-        flex: none;
+      /* ------------------------------------------------------------ HEADER (CLEAN MATCHING "/") */
+      header.top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        padding: 12px 24px;
+        padding: 14px 32px;
         background: var(--surface);
         border-bottom: 1px solid var(--border);
-        box-shadow: var(--shadow-xs);
-        z-index: 10;
+        position: sticky;
+        top: 0;
+        z-index: 50;
       }
 
       .brand {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        text-decoration: none;
+        color: var(--text);
       }
 
-      .mark {
-        width: 34px;
-        height: 34px;
+      .brand-mark {
+        width: 32px;
+        height: 32px;
         flex: none;
         display: grid;
         place-items: center;
         color: var(--text);
       }
 
-      .mark svg {
+      .brand-mark svg {
         width: 100%;
         height: 100%;
         display: block;
       }
 
-      .brand-text {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .brand-title-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .brand h1 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 600;
-        letter-spacing: -0.018em;
+      .brand-name {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
         color: var(--text);
       }
 
-      .tenant-badge {
-        font-size: 10.5px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        background: var(--accent-soft);
-        color: var(--accent-text);
-        border: 1px solid var(--accent-border);
-        padding: 1px 7px;
-        border-radius: 999px;
-      }
-
-      .brand p {
-        margin: 0;
-        font-size: 12px;
-        color: var(--text-muted);
-      }
-
-      .top-actions {
+      .header-actions {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
       }
 
-      #status {
+      .btn-auth-header {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        font-size: 11.5px;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-        text-transform: uppercase;
-        padding: 5px 11px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--surface-subtle);
-        color: var(--text-secondary);
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      #status::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-        opacity: 0.8;
-      }
-
-      #status[data-state="live"] {
-        color: #000000;
-        background: #f5f5f5;
-        border-color: #000000;
-      }
-
-      #status[data-state="live"]::before {
+        justify-content: center;
+        gap: 7px;
         background: #000000;
-        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
-        animation: pulseDot 1.8s infinite;
-      }
-
-      #status[data-state="busy"] {
-        color: #525252;
-        background: #f5f5f5;
-        border-color: #d4d4d4;
-      }
-
-      #status[data-state="error"] {
         color: #ffffff;
-        background: #000000;
-        border-color: #000000;
-      }
-
-      @keyframes pulseDot {
-        0%, 100% { transform: scale(1); opacity: 0.9; }
-        50% { transform: scale(1.3); opacity: 1; }
-      }
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
         font-family: var(--font);
         font-size: 13px;
-        font-weight: 500;
-        padding: 7px 14px;
+        font-weight: 600;
+        padding: 8px 16px;
         border-radius: var(--radius-md);
-        border: 1px solid var(--border);
+        border: 1px solid #000000;
+        cursor: pointer;
+        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
+      }
+
+      .btn-auth-header:hover {
+        background: #27272a;
+        border-color: #27272a;
+        transform: translateY(-1px);
+      }
+
+      /* ------------------------------------------------------------ PAGE WRAPPER & CONTAINER */
+      .page-container {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 28px 24px 60px;
+      }
+
+      /* ------------------------------------------------------------ BANNER: CREATE AI VOICE AGENT */
+      .creator-banner {
+        background: #09090b;
+        color: #ffffff;
+        border-radius: var(--radius-xl);
+        padding: 22px 28px;
+        margin-bottom: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .creator-banner::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 10% 50%, rgba(255, 255, 255, 0.08), transparent 60%);
+        pointer-events: none;
+      }
+
+      .creator-banner-text {
+        position: relative;
+        z-index: 1;
+      }
+
+      .creator-banner-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        letter-spacing: -0.015em;
+        color: #ffffff;
+      }
+
+      .creator-banner-sub {
+        font-size: 13px;
+        color: #a1a1aa;
+        margin: 0;
+        max-width: 680px;
+        line-height: 1.5;
+      }
+
+      .btn-creator-banner {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: #ffffff;
+        color: #09090b;
+        font-family: var(--font);
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .btn-creator-banner:hover {
+        background: #f4f4f5;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      /* ------------------------------------------------------------ DEMO TEMPLATE SELECTOR (2 DEMOS) */
+      .selector-section {
+        margin-bottom: 28px;
+      }
+
+      .selector-label {
+        font-size: 11.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+      }
+
+      .template-tabs {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .template-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
         background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        font-family: var(--font);
+        font-size: 14px;
+        font-weight: 600;
         color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.15s ease;
         box-shadow: var(--shadow-xs);
       }
 
-      .btn:hover {
-        background: var(--surface-subtle);
+      .template-tab-btn:hover {
         border-color: var(--border-hover);
         color: var(--text);
+        background: var(--surface-hover);
       }
 
-      .btn:active {
-        transform: translateY(1px) scale(0.98);
-      }
-
-      .btn-primary {
+      .template-tab-btn.active {
         background: #000000;
         color: #ffffff;
         border-color: #000000;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        box-shadow: var(--shadow-sm);
       }
 
-      .btn-primary:hover {
-        background: #262626;
-        border-color: #262626;
-        color: #ffffff;
-      }
-
-      /* ------------------------------------------------------------ MAIN WORKSPACE */
-      body {
-        display: flex;
-        flex-direction: column;
-      }
-
-      main {
-        flex: 1;
+      .template-icon {
+        width: 18px;
+        height: 18px;
         display: grid;
-        grid-template-columns: 1fr 1.05fr;
-        gap: 1px;
-        background: var(--border);
-        overflow: hidden;
+        place-items: center;
+        flex: none;
       }
 
-      @media (max-width: 900px) {
-        main {
-          grid-template-columns: 1fr;
-          grid-template-rows: 1fr 1fr;
-        }
+      .template-icon svg {
+        width: 100%;
+        height: 100%;
+        stroke: currentColor;
       }
 
-      .pane {
+      /* ------------------------------------------------------------ MAIN SHOWCASE */
+      .showcase-grid {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto;
+        max-width: 520px;
+      }
+
+      /* ------------------------------------------------------------ WIDGET CARD (LEFT COLUMN) */
+      .widget-card {
         background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-widget);
+        overflow: hidden;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        height: 640px;
+        transition: all 0.25s ease;
       }
 
-      .pane-head {
-        flex: none;
+      .widget-topbar {
+        background: var(--widget-header-bg);
+        color: var(--widget-header-text);
+        padding: 14px 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 22px;
-        border-bottom: 1px solid var(--border-subtle);
-        background: var(--surface);
+        gap: 12px;
+        user-select: none;
+        flex: none;
       }
 
-      .pane-title-group {
+      .widget-topbar-left {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        min-width: 0;
       }
 
-      .pane-icon {
+      .widget-menu-icon {
+        color: rgba(255, 255, 255, 0.7);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+      }
+
+      .widget-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+
+      .widget-avatar svg {
         width: 16px;
         height: 16px;
-        color: var(--text-muted);
+        color: #ffffff;
       }
 
-      .pane-head h2 {
+      .widget-meta {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .widget-title {
         margin: 0;
         font-size: 13.5px;
         font-weight: 600;
-        letter-spacing: -0.015em;
-        color: var(--text);
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      .pane-badge {
-        font-size: 11.5px;
-        color: var(--text-muted);
-        font-weight: 500;
-        background: var(--surface-subtle);
-        padding: 2px 8px;
-        border-radius: 999px;
-        border: 1px solid var(--border-subtle);
+      .widget-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.75);
       }
 
-      .scroll {
+      .widget-status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+      }
+
+      .widget-status-dot.idle {
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      .widget-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .widget-ctrl-btn {
+        background: transparent;
+        border: none;
+        color: inherit;
+        padding: 4px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: color 0.15s ease;
+      }
+
+      .widget-ctrl-btn:hover {
+        color: #ffffff;
+      }
+
+      /* ------------------------------------------------------------ WIDGET CONVERSATION BODY */
+      .widget-conversation {
         flex: 1;
         overflow-y: auto;
-        padding: 20px 22px;
+        padding: 18px 16px;
         display: flex;
         flex-direction: column;
         gap: 14px;
-        scrollbar-width: thin;
-        scrollbar-color: var(--border) transparent;
+        background: #ffffff;
       }
 
-      .scroll::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      .scroll::-webkit-scrollbar-thumb {
-        background: var(--border);
-        border-radius: 3px;
-      }
-
-      .empty {
-        margin: auto;
-        text-align: center;
-        max-width: 320px;
-        color: var(--text-muted);
-        font-size: 13.5px;
-        line-height: 1.6;
-        padding: 40px 20px;
-      }
-
-      .empty-icon-wrap {
-        width: 44px;
-        height: 44px;
-        margin: 0 auto 12px;
-        border-radius: 50%;
-        background: var(--surface-subtle);
-        border: 1px solid var(--border);
-        display: grid;
-        place-items: center;
-        color: var(--text-dimmer);
-      }
-
-      /* ------------------------------------------------------------ CONVERSATION BUBBLES */
-      .line {
+      .bubble-row {
         display: flex;
         flex-direction: column;
         gap: 4px;
         max-width: 88%;
-        animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
       @keyframes fadeIn {
@@ -370,1233 +435,1076 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      .line.agent {
+      .bubble-row.agent {
         align-self: flex-start;
       }
 
-      .line.user {
+      .bubble-row.user {
         align-self: flex-end;
       }
 
-      .who {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-        padding: 0 4px;
+      .bubble-wrapper {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
       }
 
-      .line.user .who {
-        text-align: right;
-      }
-
-      .line p {
-        margin: 0;
-        padding: 10px 14px;
-        border-radius: var(--radius-lg);
-        font-size: 14px;
-        line-height: 1.55;
-      }
-
-      .line.agent p {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text);
-        border-top-left-radius: 4px;
-        box-shadow: var(--shadow-xs);
-      }
-
-      .line.user p {
+      .agent-icon-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
         background: #000000;
         color: #ffffff;
-        border-top-right-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        display: grid;
+        place-items: center;
+        flex: none;
+        margin-top: 2px;
       }
 
-      .used {
+      .agent-icon-badge svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .bubble {
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 13.5px;
+        line-height: 1.45;
+        word-break: break-word;
+      }
+
+      .bubble-row.agent .bubble {
+        background: #f4f4f5;
+        color: #18181b;
+        border-top-left-radius: 4px;
+      }
+
+      .bubble-row.user .bubble {
+        background: var(--widget-user-bubble-bg);
+        color: var(--widget-user-bubble-text);
+        border-top-right-radius: 4px;
+      }
+
+      /* Quick Action Chips */
+      .quick-chips-group {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 4px;
-        padding-left: 2px;
+        margin-top: 6px;
+        margin-left: 32px;
       }
 
-      .chip {
-        font-family: var(--mono);
-        font-size: 11px;
+      .quick-chip {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-family: var(--font);
+        font-size: 12px;
         font-weight: 500;
-        padding: 3px 8px;
-        border-radius: var(--radius-sm);
-        background: #f5f5f5;
-        color: #000000;
-        border: 1px solid #e5e5e5;
+        padding: 5px 11px;
+        border-radius: 999px;
         cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
         transition: all 0.15s ease;
       }
 
-      .chip::before {
-        content: "⚡";
-        font-size: 9px;
-      }
-
-      .chip:hover {
-        background: #e5e5e5;
-        border-color: #d4d4d4;
-      }
-
-      .chip.warn {
-        background: #171717;
+      .quick-chip:hover {
+        background: #000000;
         color: #ffffff;
-        border-color: #171717;
+        border-color: #000000;
       }
 
-      /* ------------------------------------------------------------ TOOL CALL CARDS */
-      .call {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 12px 14px;
-        box-shadow: var(--shadow-xs);
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        animation: fadeIn 0.18s ease;
+      /* Live Email Input Bar inside Widget */
+      .widget-email-box {
+        background: #fbfbfb;
+        border-top: 1px solid var(--border);
+        padding: 10px 14px;
       }
 
-      .call:hover {
-        border-color: var(--border-hover);
-        box-shadow: var(--shadow-sm);
-      }
-
-      .call.flash {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-        transform: scale(1.01);
-      }
-
-      .call.warn {
-        border-left: 3px solid var(--warn);
-      }
-
-      .call-header {
+      .widget-email-head {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        align-items: center;
+        margin-bottom: 6px;
       }
 
-      .call-method-name {
-        display: flex;
+      .widget-email-tag {
+        font-size: 11px;
+        font-weight: 600;
+        color: #059669;
+        display: inline-flex;
         align-items: center;
+        gap: 5px;
+      }
+
+      .widget-email-tag span.dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #059669;
+      }
+
+      .widget-email-form {
+        display: flex;
         gap: 8px;
       }
 
-      .method-tag {
-        font-family: var(--mono);
-        font-size: 10.5px;
-        font-weight: 600;
-        padding: 2px 6px;
+      .widget-email-input {
+        flex: 1;
+        font-family: var(--font);
+        font-size: 12.5px;
+        padding: 7px 10px;
+        border: 1px solid var(--border);
         border-radius: var(--radius-sm);
-        background: #f1f5f9;
-        color: #334155;
-        border: 1px solid #e2e8f0;
+        outline: none;
       }
 
-      .call-name {
-        font-family: var(--mono);
+      .widget-email-input:focus {
+        border-color: #000000;
+      }
+
+      .widget-email-submit {
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        border-radius: var(--radius-sm);
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* ------------------------------------------------------------ WIDGET VOICE CALL DOCK */
+      .widget-voice-bar {
+        border-top: 1px solid var(--border);
+        background: #fafafa;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex: none;
+      }
+
+      .btn-voice-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+        border-radius: var(--radius-md);
+        padding: 7px 14px;
+        font-family: var(--font);
         font-size: 12.5px;
         font-weight: 600;
-        color: var(--text);
+        cursor: pointer;
+        transition: all 0.15s ease;
       }
 
-      .call-time {
+      .btn-voice-toggle:hover {
+        background: #27272a;
+      }
+
+      .btn-voice-toggle.live {
+        background: #dc2626;
+        border-color: #dc2626;
+      }
+
+      .btn-voice-toggle svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .call-timer-badge {
         font-family: var(--mono);
-        font-size: 11px;
+        font-size: 12px;
+        color: var(--text-muted);
+        background: #ffffff;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+      }
+
+      /* Sound Wave Indicator */
+      .sound-wave {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        height: 14px;
+      }
+
+      .sound-bar {
+        width: 2px;
+        height: 4px;
+        background: var(--text-muted);
+        border-radius: 1px;
+        transition: height 0.1s ease;
+      }
+
+      .sound-wave.active .sound-bar:nth-child(1) { animation: soundWave 0.6s infinite ease-in-out; }
+      .sound-wave.active .sound-bar:nth-child(2) { animation: soundWave 0.8s infinite ease-in-out; }
+      .sound-wave.active .sound-bar:nth-child(3) { animation: soundWave 0.5s infinite ease-in-out; }
+      .sound-wave.active .sound-bar:nth-child(4) { animation: soundWave 0.7s infinite ease-in-out; }
+
+      @keyframes soundWave {
+        0%, 100% { height: 4px; background: #22c55e; }
+        50% { height: 14px; background: #16a34a; }
+      }
+
+      /* ------------------------------------------------------------ WIDGET TEXT INPUT BAR */
+      .widget-input-bar {
+        border-top: 1px solid var(--border);
+        padding: 10px 14px;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: none;
+      }
+
+      .widget-input-field {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-family: var(--font);
+        font-size: 13px;
+        color: var(--text);
+        background: transparent;
+      }
+
+      .widget-input-field::placeholder {
         color: var(--text-dimmer);
       }
 
-      .call-args {
-        margin: 6px 0;
-        padding: 8px 10px;
-        border-radius: var(--radius-sm);
-        background: var(--surface-subtle);
-        border: 1px solid var(--border-subtle);
-        font-family: var(--mono);
-        font-size: 11.5px;
-        line-height: 1.5;
-        color: var(--text-secondary);
-        white-space: pre-wrap;
-        overflow-x: auto;
-      }
-
-      .call-msg {
-        margin: 6px 0 0;
-        font-size: 13px;
-        color: var(--text-secondary);
-        line-height: 1.5;
-      }
-
-      .call-reason {
-        display: inline-block;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--warn);
-        background: var(--warn-soft);
-        border: 1px solid var(--warn-border);
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-top: 4px;
-      }
-
-      /* Live Email Input Box in Console */
-      .live-email-box {
-        background: #ffffff;
-        border-top: 1px solid #e5e5e5;
-        padding: 12px 16px;
-        box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.05);
-        animation: fadeIn 0.18s ease;
-        flex: none;
-      }
-
-      .live-email-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        gap: 8px;
-      }
-
-      .live-email-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #f0fdf4;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-        padding: 2px 8px;
-        border-radius: 9999px;
-        font-size: 11px;
-        font-weight: 600;
-      }
-
-      .pulse-dot {
-        width: 6px;
-        height: 6px;
-        background: #16a34a;
+      .widget-send-btn {
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
-        animation: pulse 1.5s infinite;
-      }
-
-      @keyframes pulse {
-        0% { transform: scale(0.95); opacity: 0.8; }
-        50% { transform: scale(1.2); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.8; }
-      }
-
-      .live-email-guide {
-        font-size: 12px;
-        color: var(--text-muted);
-      }
-
-      .live-email-form {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .live-email-input-wrapper {
-        position: relative;
-        flex: 1;
-      }
-
-      .live-email-input {
-        width: 100%;
-        padding: 9px 12px 9px 34px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border);
-        font-family: var(--font);
-        font-size: 13.5px;
-        outline: none;
-        box-sizing: border-box;
-        transition: all 0.15s ease;
-        background: #ffffff;
-      }
-
-      .live-email-input:focus {
-        border-color: #000000;
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
-      }
-
-      .live-email-input.valid {
-        border-color: #22c55e;
-        background: #f0fdf4;
-      }
-
-      .live-email-input.invalid {
-        border-color: #ef4444;
-        background: #fef2f2;
-      }
-
-      .live-email-icon {
-        position: absolute;
-        left: 11px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 13px;
-        color: var(--text-muted);
-      }
-
-      .live-email-check-icon {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 13px;
-        font-weight: 700;
-      }
-
-      .btn-live-email-send {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 9px 16px;
         background: #000000;
         color: #ffffff;
-        border: 1px solid #000000;
-        border-radius: var(--radius-md);
-        font-size: 13px;
-        font-weight: 600;
+        border: none;
+        display: grid;
+        place-items: center;
         cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.15s ease;
-      }
-
-      .btn-live-email-send:hover {
-        background: #262626;
-      }
-
-      .btn-live-email-send:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .live-email-feedback {
-        margin-top: 6px;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-
-      .live-email-feedback.success {
-        color: #16a34a;
-        font-weight: 500;
-      }
-
-      .live-email-feedback.error {
-        color: #dc2626;
-        font-weight: 500;
-      }
-
-      .live-email-feedback.suggestion {
-        color: #d97706;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: underline;
-      }
-
-      .verified-email-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        background: #dcfce7;
-        color: #15803d;
-        border: 1px solid #86efac;
-        font-size: 10.5px;
-        font-weight: 600;
-        padding: 1px 6px;
-        border-radius: 4px;
-        margin-top: 4px;
-      }
-
-      /* ------------------------------------------------------------ DOCK / BOTTOM BAR */
-      .bar {
         flex: none;
-        height: var(--bar-h);
-        background: var(--surface);
-        border-top: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 24px;
-        box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.03);
-        z-index: 10;
+        transition: all 0.15s ease;
       }
 
-      .bar-left {
-        display: flex;
-        align-items: center;
-        gap: 16px;
+      .widget-send-btn:hover {
+        background: #27272a;
       }
 
-      #talk {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--font);
-        font-size: 14px;
-        font-weight: 600;
-        padding: 10px 20px;
-        border-radius: var(--radius-lg);
-        border: 1px solid #000000;
-        background: #000000;
-        color: #ffffff;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      .widget-send-btn svg {
+        width: 13px;
+        height: 13px;
       }
 
-      #talk:hover {
-        background: #262626;
-        border-color: #262626;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
 
-      #talk:active {
-        transform: translateY(1px) scale(0.98);
-      }
 
-      #talk.ending {
-        background: #ffffff;
-        color: #000000;
-        border-color: #000000;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
-
-      #talk.ending:hover {
-        background: #f5f5f5;
-        border-color: #000000;
-      }
-
-      #talk:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      #timer {
-        font-family: var(--mono);
-        font-size: 13.5px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        color: var(--text-muted);
-        background: var(--surface-subtle);
-        padding: 6px 12px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border);
-      }
-
-      #timer[data-state="running"] {
-        color: #000000;
-        background: #f5f5f5;
-        border-color: #000000;
-      }
-
-      .meta {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        font-size: 12.5px;
-        color: var(--text-muted);
-      }
-
-      .meta b {
-        font-family: var(--mono);
-        font-weight: 500;
-        color: var(--text);
-        background: var(--surface-subtle);
-        padding: 2px 6px;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border);
-      }
-
-      /* ------------------------------------------------------------ OWNER DASHBOARD SHEET */
-      .sheet-backdrop {
+      /* ------------------------------------------------------------ AUTH MODAL */
+      .auth-modal {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.35);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: grid;
+        place-items: center;
+        z-index: 1000;
+        padding: 16px;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        z-index: 100;
+        transition: opacity 0.2s ease;
       }
 
-      .sheet-backdrop.active {
+      .auth-modal.is-open {
         opacity: 1;
         pointer-events: auto;
       }
 
-      .sheet {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: 660px;
-        max-width: 100vw;
-        background: var(--surface);
-        box-shadow: var(--shadow-sheet);
-        display: flex;
-        flex-direction: column;
-        z-index: 101;
-        transform: translateX(100%);
-        transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      .sheet.active {
-        transform: translateX(0);
-      }
-
-      .sheet-header {
-        flex: none;
-        padding: 18px 24px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: var(--surface);
-      }
-
-      .sheet-title-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .sheet-title-row h2 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text);
-      }
-
-      .sheet-close-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border);
-        background: var(--surface);
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        color: var(--text-muted);
-        transition: all 0.15s ease;
-      }
-
-      .sheet-close-btn:hover {
-        background: var(--surface-subtle);
-        color: var(--text);
-      }
-
-      /* Sheet Segmented Nav Tabs */
-      .sheet-nav {
-        flex: none;
-        display: flex;
-        align-items: center;
-        padding: 8px 24px;
-        gap: 6px;
-        background: var(--surface-subtle);
-        border-bottom: 1px solid var(--border);
-        overflow-x: auto;
-        scrollbar-width: none;
-      }
-
-      .sheet-nav::-webkit-scrollbar {
-        display: none;
-      }
-
-      .tab-btn {
-        font-family: var(--font);
-        font-size: 12.5px;
-        font-weight: 500;
-        padding: 6px 12px;
-        border-radius: var(--radius-md);
-        border: 1px solid transparent;
-        background: transparent;
-        color: var(--text-secondary);
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.15s ease;
-      }
-
-      .tab-btn:hover {
-        color: var(--text);
-        background: rgba(255, 255, 255, 0.6);
-      }
-
-      .tab-btn.active {
-        background: #000000;
-        color: #ffffff;
-        font-weight: 600;
-        border-color: #000000;
-        box-shadow: var(--shadow-xs);
-      }
-
-      .sheet-content {
-        flex: 1;
-        overflow-y: auto;
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .tab-pane {
-        display: none;
-        flex-direction: column;
-        gap: 18px;
-        animation: fadeIn 0.18s ease;
-      }
-
-      .tab-pane.active {
-        display: flex;
-      }
-
-      /* KPI Stat Grid */
-      .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-      }
-
-      .kpi-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 14px;
-        box-shadow: var(--shadow-xs);
-      }
-
-      .kpi-label {
-        font-size: 11.5px;
-        font-weight: 500;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 6px;
-      }
-
-      .kpi-val {
-        font-size: 22px;
-        font-weight: 700;
-        letter-spacing: -0.025em;
-        color: var(--text);
-      }
-
-      .kpi-sub {
-        font-size: 11.5px;
-        color: var(--text-muted);
-        margin-top: 4px;
-        font-weight: 500;
-      }
-
-      /* Tables in Sheet */
-      .table-wrap {
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        background: var(--surface);
-        box-shadow: var(--shadow-xs);
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-        text-align: left;
-      }
-
-      th {
-        background: var(--surface-subtle);
-        padding: 10px 14px;
-        font-weight: 600;
-        font-size: 11.5px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-secondary);
-        border-bottom: 1px solid var(--border);
-      }
-
-      td {
-        padding: 11px 14px;
-        border-bottom: 1px solid var(--border-subtle);
-        color: var(--text);
-      }
-
-      tr:last-child td {
-        border-bottom: none;
-      }
-
-      tr:hover td {
-        background: #f5f5f5;
-      }
-
-      .badge-success {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        background: #000000;
-        color: #ffffff;
-        border: 1px solid #000000;
-        padding: 2px 7px;
-        border-radius: 999px;
-      }
-
-      .badge-pending {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        background: #f5f5f5;
-        color: #737373;
-        border: 1px solid #e5e5e5;
-        padding: 2px 7px;
-        border-radius: 999px;
-      }
-
-      /* Card Grid for Services */
-      .service-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      .service-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 16px;
-        box-shadow: var(--shadow-xs);
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .service-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .service-name {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--text);
-      }
-
-      .service-price {
-        font-family: var(--mono);
-        font-weight: 600;
-        font-size: 13.5px;
-        color: var(--accent-text);
-      }
-
-      .service-desc {
-        font-size: 12.5px;
-        color: var(--text-secondary);
-        line-height: 1.45;
-      }
-
-      .service-dur {
-        font-size: 11.5px;
-        color: var(--text-muted);
-        font-weight: 500;
-        margin-top: 4px;
-      }
-
-      /* Info Modal (Demo Data) */
-      .modal {
-        position: fixed;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        z-index: 90;
-        padding: 20px;
-      }
-
-      .modal[hidden] {
-        display: none;
-      }
-
-      .modal-backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.35);
-        backdrop-filter: blur(4px);
-      }
-
-      .modal-card {
-        position: relative;
-        width: 100%;
-        max-width: 560px;
-        max-height: 85vh;
-        background: var(--surface);
+      .auth-modal-box {
+        background: #ffffff;
         border: 1px solid var(--border);
         border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-md);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      @keyframes scaleIn {
-        from { opacity: 0; transform: scale(0.96); }
-        to { opacity: 1; transform: scale(1); }
-      }
-
-      .modal-head {
-        padding: 16px 22px;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .modal-head h2 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 600;
-      }
-
-      .modal-body {
-        padding: 20px 22px;
+        max-width: 480px;
+        width: 100%;
+        padding: 32px;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        transform: translateY(12px) scale(0.98);
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        max-height: 90vh;
         overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
       }
 
-      .block-head {
+      .auth-modal.is-open .auth-modal-box {
+        transform: translateY(0) scale(1);
+      }
+
+      .auth-head {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .auth-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 4px;
+      }
+
+      .auth-sub {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      .btn-close-modal {
+        background: transparent;
+        border: none;
+        font-size: 20px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+      }
+
+      .btn-close-modal:hover {
+        background: var(--surface-subtle);
+        color: var(--text);
+      }
+
+      .demo-bypass-card {
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
+        border-radius: var(--radius-md);
+        padding: 14px;
+        margin-bottom: 20px;
+      }
+
+      .demo-bypass-title {
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .btn-demo-quick {
+        width: 100%;
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        padding: 9px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .auth-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 20px;
+      }
+
+      .auth-tab-btn {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+
+      .auth-tab-btn.active {
+        color: var(--text);
+        border-bottom-color: #000000;
+      }
+
+      .auth-form-group {
+        margin-bottom: 14px;
+      }
+
+      .auth-label {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
         margin-bottom: 6px;
       }
 
-      .block-head h3 {
-        margin: 0;
+      .auth-input {
+        width: 100%;
+        font-family: var(--font);
         font-size: 13.5px;
-        font-weight: 600;
-      }
-
-      .block-head .src {
-        font-family: var(--mono);
-        font-size: 11px;
-        color: var(--text-dimmer);
-      }
-
-      .block-note {
-        margin: 0 0 8px;
-        font-size: 12.5px;
-        color: var(--text-muted);
-      }
-
-      .pillrow {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 8px;
-      }
-
-      .pill {
-        font-size: 12px;
-        font-weight: 500;
-        padding: 3px 9px;
-        border-radius: 999px;
-        background: var(--surface-subtle);
-        border: 1px solid var(--border);
-        color: var(--text-secondary);
-      }
-
-      .pill.tool {
-        font-family: var(--mono);
-        background: var(--accent-soft);
-        color: var(--accent-text);
-        border-color: var(--accent-border);
-      }
-
-      .kv {
-        margin: 0 0 10px;
-        display: grid;
-        grid-template-columns: 80px 1fr;
-        gap: 4px 8px;
-        font-size: 12.5px;
-      }
-
-      .kv dt {
-        color: var(--text-muted);
-      }
-
-      .kv dd {
-        margin: 0;
-        font-weight: 500;
-        color: var(--text);
-      }
-
-      .day {
+        padding: 9px 12px;
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
-        padding: 10px 12px;
-        margin-top: 8px;
-        background: var(--surface-subtle);
+        outline: none;
+        box-sizing: border-box;
       }
 
-      .day-head {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 12.5px;
+      .auth-input:focus {
+        border-color: #000000;
+      }
+
+      .btn-submit-auth {
+        width: 100%;
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        padding: 11px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
         font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
       }
 
-      .day-count {
-        color: var(--accent-text);
-        font-size: 11.5px;
+      .btn-submit-auth:hover {
+        background: #27272a;
       }
 
-      .slots {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
+      .auth-alert {
+        font-size: 12.5px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 12px;
+        display: none;
       }
 
-      .slot {
-        font-family: var(--mono);
-        font-size: 11.5px;
-        padding: 3px 7px;
-        border-radius: 4px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text);
+      .auth-alert.error {
+        display: block;
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .auth-alert.success {
+        display: block;
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      /* Hidden audio hooks so app.js can operate cleanly if loaded */
+      .hidden-hook {
+        display: none !important;
       }
     </style>
   </head>
   <body>
-    <!-- TOP HEADER -->
+    <!-- TOP HEADER (CLEAN MATCHING "/") -->
     <header class="top">
-      <div class="brand">
-        <div class="mark" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="34" height="34">
+      <a href="/" class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" width="32" height="32">
             <path fill="currentColor" d="m75 9.4c-36.6 0-66.4 29.6-66.4 66s27.3 65.2 66.4 65.2c15.2 0 29-4.7 40.1-13.1 6-4.6 10.6-9.6 13.9-14 7-9.9 12.4-23.5 12.4-38.1 0-33.3-28.1-66-66.4-66zm35.8 26.5 0.5 0.5c-3.3 0.7-6.5 1.7-10.6 2.8-5.7-7.2-11.9-12.4-18.8-16.5 8.3 1 16 3.6 28.9 13.2zm-56.2-9.3c11.4 1 23.2 6.4 31.4 15l3.1 3.4c-6.2 4.2-10.8 8.8-15.6 16.4-7.2-9.7-16.8-19.8-35-24.7 4.6-4.2 10.5-7.8 16.1-10.1zm-25.6 20.4c13.6 2.1 25.8 8.5 37.3 27.3-6.1 10.4-16.3 22.4-37.6 26.8-3-5.2-6.9-14.1-7-25.1 0-10.7 3.6-21.3 7.7-29zm8.2 65.9c10.9-2.6 22.7-7.7 32.8-20.2l3.6-5.7h0.1c4.7 6.2 8.3 10.3 15.5 15.7l-3.8 4.3c-8 7.5-18.5 13.9-33.9 15.4-5.2-2.6-9.5-5.6-14.3-9.5zm41.6 14.9c6.4-3.2 14.9-8.9 21.9-17.8 2.6 1.1 7.3 2.6 11 3.8-4.7 4.6-15.9 12.5-32.9 14zm1.8-53.4c-2.1 4.1-4.8 8.8-7 12.4l-2.1-3.3-5.1-9.2 7.1-12.4c3.1 4.4 5.5 9.2 7.1 12.1v0.2c3.5-5.9 8-11.4 15.1-17.2 2 4.9 3.5 10.4 3.4 18.2 0 6.5-1.4 11.3-3.3 16.3-5.2-4.1-9.8-8.7-15.2-17.1zm40.2 27.4c-3.9-0.3-8.9-1.6-13.8-3.7 3.4-7.4 5.5-15.2 5.5-23.9-0.1-6.8-1.2-14-5.5-24.1 1-0.5 7.3-3.1 13.2-3.8 5 8.2 8.3 17.2 8.2 28.9-0.2 9.2-3.2 19.1-7.6 26.6z"/>
           </svg>
         </div>
-        <div class="brand-text">
-          <div class="brand-title-row">
-            <h1>OmniDesk Hair Salon & Studio</h1>
-            <span class="tenant-badge">Autonomous Receptionist</span>
-          </div>
-          <p>Autonomous Voice Receptionist &middot; Live Salon Demo</p>
-        </div>
-      </div>
-      <div class="top-actions">
-        <span id="status" data-state="idle">Idle</span>
+        <span class="brand-name">OmniDesk</span>
+      </a>
+
+      <div class="header-actions">
+        <button type="button" class="btn-auth-header" id="btn-open-auth-nav">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" x2="19" y1="8" y2="14"/>
+            <line x1="22" x2="16" y1="11" y2="11"/>
+          </svg>
+          Sign In / Sign Up
+        </button>
       </div>
     </header>
 
-    <!-- MAIN TWO-PANE WORKSPACE -->
-    <main>
-      <!-- LEFT PANE: LIVE CONVERSATION -->
-      <section class="pane">
-        <div class="pane-head">
-          <div class="pane-title-group">
-            <svg class="pane-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            <h2>Live Conversation</h2>
-          </div>
-          <span class="pane-badge">Barge-in active</span>
+    <div class="page-container">
+      <!-- CREATOR CALLOUT BANNER -->
+      <section class="creator-banner">
+        <div class="creator-banner-text">
+          <div class="creator-banner-title">Want to create an AI voice agent that works 24/7 for your business?</div>
+          <p class="creator-banner-sub">Speaks naturally with callers, checks live practice calendars, and books confirmed slots directly into your database.</p>
         </div>
-        <div class="scroll" id="transcript">
-          <div class="empty">
-            <div class="empty-icon-wrap">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" x2="12" y1="19" y2="22"/>
-              </svg>
-            </div>
-            <strong>Ready for incoming caller</strong>
-            <p>Start the call and ask to schedule a haircut, styling, or coloring next week.</p>
-          </div>
-        </div>
-
-        <!-- LIVE CUSTOMER EMAIL INPUT BAR -->
-        <div class="live-email-box" id="live-email-box" style="display: none;">
-          <div class="live-email-head">
-            <div class="live-email-badge">
-              <span class="pulse-dot"></span>
-              <span>Agent Asking for Email</span>
-            </div>
-            <span class="live-email-guide">Type email to verify directly without voice spelling errors</span>
-          </div>
-          <form class="live-email-form" id="live-email-form">
-            <div class="live-email-input-wrapper">
-              <span class="live-email-icon">✉️</span>
-              <input
-                type="email"
-                id="live-email-input"
-                class="live-email-input"
-                placeholder="e.g. name@gmail.com"
-                autocomplete="email"
-                spellcheck="false"
-                required
-              />
-              <span id="live-email-check" class="live-email-check-icon"></span>
-            </div>
-            <button type="submit" id="btn-send-email" class="btn-live-email-send">
-              <span>Verify &amp; Send</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </form>
-          <div id="live-email-feedback" class="live-email-feedback" style="display: none;"></div>
-        </div>
+        <button type="button" class="btn-creator-banner" id="btn-create-agent-banner">
+          Create Voice Agent &rarr;
+        </button>
       </section>
 
-      <!-- RIGHT PANE: LIVE ASSEMBLYAI TOOLS STREAM -->
-      <section class="pane">
-        <div class="pane-head">
-          <div class="pane-title-group">
-            <svg class="pane-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m18 16 4-4-4-4"/>
-              <path d="m6 8-4 4 4 4"/>
-              <path d="m14.5 4-5 16"/>
-            </svg>
-            <h2>AssemblyAI &rarr; Booking Engine</h2>
-          </div>
-          <span class="pane-badge" id="call-count">0 calls</span>
-        </div>
-        <div class="scroll" id="calls">
-          <div class="empty">
-            <div class="empty-icon-wrap">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2"/>
-                <path d="m9 12 2 2 4-4"/>
+      <!-- 2 DEMO TEMPLATE SELECTOR BUTTONS -->
+      <section class="selector-section">
+        <div class="selector-label">Select Agent Template (2 Demos)</div>
+        <div class="template-tabs">
+          <button type="button" class="template-tab-btn active" id="tab-demo-salon" data-template="salon">
+            <span class="template-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="3"/>
+                <circle cx="6" cy="18" r="3"/>
+                <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                <line x1="8.12" y1="8.12" x2="12" y2="12"/>
               </svg>
-            </div>
-            <strong>Live HTTP Tool Stream</strong>
-            <p>Tool calls executed by AssemblyAI directly against the booking API appear here in real-time.</p>
-          </div>
-        </div>
-      </section>
-    </main>
+            </span>
+            Hair Salon &amp; Studio
+          </button>
 
-    <!-- BOTTOM CONTROL DOCK -->
-    <footer class="bar">
-      <div class="bar-left">
-        <button id="talk" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" x2="12" y1="19" y2="22"/>
-          </svg>
-          Start call
-        </button>
-        <span id="timer" data-state="idle">0:00</span>
-        <span id="agent-id" style="display: none;"></span>
-      </div>
-    </footer>
-
-    <!-- OWNER DASHBOARD SLIDE-OVER SHEET -->
-    <div class="sheet-backdrop" id="owner-backdrop"></div>
-    <aside class="sheet" id="owner-sheet" aria-labelledby="sheet-title" role="dialog" aria-modal="true">
-      <div class="sheet-header">
-        <div class="sheet-title-row">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="18" x="3" y="3" rx="2"/>
-            <path d="M9 3v18"/>
-          </svg>
-          <h2 id="sheet-title">OmniDesk Hair Salon & Studio &mdash; Owner Console</h2>
-        </div>
-        <button class="sheet-close-btn" id="sheet-close-btn" type="button" aria-label="Close sheet">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18"/>
-            <path d="m6 6 12 12"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Segmented Tab Navigation -->
-      <nav class="sheet-nav">
-        <button class="tab-btn active" data-tab="tab-overview" type="button">Overview</button>
-        <button class="tab-btn" data-tab="tab-calendar" type="button">Calendar</button>
-        <button class="tab-btn" data-tab="tab-customers" type="button">Customers</button>
-        <button class="tab-btn" data-tab="tab-services" type="button">Services</button>
-        <button class="tab-btn" data-tab="tab-agent" type="button">AI Agent</button>
-        <button class="tab-btn" data-tab="tab-settings" type="button">Settings</button>
-      </nav>
-
-      <!-- Tab Content Panes -->
-      <div class="sheet-content">
-        <!-- TAB 1: OVERVIEW -->
-        <div class="tab-pane active" id="tab-overview">
-          <div class="kpi-grid">
-            <div class="kpi-card">
-              <div class="kpi-label">Today's Bookings</div>
-              <div class="kpi-val" id="kpi-today">0</div>
-              <div class="kpi-sub">Active schedule</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Upcoming</div>
-              <div class="kpi-val" id="kpi-upcoming">0</div>
-              <div class="kpi-sub">Next 14 days</div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-label">Est. Revenue</div>
-              <div class="kpi-val" id="kpi-rev">$0</div>
-              <div class="kpi-sub">Confirmed value</div>
-            </div>
-          </div>
-
-          <div>
-            <h3 style="margin: 0 0 10px; font-size: 13.5px; font-weight: 600;">Today's Schedule</h3>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Customer</th>
-                    <th>Service</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody id="overview-today-table">
-                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No bookings scheduled for today</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 2: CALENDAR & APPOINTMENTS -->
-        <div class="tab-pane" id="tab-calendar">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">All Confirmed Appointments</h3>
-            <span class="tenant-badge" id="calendar-count">0 total</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Date & Time</th>
-                  <th>Customer</th>
-                  <th>Service</th>
-                  <th>Email</th>
-                </tr>
-              </thead>
-              <tbody id="calendar-table">
-                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading appointments&hellip;</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TAB 3: CUSTOMERS (MINI-CRM) -->
-        <div class="tab-pane" id="tab-customers">
-          <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">Customer Profiles</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Visits</th>
-                  <th>Last Service</th>
-                </tr>
-              </thead>
-              <tbody id="customers-table">
-                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading customer profiles&hellip;</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TAB 4: SERVICES & PRICING -->
-        <div class="tab-pane" id="tab-services">
-          <h3 style="margin: 0; font-size: 13.5px; font-weight: 600;">Clinical Service Offerings</h3>
-          <div class="service-grid" id="services-grid">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-
-        <!-- TAB 5: AI AGENT BUILDER -->
-        <div class="tab-pane" id="tab-agent">
-          <div class="kpi-card">
-            <div class="kpi-label">Agent Engine</div>
-            <div style="font-weight: 600; font-size: 15px;">AssemblyAI Voice Agent API</div>
-            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Direct HTTP Tool execution with ultra-low latency barge-in.</div>
-          </div>
-          <div>
-            <h4 style="margin: 0 0 6px; font-size: 12.5px; font-weight: 600;">Phonetic Boost Terms (Keyterms)</h4>
-            <div class="pillrow" id="sheet-keyterms">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-          <div>
-            <h4 style="margin: 0 0 6px; font-size: 12.5px; font-weight: 600;">Registered HTTP Tools</h4>
-            <div class="pillrow">
-              <span class="pill tool">get_today</span>
-              <span class="pill tool">check_availability</span>
-              <span class="pill tool">book_appointment</span>
-              <span class="pill tool">send_confirmation</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 6: SETTINGS -->
-        <div class="tab-pane" id="tab-settings">
-          <div class="kpi-card">
-            <div class="kpi-label">Salon Operating Hours</div>
-            <div style="font-weight: 600; font-size: 14px;">Monday to Friday &middot; 9:00 AM &ndash; 5:00 PM</div>
-            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Slots automatically generated at 30-minute intervals.</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Customer Confirmation Engine</div>
-            <div style="font-weight: 600; font-size: 14px; color: var(--accent-text);">Resend Transactional Email</div>
-            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Sends HTML appointment receipts with attached native .ics calendar events for 1-tap addition to Google / Apple Calendar.</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- WHAT AGENT KNOWS MODAL (DEMO DATA) -->
-    <div class="modal" id="info" hidden>
-      <div class="modal-backdrop" data-close></div>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="info-title">
-        <div class="modal-head">
-          <h2 id="info-title">What the agent knows</h2>
-          <button class="sheet-close-btn" data-close type="button" aria-label="Close modal">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18"/>
-              <path d="m6 6 12 12"/>
-            </svg>
+          <button type="button" class="template-tab-btn" id="tab-demo-realestate" data-template="realestate">
+            <span class="template-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </span>
+            Real Estate &amp; Property
           </button>
         </div>
-        <div class="modal-body" id="info-body">
-          <p class="block-note">Loading&hellip;</p>
+      </section>
+
+      <!-- SHOWCASE GRID -->
+      <section class="showcase-grid">
+        <!-- LEFT: INTERACTIVE VOICE WIDGET -->
+        <div class="widget-card" id="voice-widget-card">
+          <!-- Widget Topbar -->
+          <div class="widget-topbar" id="widget-topbar">
+            <div class="widget-topbar-left">
+              <div class="widget-menu-icon" aria-label="Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"/>
+                  <circle cx="12" cy="5" r="1"/>
+                  <circle cx="12" cy="19" r="1"/>
+                </svg>
+              </div>
+              <div class="widget-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+              </div>
+              <div class="widget-meta">
+                <h3 class="widget-title" id="widget-display-name">OmniDesk Hair Salon &amp; Studio</h3>
+                <div class="widget-status-badge">
+                  <span class="widget-status-dot idle" id="widget-live-dot"></span>
+                  <span id="status" data-state="idle">Idle &middot; Ready</span>
+                </div>
+              </div>
+            </div>
+            <div class="widget-controls">
+              <button type="button" class="widget-ctrl-btn" id="btn-widget-expand" title="Fullscreen">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              </button>
+              <button type="button" class="widget-ctrl-btn" id="btn-widget-reset" title="Reset Conversation">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Widget Conversation Feed -->
+          <div class="widget-conversation" id="transcript">
+            <!-- Initial Agent Bubble -->
+            <div class="bubble-row agent" id="agent-initial-row">
+              <div class="bubble-wrapper">
+                <div class="agent-icon-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  </svg>
+                </div>
+                <div class="bubble" id="agent-initial-text">
+                  Thanks for calling OmniDesk Hair Salon &amp; Studio! Are you looking to book a haircut, styling, or coloring session?
+                </div>
+              </div>
+              <div class="quick-chips-group" id="quick-chips-container">
+                <button type="button" class="quick-chip" data-query="I want to book a haircut">Signature Haircut ($45)</button>
+                <button type="button" class="quick-chip" data-query="Do you have balayage appointments?">Artisan Balayage ($180)</button>
+                <button type="button" class="quick-chip" data-query="What times are available this Thursday?">Check Availability</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer Email Confirmation Bar -->
+          <div class="widget-email-box" id="live-email-box" style="display: none;">
+            <div class="widget-email-head">
+              <span class="widget-email-tag"><span class="dot"></span> Agent Requested Email</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Quick confirmation entry</span>
+            </div>
+            <form class="widget-email-form" id="live-email-form">
+              <input type="email" id="live-email-input" class="widget-email-input" placeholder="e.g. client@gmail.com" required />
+              <button type="submit" id="btn-send-email" class="widget-email-submit">Confirm</button>
+            </form>
+            <div id="live-email-feedback" style="display: none; font-size: 11px; margin-top: 4px;"></div>
+          </div>
+
+          <!-- Voice Call Bar -->
+          <div class="widget-voice-bar">
+            <button type="button" class="btn-voice-toggle" id="talk">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+              </svg>
+              <span id="talk-btn-label">Start Voice Call</span>
+            </button>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="sound-wave" id="sound-wave-indicator">
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+                <div class="sound-bar"></div>
+              </div>
+              <span class="call-timer-badge" id="timer" data-state="idle">0:00</span>
+            </div>
+          </div>
+
+
         </div>
+      </section>
+    </div>
+
+    <!-- AUTH MODAL (SUPABASE EMAIL + 1-CLICK DEMO ACCOUNT) -->
+    <div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="auth-modal-box">
+        <div class="auth-head">
+          <div>
+            <h3 class="auth-title" id="auth-modal-title">OmniDesk Portal Access</h3>
+            <p class="auth-sub">Manage your AI voice receptionist, customize prompts, and inspect live customer call logs.</p>
+          </div>
+          <button type="button" class="btn-close-modal" id="btn-close-auth-modal" aria-label="Close modal">&times;</button>
+        </div>
+
+        <!-- 1-Click Demo Account Card -->
+        <div class="demo-bypass-card">
+          <div class="demo-bypass-title">Don't want to sign in? Use Demo Account</div>
+          <button type="button" class="btn-demo-quick" id="btn-instant-demo">
+            Continue with Instant Demo Account &rarr;
+          </button>
+        </div>
+
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tab-btn-signin">Sign In</button>
+          <button type="button" class="auth-tab-btn" id="tab-btn-signup">Create Account</button>
+        </div>
+
+        <div class="auth-alert" id="auth-alert"></div>
+
+        <form id="supabase-auth-form">
+          <div class="auth-form-group" id="group-fullname" style="display: none;">
+            <label class="auth-label" for="auth-fullname">Full Name</label>
+            <input type="text" id="auth-fullname" class="auth-input" placeholder="Jane Doe" autocomplete="name" />
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" class="auth-input" placeholder="owner@practice.com" required autocomplete="email" />
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label" for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="auth-input" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+
+          <button type="submit" class="btn-submit-auth" id="btn-auth-submit">
+            <span id="auth-submit-label">Sign In</span>
+          </button>
+        </form>
       </div>
     </div>
 
-    <script src="/app.js?v=salon2"></script>
+    <!-- Hidden compatibility elements to support app.js websocket pipeline if needed -->
+    <div class="hidden-hook">
+      <div id="calls"></div>
+      <span id="call-count">0 calls</span>
+      <span id="agent-id"></span>
+      <span id="live-email-check"></span>
+      <button id="btn-toggle-email" type="button"></button>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+      (function() {
+        // --- TEMPLATE DEFINITIONS (2 Demos: Salon & Real Estate) ---
+        const TEMPLATES = {
+          salon: {
+            id: "salon-demo",
+            name: "OmniDesk Hair Salon & Studio",
+            greeting: "Thanks for calling OmniDesk Hair Salon & Studio! Are you looking to book a haircut, styling, or coloring session?",
+            agentRole: "Hair Salon Voice Receptionist",
+            chips: [
+              { label: "Signature Haircut ($45)", query: "I want to book a haircut" },
+              { label: "Artisan Balayage ($180)", query: "Do you have balayage appointments?" },
+              { label: "Check Availability", query: "What times are available this Thursday?" }
+            ]
+          },
+          realestate: {
+            id: "realestate-demo",
+            name: "OmniDesk Real Estate & Property Advisory",
+            greeting: "Welcome to OmniDesk Real Estate! Would you like to schedule a private property viewing, buyer consultation, or request a home valuation?",
+            agentRole: "Real Estate Voice Receptionist",
+            chips: [
+              { label: "Schedule Property Tour", query: "I'd like to book a private viewing tour for 742 Evergreen Terrace" },
+              { label: "Buyer Consultation", query: "Can I schedule a consultation for buying a new home?" },
+              { label: "Open House Schedule", query: "When are the open house showings scheduled this weekend?" }
+            ]
+          }
+        };
+
+        let currentTemplate = "salon";
+        let currentTheme = "dark";
+        let currentPos = "bottom-right";
+        let currentAccent = "#18181b";
+
+        // DOM elements
+        const widgetCard = document.getElementById("voice-widget-card");
+        const widgetTopbar = document.getElementById("widget-topbar");
+        const widgetDisplayName = document.getElementById("widget-display-name");
+        const agentInitialText = document.getElementById("agent-initial-text");
+        const quickChipsContainer = document.getElementById("quick-chips-container");
+        const transcriptEl = document.getElementById("transcript");
+        const textInput = document.getElementById("widget-text-input");
+        const sendBtn = document.getElementById("widget-send-btn");
+        const resetBtn = document.getElementById("btn-widget-reset");
+        const expandBtn = document.getElementById("btn-widget-expand");
+
+        // Template Switchers
+        const tabSalon = document.getElementById("tab-demo-salon");
+        const tabRealEstate = document.getElementById("tab-demo-realestate");
+
+        function setTemplate(key) {
+          if (!TEMPLATES[key]) return;
+          currentTemplate = key;
+          const data = TEMPLATES[key];
+
+          if (tabSalon) tabSalon.classList.toggle("active", key === "salon");
+          if (tabRealEstate) tabRealEstate.classList.toggle("active", key === "realestate");
+
+          if (widgetDisplayName) widgetDisplayName.textContent = data.name;
+          if (agentInitialText) agentInitialText.textContent = data.greeting;
+
+          // Render chips
+          if (quickChipsContainer) {
+            quickChipsContainer.innerHTML = "";
+            data.chips.forEach(chip => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "quick-chip";
+              btn.dataset.query = chip.query;
+              btn.textContent = chip.label;
+              btn.addEventListener("click", () => handleQuickQuery(chip.query));
+              quickChipsContainer.appendChild(btn);
+            });
+          }
+        }
+
+        tabSalon.addEventListener("click", () => setTemplate("salon"));
+        tabRealEstate.addEventListener("click", () => setTemplate("realestate"));
+
+        // Add user & agent bubbles
+        function appendBubble(who, text) {
+          const row = document.createElement("div");
+          row.className = `bubble-row ${who}`;
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "bubble-wrapper";
+
+          if (who === "agent") {
+            const iconBadge = document.createElement("div");
+            iconBadge.className = "agent-icon-badge";
+            iconBadge.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              </svg>
+            `;
+            wrapper.appendChild(iconBadge);
+          }
+
+          const bubble = document.createElement("div");
+          bubble.className = "bubble";
+          bubble.textContent = text;
+          wrapper.appendChild(bubble);
+
+          row.appendChild(wrapper);
+          transcriptEl.appendChild(row);
+          transcriptEl.scrollTop = transcriptEl.scrollHeight;
+        }
+
+        function handleQuickQuery(text) {
+          appendBubble("user", text);
+          setTimeout(() => {
+            if (currentTemplate === "salon") {
+              if (text.toLowerCase().includes("haircut") || text.toLowerCase().includes("balayage")) {
+                appendBubble("agent", "Great choice! We have slots open this Friday at 10:30 am with Jordan, or 2:00 pm with Taylor. Would either of those times work for you?");
+              } else {
+                appendBubble("agent", "We have availability this Thursday at 9:00 am, 11:30 am, and 2:30 pm. Let me know your preferred time and I'll confirm your booking!");
+              }
+            } else {
+              if (text.toLowerCase().includes("tour") || text.toLowerCase().includes("viewing")) {
+                appendBubble("agent", "I'd be glad to arrange that property tour! We have viewing slots open this Saturday at 11:00 am and 3:00 pm. Would you like to reserve one?");
+              } else {
+                appendBubble("agent", "Our licensed property specialists are available for private consultations this Friday afternoon. What time suits your schedule best?");
+              }
+            }
+          }, 600);
+        }
+
+        // Send text query (if input bar present)
+        if (sendBtn && textInput) {
+          sendBtn.addEventListener("click", () => {
+            const val = textInput.value.trim();
+            if (!val) return;
+            textInput.value = "";
+            handleQuickQuery(val);
+          });
+          textInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              const val = textInput.value.trim();
+              if (!val) return;
+              textInput.value = "";
+              handleQuickQuery(val);
+            }
+          });
+        }
+
+        // Reset conversation
+        if (resetBtn) {
+          resetBtn.addEventListener("click", () => {
+            transcriptEl.innerHTML = "";
+            const row = document.createElement("div");
+            row.className = "bubble-row agent";
+            row.id = "agent-initial-row";
+            row.innerHTML = `
+              <div class="bubble-wrapper">
+                <div class="agent-icon-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  </svg>
+                </div>
+                <div class="bubble" id="agent-initial-text">${TEMPLATES[currentTemplate].greeting}</div>
+              </div>
+              <div class="quick-chips-group" id="quick-chips-container"></div>
+            `;
+            transcriptEl.appendChild(row);
+            setTemplate(currentTemplate);
+          });
+        }
+
+        // Expand / minimize widget card
+        let isExpanded = false;
+        if (expandBtn) {
+          expandBtn.addEventListener("click", () => {
+            isExpanded = !isExpanded;
+            if (isExpanded) {
+              widgetCard.style.position = "fixed";
+              widgetCard.style.inset = "20px";
+              widgetCard.style.height = "auto";
+              widgetCard.style.zIndex = "200";
+            } else {
+              widgetCard.style.position = "";
+              widgetCard.style.inset = "";
+              widgetCard.style.height = "640px";
+              widgetCard.style.zIndex = "";
+            }
+          });
+        }
+
+        // Initialize chips
+        setTemplate("salon");
+
+        // --- AUTH MODAL LOGIC (SUPABASE + 1-CLICK DEMO) ---
+        let supabase = null;
+        async function getSupabase() {
+          if (supabase) return supabase;
+          try {
+            const res = await fetch("/api/config");
+            const cfg = await res.json();
+            if (window.supabase && window.supabase.createClient && cfg.supabase_url && cfg.supabase_anon_key) {
+              supabase = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+            }
+          } catch (err) {
+            console.warn("Supabase load fallback:", err);
+          }
+          return supabase;
+        }
+        getSupabase();
+
+        const modal = document.getElementById("auth-modal");
+        const btnOpenNav = document.getElementById("btn-open-auth-nav");
+        const btnCreateBanner = document.getElementById("btn-create-agent-banner");
+        const btnCloseModal = document.getElementById("btn-close-auth-modal");
+        const btnInstantDemo = document.getElementById("btn-instant-demo");
+        const tabSignIn = document.getElementById("tab-btn-signin");
+        const tabSignUp = document.getElementById("tab-btn-signup");
+        const authForm = document.getElementById("supabase-auth-form");
+        const inputName = document.getElementById("auth-fullname");
+        const inputEmail = document.getElementById("auth-email");
+        const inputPassword = document.getElementById("auth-password");
+        const groupName = document.getElementById("group-fullname");
+        const submitLabel = document.getElementById("auth-submit-label");
+        const alertBox = document.getElementById("auth-alert");
+        const submitBtn = document.getElementById("btn-auth-submit");
+
+        let authMode = "signin";
+
+        function showAuthAlert(msg, type = "error") {
+          alertBox.className = "auth-alert " + type;
+          alertBox.textContent = msg;
+        }
+
+        function clearAuthAlert() {
+          alertBox.className = "auth-alert";
+          alertBox.textContent = "";
+        }
+
+        function openAuthModal(defaultMode = "signin") {
+          clearAuthAlert();
+          setAuthMode(defaultMode);
+          modal.classList.add("is-open");
+          inputEmail.focus();
+        }
+
+        function closeAuthModal() {
+          modal.classList.remove("is-open");
+          clearAuthAlert();
+        }
+
+        function setAuthMode(newMode) {
+          authMode = newMode;
+          clearAuthAlert();
+          if (authMode === "signin") {
+            tabSignIn.classList.add("active");
+            tabSignUp.classList.remove("active");
+            groupName.style.display = "none";
+            submitLabel.textContent = "Sign In";
+            inputPassword.autocomplete = "current-password";
+          } else {
+            tabSignUp.classList.add("active");
+            tabSignIn.classList.remove("active");
+            groupName.style.display = "block";
+            submitLabel.textContent = "Create Account";
+            inputPassword.autocomplete = "new-password";
+          }
+        }
+
+        if (btnOpenNav) btnOpenNav.addEventListener("click", () => openAuthModal("signin"));
+        if (btnCreateBanner) btnCreateBanner.addEventListener("click", () => openAuthModal("signup"));
+        if (btnCloseModal) btnCloseModal.addEventListener("click", closeAuthModal);
+
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) closeAuthModal();
+        });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && modal.classList.contains("is-open")) closeAuthModal();
+        });
+
+        tabSignIn.addEventListener("click", () => setAuthMode("signin"));
+        tabSignUp.addEventListener("click", () => setAuthMode("signup"));
+
+        btnInstantDemo.addEventListener("click", () => {
+          const demoOwner = {
+            id: "owner_demo",
+            email: "demo@omnidesk.ai",
+            name: "OmniDesk Demo Operator"
+          };
+          localStorage.setItem("omnidesk_owner", JSON.stringify(demoOwner));
+          window.location.href = "/dashboard";
+        });
+
+        authForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          clearAuthAlert();
+
+          const email = inputEmail.value.trim();
+          const password = inputPassword.value;
+          const fullName = inputName.value.trim();
+
+          if (!email || !password) {
+            showAuthAlert("Please provide both email and password.");
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitLabel.textContent = authMode === "signin" ? "Signing In..." : "Creating Account...";
+
+          try {
+            const sb = await getSupabase();
+            if (!sb) {
+              const res = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name: fullName })
+              });
+              const data = await res.json();
+              if (data.ok) {
+                localStorage.setItem("omnidesk_owner", JSON.stringify(data.owner));
+                window.location.href = "/dashboard";
+                return;
+              }
+              throw new Error(data.detail || "Authentication failed");
+            }
+
+            if (authMode === "signin") {
+              const { data, error } = await sb.auth.signInWithPassword({ email, password });
+              if (error) throw error;
+              const syncRes = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: data.user.email,
+                  name: (data.user.user_metadata && data.user.user_metadata.full_name) || email.split("@")[0]
+                })
+              });
+              const syncData = await syncRes.json();
+              if (syncData.ok) localStorage.setItem("omnidesk_owner", JSON.stringify(syncData.owner));
+              window.location.href = "/dashboard";
+            } else {
+              const { data, error } = await sb.auth.signUp({
+                email,
+                password,
+                options: { data: { full_name: fullName || email.split("@")[0] } }
+              });
+              if (error) throw error;
+              const syncRes = await fetch("/api/auth/owner", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name: fullName || email.split("@")[0] } )
+              });
+              const syncData = await syncRes.json();
+              if (syncData.ok) localStorage.setItem("omnidesk_owner", JSON.stringify(syncData.owner));
+              if (data.session) {
+                window.location.href = "/dashboard";
+              } else {
+                showAuthAlert("Account created! Please check your email to verify, or click Demo Account.", "success");
+                submitBtn.disabled = false;
+                submitLabel.textContent = "Account Created";
+              }
+            }
+          } catch (err) {
+            showAuthAlert(err.message || "Authentication error.");
+            submitBtn.disabled = false;
+            submitLabel.textContent = authMode === "signin" ? "Sign In" : "Create Account";
+          }
+        });
+      })();
+    </script>
+
+    <!-- LIVE AUDIO & ASSEMBLYAI WEBSOCKET ENGINE -->
+    <script src="/app.js?v=widget1"></script>
   </body>
 </html>

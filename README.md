@@ -431,7 +431,7 @@ The script points all 4 HTTP tools (`get_today`, `check_availability`, `book_app
 ### 5. Access the Web Applications
 
 - **Public Landing Page**: Navigate to `http://localhost:8000/`
-- **Voice Receptionist Demo**: Navigate to `http://localhost:8000/demo` (or click "Try Salon Demo" on the landing page)
+- **Voice Receptionist Demo**: Navigate to `http://localhost:8000/demo` (or click "Try Demos" on the landing page)
 - **Owner Dashboard Sheet**: Click the "Owner Dashboard" button in the upper-right corner of the console to view the slide-over practice management sheet.
 
 ---

@@ -1127,6 +1127,7 @@ def api_create_business(req: CreateBusinessRequest) -> dict:
 
 @app.put("/api/owner/businesses/{business_id}")
 def api_update_business(business_id: str, req: UpdateBusinessRequest) -> dict:
+    print(f"\n[*] [Save & Deploy] Updating business settings for '{business_id}'...", flush=True)
     updates: dict[str, Any] = {}
     for k, v in req.dict(exclude_unset=True).items():
         if k == "services" and v is not None:
@@ -1136,22 +1137,33 @@ def api_update_business(business_id: str, req: UpdateBusinessRequest) -> dict:
 
     updated = db.update_business(business_id, updates)
     if not updated:
+        print(f"[!] [Save & Deploy] Business '{business_id}' not found", flush=True)
         raise HTTPException(404, "Business not found")
+    print(f"[+] [Save & Deploy] Saved configuration for '{updated['name']}' to database", flush=True)
     return {"ok": True, "business": updated}
 
 
 @app.post("/api/owner/businesses/{business_id}/deploy")
 def api_deploy_business_agent(business_id: str) -> dict:
     """Provision or update this tenant's custom voice agent with AssemblyAI Voice Agent API."""
+    import time
     biz = db.get_business(business_id)
     if not biz:
+        print(f"[!] [Save & Deploy] Business '{business_id}' not found", flush=True)
         raise HTTPException(404, "Business not found")
+
+    print("\n" + "=" * 62, flush=True)
+    print(f"[*] [Save & Deploy] Deploying voice agent for: {biz['name']} ({business_id})", flush=True)
 
     api_key = os.getenv("ASSEMBLYAI_API_KEY")
     if not api_key:
+        print("[!] [Save & Deploy] ASSEMBLYAI_API_KEY is not set on the server", flush=True)
         raise HTTPException(500, "ASSEMBLYAI_API_KEY is not set on the server")
 
+    # Reload .env to ensure the latest dynamic Cloudflare tunnel URL is loaded immediately
+    load_dotenv(ROOT / ".env", override=True)
     base_url = os.getenv("PUBLIC_API_BASE_URL", "http://localhost:8000").rstrip("/")
+    print(f"[*] [Save & Deploy] Tool webhook base URL: {base_url}", flush=True)
 
     # Build comprehensive services & pricing menu
     days_map = {
@@ -1228,7 +1240,10 @@ def api_deploy_business_agent(business_id: str) -> dict:
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "email": {"type": "string", "description": "The customer's email address as heard or spelled."},
+                    "email": {
+                        "type": "string",
+                        "description": "The customer's email address as heard or spelled.",
+                    }
                 },
                 "required": ["email"],
             },
@@ -1244,7 +1259,10 @@ def api_deploy_business_agent(business_id: str) -> dict:
                 "type": "object",
                 "properties": {
                     "service": {"type": "string", "enum": service_keys},
-                    "date": {"type": "string", "description": "Date in YYYY-MM-DD format"},
+                    "date": {
+                        "type": "string",
+                        "description": "Date in YYYY-MM-DD format",
+                    },
                 },
                 "required": ["service", "date"],
             },
@@ -1312,27 +1330,71 @@ def api_deploy_business_agent(business_id: str) -> dict:
 
     headers = {"Authorization": api_key, "Content-Type": "application/json"}
     agent_id = biz.get("assemblyai_agent_id")
+    print(f"[*] [Save & Deploy] Syncing agent definition with AssemblyAI (agent_id: {agent_id or 'new'})...", flush=True)
 
-    try:
-        if agent_id:
-            put_resp = httpx.put(f"{AGENTS_URL}/{agent_id}", headers=headers, json=agent_definition, timeout=30)
-            if put_resp.status_code < 400:
-                agent_id = put_resp.json().get("id", agent_id)
+    deployed_agent_id = None
+    last_err_text = ""
+
+    for attempt in range(1, 6):
+        try:
+            if agent_id:
+                put_resp = httpx.put(f"{AGENTS_URL}/{agent_id}", headers=headers, json=agent_definition, timeout=30)
+                if put_resp.status_code < 400:
+                    deployed_agent_id = put_resp.json().get("id", agent_id)
+                    break
+                elif "does not resolve" in put_resp.text:
+                    last_err_text = put_resp.text
+                    print(f"[*] [Save & Deploy] Cloudflare DNS propagating (attempt {attempt}/5), retrying in 3s...", flush=True)
+                    time.sleep(3.0)
+                    continue
+                else:
+                    # If PUT returns 404 or other error, fallback to creating fresh agent
+                    print(f"[*] [Save & Deploy] Updating existing agent returned {put_resp.status_code}, falling back to POST...", flush=True)
+                    post_resp = httpx.post(AGENTS_URL, headers=headers, json=agent_definition, timeout=30)
+                    if post_resp.status_code < 400:
+                        deployed_agent_id = post_resp.json().get("id")
+                        break
+                    elif "does not resolve" in post_resp.text:
+                        last_err_text = post_resp.text
+                        print(f"[*] [Save & Deploy] Cloudflare DNS propagating (attempt {attempt}/5), retrying in 3s...", flush=True)
+                        time.sleep(3.0)
+                        continue
+                    else:
+                        post_resp.raise_for_status()
             else:
                 post_resp = httpx.post(AGENTS_URL, headers=headers, json=agent_definition, timeout=30)
-                post_resp.raise_for_status()
-                agent_id = post_resp.json().get("id")
-        else:
-            post_resp = httpx.post(AGENTS_URL, headers=headers, json=agent_definition, timeout=30)
-            post_resp.raise_for_status()
-            agent_id = post_resp.json().get("id")
-    except Exception as exc:
-        err_msg = str(exc)
-        if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
-            err_msg = f"{exc.response.status_code}: {exc.response.text}"
-        raise HTTPException(502, f"Failed to provision agent on AssemblyAI: {err_msg}")
+                if post_resp.status_code < 400:
+                    deployed_agent_id = post_resp.json().get("id")
+                    break
+                elif "does not resolve" in post_resp.text:
+                    last_err_text = post_resp.text
+                    print(f"[*] [Save & Deploy] Cloudflare DNS propagating (attempt {attempt}/5), retrying in 3s...", flush=True)
+                    time.sleep(3.0)
+                    continue
+                else:
+                    post_resp.raise_for_status()
+        except Exception as exc:
+            last_err_text = str(exc)
+            if "does not resolve" in last_err_text and attempt < 5:
+                print(f"[*] [Save & Deploy] Cloudflare DNS propagating (attempt {attempt}/5), retrying in 3s...", flush=True)
+                time.sleep(3.0)
+                continue
+            err_msg = str(exc)
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                err_msg = f"{exc.response.status_code}: {exc.response.text}"
+            print(f"[!] [Save & Deploy] AssemblyAI provisioning error: {err_msg}", flush=True)
+            print("=" * 62 + "\n", flush=True)
+            raise HTTPException(502, f"Failed to provision agent on AssemblyAI: {err_msg}")
 
+    if not deployed_agent_id:
+        print(f"[!] [Save & Deploy] AssemblyAI provisioning failed after 5 retries: {last_err_text}", flush=True)
+        print("=" * 62 + "\n", flush=True)
+        raise HTTPException(502, f"Failed to provision agent on AssemblyAI: 422: {last_err_text}")
+
+    agent_id = deployed_agent_id
     db.update_business_agent_id(business_id, agent_id)
+    print(f"[+] [Save & Deploy] Successfully deployed agent on AssemblyAI: {agent_id}", flush=True)
+    print("=" * 62 + "\n", flush=True)
 
     # Synchronize agent_id.txt so demo console immediately uses the newly deployed agent
     try:

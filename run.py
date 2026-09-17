@@ -94,13 +94,13 @@ def sync_agent_tools(tunnel_url: str) -> bool:
         raw_def = (ROOT / "agent.json").read_text(encoding="utf-8")
         synced_def = json.loads(raw_def.replace("{{BASE_URL}}", tunnel_url.rstrip("/")))
         headers = {"Authorization": api_key, "Content-Type": "application/json"}
-        for attempt in range(1, 5):
+        for attempt in range(1, 7):
             resp = httpx.put(f"https://agents.assemblyai.com/v1/agents/{aid}", headers=headers, json=synced_def, timeout=15)
             if resp.status_code < 400:
                 print(f"[+] Synced Voice Agent tools to active tunnel ({aid})")
                 return True
-            if "does not resolve" in resp.text and attempt < 4:
-                time.sleep(2.0)
+            if "does not resolve" in resp.text and attempt < 6:
+                time.sleep(2.5)
                 continue
             print(f"[!] Warning: Voice agent sync returned {resp.status_code}: {resp.text}")
             break
@@ -178,7 +178,7 @@ def main():
     print("-" * 65)
     print(f"  Owner Dashboard:    http://localhost:{port}/dashboard")
     print(f"  Public Landing:     http://localhost:{port}/")
-    print(f"  Try Salon Demo:     http://localhost:{port}/demo")
+    print(f"  Try Demos:          http://localhost:{port}/demo")
     if tunnel_url:
         print(f"  Public Tunnel URL:  {tunnel_url}")
     print("-" * 65)

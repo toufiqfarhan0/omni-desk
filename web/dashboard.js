@@ -454,6 +454,7 @@ async function init() {
   bindTabs();
   bindModals();
   bindBuilderEvents();
+  bindIntegrationEvents();
   bindSimulatorEvents();
 
   let activeEmail = "demo@omnidesk.ai";
@@ -614,6 +615,7 @@ function populateBuilder(biz) {
 
   state.isDirty = false;
   if (els.personaTestWarning) els.personaTestWarning.style.display = "none";
+  updateIntegrationSnippets(biz);
 }
 
 function renderPersonaShowcase(biz) {
@@ -1057,6 +1059,130 @@ async function deployAgentWorkflow(autoSwitchToSimulator = false) {
 }
 
 // ---------------------------------------------------------------------------
+// Website Integration Snippets & Widget Customizer
+// ---------------------------------------------------------------------------
+
+let integrationTheme = "dark";
+let integrationPos = "bottom-right";
+let integrationAccent = "#18181b";
+
+function updateIntegrationSnippets(biz) {
+  const b = biz || state.activeBiz;
+  const agentId = (b && (b.assemblyai_agent_id || b.id)) || "biz_demo_dental";
+
+  const scriptAgent = document.getElementById("dash-snippet-data-agent");
+  const scriptPos = document.getElementById("dash-snippet-data-pos");
+  const scriptTheme = document.getElementById("dash-snippet-data-theme");
+  const reactAgent = document.getElementById("dash-snippet-react-agent");
+  const reactPos = document.getElementById("dash-snippet-react-pos");
+  const reactTheme = document.getElementById("dash-snippet-react-theme");
+
+  if (scriptAgent) scriptAgent.textContent = `"${agentId}"`;
+  if (scriptPos) scriptPos.textContent = `"${integrationPos}"`;
+  if (scriptTheme) scriptTheme.textContent = `"${integrationTheme}"`;
+  if (reactAgent) reactAgent.textContent = `"${agentId}"`;
+  if (reactPos) reactPos.textContent = `"${integrationPos}"`;
+  if (reactTheme) reactTheme.textContent = `"${integrationTheme}"`;
+}
+
+function bindIntegrationEvents() {
+  const btnDark = document.getElementById("dash-btn-theme-dark");
+  const btnLight = document.getElementById("dash-btn-theme-light");
+  const btnPosRight = document.getElementById("dash-btn-pos-right");
+  const btnPosLeft = document.getElementById("dash-btn-pos-left");
+  const tabScript = document.getElementById("dash-int-tab-script");
+  const tabReact = document.getElementById("dash-int-tab-react");
+  const contentScript = document.getElementById("dash-int-content-script");
+  const contentReact = document.getElementById("dash-int-content-react");
+
+  if (btnDark && btnLight) {
+    btnDark.addEventListener("click", () => {
+      integrationTheme = "dark";
+      btnDark.classList.add("active");
+      btnLight.classList.remove("active");
+      updateIntegrationSnippets();
+    });
+    btnLight.addEventListener("click", () => {
+      integrationTheme = "light";
+      btnLight.classList.add("active");
+      btnDark.classList.remove("active");
+      updateIntegrationSnippets();
+    });
+  }
+
+  if (btnPosRight && btnPosLeft) {
+    btnPosRight.addEventListener("click", () => {
+      integrationPos = "bottom-right";
+      btnPosRight.classList.add("active");
+      btnPosLeft.classList.remove("active");
+      updateIntegrationSnippets();
+    });
+    btnPosLeft.addEventListener("click", () => {
+      integrationPos = "bottom-left";
+      btnPosLeft.classList.add("active");
+      btnPosRight.classList.remove("active");
+      updateIntegrationSnippets();
+    });
+  }
+
+  document.querySelectorAll(".customizer-bar-dash .color-swatch").forEach(swatch => {
+    swatch.addEventListener("click", () => {
+      document.querySelectorAll(".customizer-bar-dash .color-swatch").forEach(s => s.classList.remove("active"));
+      swatch.classList.add("active");
+      integrationAccent = swatch.dataset.color || "#18181b";
+      updateIntegrationSnippets();
+    });
+  });
+
+  if (tabScript && tabReact) {
+    tabScript.addEventListener("click", () => {
+      tabScript.classList.add("active");
+      tabReact.classList.remove("active");
+      if (contentScript) contentScript.style.display = "block";
+      if (contentReact) contentReact.style.display = "none";
+    });
+    tabReact.addEventListener("click", () => {
+      tabReact.classList.add("active");
+      tabScript.classList.remove("active");
+      if (contentReact) contentReact.style.display = "block";
+      if (contentScript) contentScript.style.display = "none";
+    });
+  }
+
+  function attachCopy(btnId, textGetter, labelId) {
+    const btn = document.getElementById(btnId);
+    const label = document.getElementById(labelId);
+    if (!btn || !label) return;
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(textGetter());
+        btn.classList.add("copied");
+        const orig = label.textContent;
+        label.textContent = "Copied!";
+        setTimeout(() => {
+          btn.classList.remove("copied");
+          label.textContent = orig;
+        }, 2000);
+      } catch (_) {}
+    });
+  }
+
+  attachCopy("dash-btn-copy-script", () => {
+    const el = document.getElementById("dash-snippet-script-code");
+    return el ? el.innerText : "";
+  }, "dash-copy-script-text");
+
+  attachCopy("dash-btn-copy-npm", () => "npm install @omnidesk/voice-widget", "dash-copy-npm-text");
+
+  attachCopy("dash-btn-copy-react", () => {
+    const el = document.getElementById("dash-snippet-react-code");
+    return el ? el.innerText : "";
+  }, "dash-copy-react-text");
+
+  updateIntegrationSnippets();
+}
+
+// ---------------------------------------------------------------------------
 // Tabs & Modals Navigation
 // ---------------------------------------------------------------------------
 
@@ -1426,7 +1552,7 @@ async function loadBookings() {
             ${
               b.confirmation_sent
                 ? `<span class="badge-tag sent" title="Calendar invite sent via Resend">Sent (.ics)</span>`
-                : `<button class="badge-tag pending-btn" onclick="window.sendInviteFromTable('${escapeHtml(b.confirmation_code)}', this)" title="Click to send calendar invite email via Resend now">Pending &bull; Send ✉</button>`
+                : `<button class="badge-tag pending-btn" onclick="window.sendInviteFromTable('${escapeHtml(b.confirmation_code)}', this)" title="Click to send calendar invite email via Resend now">Pending &bull; Send Invite</button>`
             }
           </td>
           <td style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(b.created_at)}</td>

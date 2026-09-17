@@ -338,6 +338,118 @@ def init_db() -> None:
             (json.dumps(conv_transcript),),
         )
 
+    # Check if demo real estate business exists for demo owner
+    demo_realestate = cur.execute("SELECT id FROM businesses WHERE id = 'biz_demo_realestate'").fetchone()
+    if not demo_realestate:
+        now_str = datetime.now().isoformat()
+        agent_id_file = ROOT / "agent_id.txt"
+        agent_id = agent_id_file.read_text(encoding="utf-8").strip() if agent_id_file.exists() else "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
+        cur.execute(
+            """
+            INSERT INTO businesses (
+                id, owner_id, name, industry, tone, greeting, system_prompt,
+                voice_id, slot_minutes, open_hour, close_hour, keyterms,
+                assemblyai_agent_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "biz_demo_realestate",
+                "owner_demo",
+                "OmniDesk Real Estate & Property Advisory",
+                "realestate",
+                "professional",
+                "Thanks for calling OmniDesk Real Estate. Are you looking to schedule a private property viewing, home appraisal, or buyer consultation?",
+                "You are an autonomous receptionist for OmniDesk Real Estate & Property Advisory. You speak in a confident, polished, and professional tone. You assist callers with scheduling private property viewings, open house tour reservations, home valuation appraisals, and buyer or seller consultations. You check real calendar slots using your tools and book appointments for clients.",
+                "alba",
+                45,
+                9,
+                18,
+                json.dumps(["OmniDesk", "OmniDesk Real Estate", "property viewing", "home appraisal", "buyer consultation", "listing", "open house", "condo", "single family", "mortgage pre-approval", "escrow"]),
+                agent_id,
+                now_str,
+                now_str,
+            ),
+        )
+
+        re_services = [
+            ("viewing", "Private Property Viewing Tour", 45, 0.0, "Exclusive 1-on-1 guided walkthrough of featured luxury and residential properties."),
+            ("consultation", "Buyer & Investor Consultation", 60, 0.0, "Detailed market trends, neighborhood pricing comparative analysis, and portfolio matching."),
+            ("appraisal", "Home Valuation & Seller Strategy", 45, 0.0, "On-site comparative market analysis and listing preparation strategy for property owners."),
+            ("openhouse", "Open House VIP Reservation", 30, 0.0, "Priority access slot for scheduled weekend open house showings with dedicated agent walkthrough."),
+        ]
+        for key, label, mins, price, desc in re_services:
+            cur.execute(
+                """
+                INSERT INTO services (business_id, key, label, minutes, price, description)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                ("biz_demo_realestate", key, label, mins, price, desc),
+            )
+
+        re_bookings = [
+            ("9RE401", "viewing", "Private Property Viewing Tour", 0, "11:00", "Julian Vance", "julian.vance@gmail.com", 0.0, 1),
+            ("3RE812", "consultation", "Buyer & Investor Consultation", 1, "14:00", "Samantha Hayes", "samantha.hayes@outlook.com", 0.0, 1),
+            ("7RE109", "appraisal", "Home Valuation & Seller Strategy", 2, "10:30", "Robert Sterling", "robert.sterling@gmail.com", 0.0, 0),
+        ]
+        for code, skey, slabel, offset, tstr, cname, cemail, price, sent in re_bookings:
+            target_date = date.today() + timedelta(days=offset)
+            if target_date.weekday() >= 5:
+                target_date += timedelta(days=2)
+            cur.execute(
+                """
+                INSERT INTO bookings (
+                    business_id, confirmation_code, service_key, service_label,
+                    appointment_date, appointment_time, customer_name, customer_email,
+                    price, status, confirmation_sent, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "biz_demo_realestate",
+                    code,
+                    skey,
+                    slabel,
+                    target_date.isoformat(),
+                    tstr,
+                    cname,
+                    cemail,
+                    price,
+                    "confirmed",
+                    sent,
+                    datetime.now().strftime("%Y-%m-%d %H:%M"),
+                ),
+            )
+
+        re_transcript = [
+            {"who": "agent", "text": "Thanks for calling OmniDesk Real Estate. Are you looking to schedule a private property viewing, home appraisal, or buyer consultation?"},
+            {"who": "user", "text": "Hi, I'm interested in viewing the 4-bedroom property on Evergreen Terrace this week."},
+            {"who": "agent", "text": "I'd be happy to arrange a private viewing for you! Let me check available agent slots for that listing. We have 11:00 AM available today or 2:00 PM tomorrow. Would either of those times work?"},
+            {"who": "user", "text": "Today at 11:00 AM sounds great."},
+            {"who": "agent", "text": "May I have your full name and email to send over the entry gate code and confirmation?"},
+            {"who": "user", "text": "Julian Vance, julian dot vance at gmail dot com."},
+            {"who": "agent", "text": "Your private property tour is confirmed for today at 11:00 AM. Confirmation code is 9RE401 and I've emailed the viewing details to you."},
+        ]
+        cur.execute(
+            """
+            INSERT INTO conversations (
+                id, business_id, caller_name, caller_email, started_at, ended_at,
+                duration_seconds, status, outcome, transcript, tool_calls
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "conv_demo_re_01",
+                "biz_demo_realestate",
+                "Julian Vance",
+                "julian.vance@gmail.com",
+                (datetime.now() - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S"),
+                (datetime.now() - timedelta(hours=3, minutes=-3)).strftime("%Y-%m-%d %H:%M:%S"),
+                135,
+                "completed",
+                "booked",
+                json.dumps(re_transcript),
+                json.dumps([{"tool": "check_availability"}, {"tool": "book_appointment"}, {"tool": "send_confirmation"}]),
+            ),
+        )
+
     conn.commit()
     conn.close()
 
