@@ -705,7 +705,7 @@ def save_conversation(
     conn = get_connection()
     cur = conn.cursor()
 
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if not started_at:
         started_at = now_str
     if not ended_at:
@@ -716,15 +716,32 @@ def save_conversation(
     if caller_email and caller_email not in ("caller@example.com", "unknown@unknown.com", ""):
         existing = cur.execute(
             """
-            SELECT id FROM conversations 
+            SELECT id, started_at FROM conversations 
             WHERE business_id = ? AND caller_email = ?
             ORDER BY started_at DESC LIMIT 1
             """,
             (business_id, caller_email),
         ).fetchone()
 
+    # Fallback: try to find the most recent booking-linked conversation created in the last 30 min
+    # This handles the case where the email in the session cache was stale at booking time
+    if not existing:
+        cutoff = (datetime.now() - timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+        recent_booking_conv = cur.execute(
+            """
+            SELECT c.id, c.started_at FROM conversations c
+            WHERE c.business_id = ? AND c.id LIKE 'conv_bkg_%' AND c.started_at >= ?
+            ORDER BY c.started_at DESC LIMIT 1
+            """,
+            (business_id, cutoff),
+        ).fetchone()
+        if recent_booking_conv:
+            existing = recent_booking_conv
+
     if existing:
         conv_id = existing["id"]
+        # Preserve original booking start time if already set
+        effective_start = existing["started_at"] or started_at
         cur.execute(
             """
             UPDATE conversations 
@@ -735,7 +752,7 @@ def save_conversation(
             (
                 caller_name or "Caller",
                 caller_email,
-                started_at,
+                effective_start,
                 ended_at,
                 duration_seconds,
                 status,
@@ -892,7 +909,7 @@ def list_conversations_for_business(business_id: str, limit: int = 50) -> list[d
 def set_active_verified_email(business_id: str, email: str) -> None:
     conn = get_connection()
     cur = conn.cursor()
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cur.execute(
         """
         INSERT INTO session_store (key, value, updated_at)

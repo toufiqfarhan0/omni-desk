@@ -344,12 +344,8 @@ def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
             s = suggested.lower()
             auto_fixed = True
 
-    # Check if this caller has an active verified email that matches
+    # Cache the newly validated email for this session (always trust the new input)
     biz_key = biz_id or "default"
-    active_email = _active_verified_emails.get(biz_key) or _active_verified_emails.get("default")
-    if active_email and (active_email == s or active_email in s or s in active_email or active_email.split("@")[0] in s):
-        s = active_email
-
     _active_verified_emails[biz_key] = s
     _active_verified_emails["default"] = s
     try:
@@ -371,25 +367,19 @@ def _validate_and_verify_email(raw: str, biz_id: str | None = None) -> dict:
 
 
 def _normalize_email(raw: str, biz_id: str | None = None) -> tuple[str | None, str]:
-    """Sanitize and validate spoken or transcribed email address, with typo correction."""
-    biz_key = biz_id or "default"
-    active_email = (
-        _active_verified_emails.get(biz_key)
-        or _active_verified_emails.get("default")
-        or db.get_active_verified_email(biz_key)
-    )
+    """Validate the customer's email input. No cache, no fallback.
 
-    # If caller/agent passed 'unknown' or empty, but we already have an active verified email, use it!
-    if (not raw or raw.strip().lower() in ("unknown", "unknown@unknown.com", "none", "null")) and active_email:
-        return active_email, ""
+    - If empty or missing → return error (agent must ask for email).
+    - If provided → validate format + DNS + Abstract API.
+    - If valid → return it exactly as verified.
+    - If invalid → return error (agent must re-ask for a valid email).
+    """
+    if not raw or raw.strip().lower() in ("unknown", "unknown@unknown.com", "none", "null", ""):
+        return None, "missing_email"
 
     res = _validate_and_verify_email(raw, biz_id=biz_id)
     if res["ok"]:
         return res["email"], ""
-
-    # Fallback to active verified email if available for this session
-    if active_email:
-        return active_email, ""
 
     return None, res.get("reason", "bad_email")
 
@@ -618,40 +608,13 @@ def _send_resend_confirmation(record: dict, biz: dict | None = None) -> dict:
         if resp.status_code in (200, 201):
             return {"sent": True, "id": resp.json().get("id")}
 
-        # Handle Resend free tier sandbox restriction (403 on external emails when using onboarding@resend.dev)
+        # Resend sandbox restriction: can't send to external emails on free tier
         if resp.status_code == 403 and "only send testing emails to your own email address" in resp.text:
-            owner_email = "toufiqfarhan0@gmail.com"
-            match = re.search(r"\(([^)]+@[^)]+)\)", resp.text)
-            if match:
-                owner_email = match.group(1).strip()
-            
-            logger.info(f"Resend sandbox restriction active. Forwarding calendar invite for '{to_email}' to owner '{owner_email}'.")
-            sandbox_banner = f"""<div style="background:#fef3c7; border:1px solid #f59e0b; padding:12px 16px; border-radius:8px; font-size:13px; color:#92400e; margin-bottom:20px;">
-  <strong>Resend Sandbox Notice:</strong> This appointment was scheduled for <strong>{to_email}</strong>. In Resend development mode (<code>onboarding@resend.dev</code>), test emails can only be delivered to your registered email (<code>{owner_email}</code>). A native <code>.ics</code> calendar invite is attached below. To send directly to customer emails, verify your domain at <a href="https://resend.com/domains" style="color:#b45309; text-decoration:underline;">resend.com/domains</a>.
-</div>"""
-            forwarded_html = html_content.replace('<div style="padding: 28px;">', f'<div style="padding: 28px;">\n{sandbox_banner}')
-            resp_fallback = httpx.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {resend_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "from": f"{biz_name} <{from_email}>",
-                    "to": [owner_email],
-                    "subject": f"[Dev Test for {to_email}] Appointment Confirmed: {service_label} - {biz_name}",
-                    "html": forwarded_html,
-                    "attachments": [
-                        {
-                            "filename": "appointment.ics",
-                            "content": ics_b64,
-                        }
-                    ],
-                },
-                timeout=10,
+            logger.warning(
+                f"Resend sandbox restriction: cannot deliver to '{to_email}'. "
+                "To send to real customer emails, verify your domain at resend.com/domains."
             )
-            if resp_fallback.status_code in (200, 201):
-                return {"sent": True, "id": resp_fallback.json().get("id"), "sandbox_fallback": True, "delivered_to": owner_email}
+            return {"sent": False, "reason": "resend_sandbox_restriction", "intended_recipient": to_email}
 
         return {"sent": False, "reason": resp.text}
     except Exception as exc:
