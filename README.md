@@ -153,7 +153,6 @@ assemblyai-voice-agent-scheduler/
     │   │   └── tools/[...slug]/ # Server-side HTTP webhook tools called by AssemblyAI
     │   └── tools/[...slug]/     # Direct root webhook fallback route
     ├── components/
-    │   ├── navbar.tsx           # Top navigation bar with tenant switcher
     │   ├── voice-widget.tsx     # Standalone embeddable floating voice widget
     │   ├── dashboard/
     │   │   ├── sidebar.tsx      # Sidebar navigation & business tenant selector
