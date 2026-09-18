@@ -417,25 +417,6 @@ export function UnderTheHoodPlayground() {
                   <span>Open Salon Demo</span>
                   <ArrowRight size={13} />
                 </Link>
-                <Link
-                  href="/demo/real-estate"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 14px",
-                    borderRadius: "10px",
-                    background: "#3b82f6",
-                    color: "#ffffff",
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    boxShadow: "0 2px 8px rgba(59,130,246,0.25)",
-                  }}
-                >
-                  <span>Open Real Estate Demo</span>
-                  <ArrowRight size={13} />
-                </Link>
               </div>
             </div>
 

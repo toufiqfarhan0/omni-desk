@@ -186,8 +186,14 @@ export async function supabaseListBusinesses(ownerId = "owner_demo"): Promise<Bu
       return [];
     }
 
+    // Filter for demo operator to strictly keep ONLY the Hair Salon demo
+    const effectiveBusinesses =
+      ownerId === "owner_demo"
+        ? businesses.filter((b) => b.id === "biz_demo_dental")
+        : businesses;
+
     // Fetch services for all returned businesses
-    const bizIds = businesses.map((b) => b.id);
+    const bizIds = effectiveBusinesses.map((b) => b.id);
     let servicesByBiz: Record<string, Service[]> = {};
 
     if (bizIds.length > 0) {
@@ -205,7 +211,7 @@ export async function supabaseListBusinesses(ownerId = "owner_demo"): Promise<Bu
       }
     }
 
-    return businesses.map((b) => ({
+    return effectiveBusinesses.map((b) => ({
       ...b,
       keyterms: Array.isArray(b.keyterms) ? b.keyterms : JSON.parse(b.keyterms || "[]"),
       services: servicesByBiz[b.id] || [],

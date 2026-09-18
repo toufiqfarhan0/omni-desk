@@ -303,38 +303,6 @@ function initSqliteDb(db: any): void {
     insertService.run("biz_demo_dental", "balayage", "Artisan Balayage & Highlights", 120, 280, "Hand-painted dimensional highlights, toner formulation, deep conditioning mask, and style.");
     insertService.run("biz_demo_dental", "blowout", "Signature Blowout & Treatment", 45, 65, "Revitalizing scalp massage, clarifying shampoo, hydrating mask, and voluminous blowout styling.");
   }
-
-  // PRE-LOCK DEMO REAL ESTATE BUSINESS
-  const existingRealEstate = db.prepare("SELECT id FROM businesses WHERE id = ?").get("biz_demo_realestate");
-  if (!existingRealEstate) {
-    db.prepare(`
-      INSERT INTO businesses (
-        id, owner_id, name, industry, tone, greeting, system_prompt, voice_id,
-        slot_minutes, open_hour, close_hour, operating_days, keyterms, created_at, updated_at
-      ) VALUES (
-        'biz_demo_realestate',
-        'owner_demo',
-        'OmniDesk Real Estate & Property Advisory',
-        'realestate',
-        'professional',
-        'Thanks for calling OmniDesk Real Estate. Are you looking to schedule a private property viewing, home appraisal, or buyer consultation?',
-        'You are an autonomous receptionist for OmniDesk Real Estate & Property Advisory. You speak in a confident, polished, and professional tone. You assist callers with scheduling private property viewings, open house tour reservations, home valuation appraisals, and buyer or seller consultations. You check real calendar slots using your tools and book appointments for clients.',
-        'michael',
-        45, 9, 18, 'mon-fri',
-        '["OmniDesk","OmniDesk Real Estate","property viewing","home appraisal","buyer consultation","listing","open house","condo","single family","mortgage pre-approval","escrow"]',
-        datetime('now'), datetime('now')
-      )
-    `).run();
-
-    const insertService = db.prepare(`
-      INSERT OR IGNORE INTO services (business_id, key, label, minutes, price, description)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    insertService.run("biz_demo_realestate", "viewing", "Private Property Viewing Tour", 45, 0, "Exclusive 1-on-1 guided walkthrough of featured luxury and residential properties.");
-    insertService.run("biz_demo_realestate", "consultation", "Buyer & Investor Consultation", 60, 0, "Detailed market trends, neighborhood pricing comparative analysis, and portfolio matching.");
-    insertService.run("biz_demo_realestate", "appraisal", "Home Valuation & Seller Strategy", 45, 0, "On-site comparative market analysis and listing preparation strategy for property owners.");
-    insertService.run("biz_demo_realestate", "openhouse", "Open House VIP Reservation", 30, 0, "Priority access slot for scheduled weekend open house showings with dedicated agent walkthrough.");
-  }
 }
 
 // -----------------------------------------------------------------------------
@@ -467,7 +435,12 @@ export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]
   }
 
   const db = getDb();
-  const rows = db.prepare("SELECT * FROM businesses WHERE owner_id = ? ORDER BY created_at DESC").all(ownerId) as any[];
+  let rows = db.prepare("SELECT * FROM businesses WHERE owner_id = ? ORDER BY created_at DESC").all(ownerId) as any[];
+
+  // Demo operator strictly keeps ONLY the OmniDesk Hair Salon demo
+  if (ownerId === "owner_demo") {
+    rows = rows.filter((r) => r.id === "biz_demo_dental");
+  }
 
   return rows.map((r) => {
     const services = db.prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC").all(r.id) as Service[];

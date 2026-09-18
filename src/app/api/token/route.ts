@@ -8,10 +8,22 @@ export async function GET(request: Request) {
     const businessId = searchParams.get("businessId") || "biz_demo_dental";
 
     const biz = await getBusiness(businessId);
-    const agentId =
-      biz?.assemblyai_agent_id ||
-      process.env.AGENT_ID ||
-      "";
+    let agentId = biz?.assemblyai_agent_id;
+
+    // Only allow default AGENT_ID fallback for the official pre-configured hair salon demo
+    if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
+      agentId = process.env.AGENT_ID || "";
+    }
+
+    if (!agentId) {
+      return NextResponse.json(
+        {
+          error: "NOT_DEPLOYED",
+          message: "This agent has not been deployed to AssemblyAI yet. Please click 'Deploy to AssemblyAI' in the AI Agent Builder first.",
+        },
+        { status: 400 }
+      );
+    }
 
     const token = await mintAgentToken(600);
 

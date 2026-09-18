@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import { BrandLogo } from "@/components/brand-logo";
 import { toast } from "sonner";
 
@@ -13,18 +12,11 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [activeDemoIdx, setActiveDemoIdx] = useState(0);
 
   const [authError, setAuthError] = useState("");
   const [authNotFound, setAuthNotFound] = useState(false);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
-
-  // Auto-cycle demo cards every 4 seconds
-  useEffect(() => {
-    const t = setInterval(() => setActiveDemoIdx((p) => (p + 1) % 2), 4000);
-    return () => clearInterval(t);
-  }, []);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -424,154 +416,55 @@ export default function LandingPage() {
             <p>These are real production demo websites with the OmniDesk voice widget embedded. Click to visit and experience it live.</p>
           </div>
 
-          {/* Demo selector tabs */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "32px" }}>
-            {[
-              { label: "Hair Salon", color: "#10b981" },
-              { label: "Real Estate", color: "#3b82f6" },
-            ].map((tab, i) => (
-              <button
-                key={tab.label}
-                type="button"
-                onClick={() => setActiveDemoIdx(i)}
+          {/* Premier Hair Salon showcase card */}
+          <div
+            style={{
+              maxWidth: "800px",
+              margin: "0 auto",
+              background: "#fff",
+              border: "2px solid #10b981",
+              borderRadius: "20px",
+              overflow: "hidden",
+              boxShadow: "0 20px 40px -10px rgba(16,185,129,0.15)",
+            }}
+          >
+            <div style={{ background: "linear-gradient(135deg,#064e3b,#065f46)", padding: "32px 40px", color: "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                <div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(16,185,129,0.3)", color: "#6ee7b7", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon &amp; MedSpa</div>
+                  <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Luxe &amp; Mane Hair Studio</h3>
+                </div>
+              </div>
+              <p style={{ fontSize: "14px", color: "#6ee7b7", lineHeight: 1.6, margin: 0 }}>
+                High-end salon with live calendar booking for precision haircuts, coloring, and artisan balayage. Experience how visitors schedule directly from the homepage.
+              </p>
+            </div>
+            <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
+              <div style={{ display: "flex", gap: "24px" }}>
+                {[["Haircuts", "45min"], ["Balayage", "120min"], ["Coloring", "90min"]].map(([s, d]) => (
+                  <div key={s} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
+                    <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
+                  </div>
+                ))}
+              </div>
+              <a
+                href="https://omni-desk-rho.vercel.app/demo/salon"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
-                  padding: "8px 20px",
-                  borderRadius: "999px",
-                  border: activeDemoIdx === i ? `2px solid ${tab.color}` : "1px solid var(--border)",
-                  background: activeDemoIdx === i ? tab.color : "var(--surface)",
-                  color: activeDemoIdx === i ? "#fff" : "var(--text-muted)",
-                  fontFamily: "var(--font)",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
+                  display: "inline-flex", alignItems: "center", gap: "8px",
+                  background: "#10b981", color: "#fff",
+                  fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
+                  padding: "12px 24px", borderRadius: "12px",
+                  textDecoration: "none", whiteSpace: "nowrap",
+                  boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
+                  transition: "all 0.2s",
                 }}
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Animated card */}
-          <AnimatePresence mode="wait">
-            {activeDemoIdx === 0 ? (
-              <motion.div
-                key="salon"
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                style={{ maxWidth: "800px", margin: "0 auto", background: "#fff", border: "2px solid #10b981", borderRadius: "20px", overflow: "hidden", boxShadow: "0 20px 40px -10px rgba(16,185,129,0.15)" }}
-              >
-                <div style={{ background: "linear-gradient(135deg,#064e3b,#065f46)", padding: "32px 40px", color: "#fff" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(16,185,129,0.3)", color: "#6ee7b7", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon & MedSpa</div>
-                      <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Luxe & Mane Hair Studio</h3>
-                    </div>
-
-                  </div>
-                  <p style={{ fontSize: "14px", color: "#6ee7b7", lineHeight: 1.6, margin: 0 }}>
-                    High-end salon with live calendar booking for precision haircuts, coloring, and artisan balayage. Experience how visitors schedule directly from the homepage.
-                  </p>
-                </div>
-                <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
-                  <div style={{ display: "flex", gap: "24px" }}>
-                    {[["Haircuts", "45min"], ["Balayage", "120min"], ["Coloring", "90min"]].map(([s, d]) => (
-                      <div key={s} style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
-                        <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <a
-                    href="https://omni-desk-rho.vercel.app/demo/salon"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: "8px",
-                      background: "#10b981", color: "#fff",
-                      fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
-                      padding: "12px 24px", borderRadius: "12px",
-                      textDecoration: "none", whiteSpace: "nowrap",
-                      boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    Open Salon Website ↗
-                  </a>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="realestate"
-                initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                style={{ maxWidth: "800px", margin: "0 auto", background: "#fff", border: "2px solid #3b82f6", borderRadius: "20px", overflow: "hidden", boxShadow: "0 20px 40px -10px rgba(59,130,246,0.15)" }}
-              >
-                <div style={{ background: "linear-gradient(135deg,#1e3a5f,#1e40af)", padding: "32px 40px", color: "#fff" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(59,130,246,0.3)", color: "#93c5fd", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Luxury Real Estate</div>
-                      <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Apex Luxury Property Advisory</h3>
-                    </div>
-
-                  </div>
-                  <p style={{ fontSize: "14px", color: "#93c5fd", lineHeight: 1.6, margin: 0 }}>
-                    Boutique brokerage showcasing multimillion-dollar estates. Autonomous voice scheduling for private tours, buyer consultations, and home valuations.
-                  </p>
-                </div>
-                <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
-                  <div style={{ display: "flex", gap: "24px" }}>
-                    {[["Tours", "45min"], ["Consultations", "60min"], ["Valuations", "45min"]].map(([s, d]) => (
-                      <div key={s} style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
-                        <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <a
-                    href="https://omni-desk-rho.vercel.app/demo/real-estate"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: "8px",
-                      background: "#3b82f6", color: "#fff",
-                      fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
-                      padding: "12px 24px", borderRadius: "12px",
-                      textDecoration: "none", whiteSpace: "nowrap",
-                      boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    Open Real Estate Website ↗
-                  </a>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Dot indicators */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "24px" }}>
-            {[0, 1].map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setActiveDemoIdx(i)}
-                style={{
-                  width: activeDemoIdx === i ? "24px" : "8px",
-                  height: "8px",
-                  borderRadius: "999px",
-                  background: activeDemoIdx === i ? "#09090b" : "#d4d4d8",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  padding: 0,
-                }}
-              />
-            ))}
+                Open Salon Website ↗
+              </a>
+            </div>
           </div>
         </div>
       </section>

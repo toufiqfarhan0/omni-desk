@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrCreateOwner, listBusinesses, createBusiness } from "@/lib/db";
+import { getOrCreateOwner, listBusinesses, createBusiness, getBusiness } from "@/lib/db";
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +8,12 @@ export async function GET(request: Request) {
     const owner = await getOrCreateOwner(email);
     let businesses = await listBusinesses(owner.id);
 
-    if (businesses.length === 0 && owner.id !== "owner_demo") {
+    if (owner.id === "owner_demo") {
+      const demoSalon = await getBusiness("biz_demo_dental");
+      if (demoSalon) {
+        businesses = [demoSalon];
+      }
+    } else if (businesses.length === 0) {
       const bizName = owner.name
         ? `${owner.name}'s Salon & Studio`
         : "My Business Studio";

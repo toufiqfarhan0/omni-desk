@@ -89,7 +89,15 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     }
   };
 
+  const isDeployed = Boolean(
+    business.assemblyai_agent_id || business.id === "biz_demo_dental"
+  );
+
   const handleToggleCall = async () => {
+    if (!isDeployed) {
+      toast.error("Please deploy this agent to AssemblyAI in the AI Agent Builder before testing.");
+      return;
+    }
     if (callStatus === "live" || callStatus === "busy") {
       handleEndCall();
     } else {
@@ -98,13 +106,19 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   };
 
   const handleStartCall = async () => {
+    if (!isDeployed) {
+      toast.error("Please deploy this agent to AssemblyAI in the AI Agent Builder first.");
+      return;
+    }
     try {
       setCallStatus("busy");
       startTimer();
 
       const res = await fetch(`/api/token?businessId=${business.id}`);
-      if (!res.ok) throw new Error("Failed to mint session token");
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Failed to mint session token");
+      }
 
       const agentId =
         data.agent_id ||
@@ -442,6 +456,32 @@ export default function App() {
           </div>
         </div>
 
+        {/* Undeployed warning banner */}
+        {!isDeployed && (
+          <div
+            style={{
+              padding: "12px 18px",
+              background: "#fffbeb",
+              borderBottom: "1px solid #fde68a",
+              color: "#92400e",
+              fontSize: "12.5px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              lineHeight: 1.45,
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <div>
+              <strong>Agent Not Deployed:</strong> This receptionist hasn&apos;t been deployed to AssemblyAI yet. Please open the <strong>AI Agent Builder</strong> and click <strong>Deploy to AssemblyAI</strong> before starting live voice calls.
+            </div>
+          </div>
+        )}
+
         {/* Conversation Feed */}
         <div
           style={{
@@ -607,27 +647,38 @@ export default function App() {
           <button
             type="button"
             onClick={handleToggleCall}
+            disabled={!isDeployed || callStatus === "busy"}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
               padding: "9px 18px",
-              background: callStatus === "live" ? "#dc2626" : widgetAccent,
+              background: !isDeployed ? "#71717a" : callStatus === "live" ? "#dc2626" : widgetAccent,
               color: "#ffffff",
               borderRadius: "10px",
               border: "none",
               fontSize: "13.5px",
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: !isDeployed ? "not-allowed" : "pointer",
+              opacity: !isDeployed ? 0.65 : 1,
               transition: "all 0.15s ease",
             }}
+            title={!isDeployed ? "Deploy to AssemblyAI in Agent Builder before testing" : undefined}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
               <line x1="12" y1="19" x2="12" y2="22" />
             </svg>
-            <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
+            <span>
+              {!isDeployed
+                ? "Deploy Agent to Test Live Voice"
+                : callStatus === "live"
+                ? "End Voice Call"
+                : callStatus === "busy"
+                ? "Connecting..."
+                : "Start Voice Call"}
+            </span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

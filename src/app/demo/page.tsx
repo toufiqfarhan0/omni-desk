@@ -27,27 +27,6 @@ const TEMPLATES: Record<string, TemplateInfo> = {
       { label: "Check Availability", query: "What times are available this Thursday?" },
     ],
   },
-  realestate: {
-    id: "realestate-demo",
-    name: "OmniDesk Real Estate & Property Advisory",
-    greeting:
-      "Welcome to OmniDesk Real Estate! Would you like to schedule a private property viewing, buyer consultation, or request a home valuation?",
-    agentRole: "Real Estate Voice Receptionist",
-    chips: [
-      {
-        label: "Schedule Property Tour",
-        query: "I'd like to book a private viewing tour for 742 Evergreen Terrace",
-      },
-      {
-        label: "Buyer Consultation",
-        query: "Can I schedule a consultation for buying a new home?",
-      },
-      {
-        label: "Open House Schedule",
-        query: "When are the open house showings scheduled this weekend?",
-      },
-    ],
-  },
 };
 
 interface MessageBubble {
@@ -57,7 +36,7 @@ interface MessageBubble {
 }
 
 export default function DemoPage() {
-  const [templateKey, setTemplateKey] = useState<"salon" | "realestate">("salon");
+  const [templateKey] = useState<"salon">("salon");
   const [messages, setMessages] = useState<MessageBubble[]>([]);
   const [callStatus, setCallStatus] = useState<"idle" | "busy" | "live" | "error">("idle");
   const [callDuration, setCallDuration] = useState("0:00");
@@ -470,7 +449,7 @@ export default function DemoPage() {
           </button>
         </section>
 
-        {/* 2 DEMO SHOWCASE CARDS (LIVE CLIENT SITES) */}
+        {/* DEMO SHOWCASE CARD (LIVE CLIENT SITE) */}
         <section style={{ marginBottom: "36px" }}>
           <div
             style={{
@@ -482,25 +461,23 @@ export default function DemoPage() {
               marginBottom: "14px",
             }}
           >
-            Live Client Website Showcases (Real-World Embedded Widget)
+            Live Client Website Showcase (Real-World Embedded Widget)
           </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-              gap: "18px",
+              maxWidth: "680px",
+              margin: "0 auto",
             }}
           >
-            {/* CARD 1: HAIR SALON */}
+            {/* CARD: HAIR SALON */}
             <div
               style={{
-                background: templateKey === "salon" ? "#fafafa" : "#ffffff",
-                border: templateKey === "salon" ? "2px solid #10b981" : "1px solid #e4e4e7",
+                background: "#fafafa",
+                border: "2px solid #10b981",
                 borderRadius: "18px",
                 padding: "24px",
-                boxShadow: templateKey === "salon" ? "0 10px 25px -5px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
-                transition: "all 0.2s ease",
+                boxShadow: "0 10px 25px -5px rgba(16, 185, 129, 0.15)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
@@ -557,108 +534,6 @@ export default function DemoPage() {
                   <span>Open Salon Website</span>
                   <span>&rarr;</span>
                 </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setTemplateKey("salon")}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #e4e4e7",
-                    background: templateKey === "salon" ? "#09090b" : "#ffffff",
-                    color: templateKey === "salon" ? "#ffffff" : "#09090b",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {templateKey === "salon" ? "Active in Sandbox" : "Load in Sandbox"}
-                </button>
-              </div>
-            </div>
-
-            {/* CARD 2: REAL ESTATE */}
-            <div
-              style={{
-                background: templateKey === "realestate" ? "#fafafa" : "#ffffff",
-                border: templateKey === "realestate" ? "2px solid #3b82f6" : "1px solid #e4e4e7",
-                borderRadius: "18px",
-                padding: "24px",
-                boxShadow: templateKey === "realestate" ? "0 10px 25px -5px rgba(59, 130, 246, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
-                transition: "all 0.2s ease",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                  <span
-                    style={{
-                      background: "rgba(59, 130, 246, 0.1)",
-                      color: "#2563eb",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      padding: "4px 10px",
-                      borderRadius: "9999px",
-                      border: "1px solid rgba(59, 130, 246, 0.2)",
-                    }}
-                  >
-                    LUXURY REAL ESTATE
-                  </span>
-                  <span style={{ fontSize: "12px", color: "#71717a", fontWeight: 500 }}>
-                    60m Private Tours
-                  </span>
-                </div>
-
-                <h3 style={{ fontSize: "19px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
-                  Apex Luxury Property Advisory
-                </h3>
-                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 18px" }}>
-                  Boutique brokerage showcasing multimillion-dollar estates. Demonstrates autonomous voice tour scheduling, buyer consultations, and instant calendar coordination.
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", paddingTop: "8px" }}>
-                <Link
-                  href="/demo/real-estate"
-                  style={{
-                    flex: 1,
-                    minWidth: "150px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    background: "#3b82f6",
-                    color: "#ffffff",
-                    textDecoration: "none",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    padding: "10px 16px",
-                    borderRadius: "10px",
-                    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
-                  }}
-                >
-                  <span>Open Real Estate Website</span>
-                  <span>&rarr;</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setTemplateKey("realestate")}
-                  style={{
-                    padding: "10px 16px",
-                    borderRadius: "10px",
-                    border: "1px solid #e4e4e7",
-                    background: templateKey === "realestate" ? "#09090b" : "#ffffff",
-                    color: templateKey === "realestate" ? "#ffffff" : "#09090b",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {templateKey === "realestate" ? "Active in Sandbox" : "Load in Sandbox"}
-                </button>
               </div>
             </div>
           </div>
