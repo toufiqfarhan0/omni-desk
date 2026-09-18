@@ -91,7 +91,7 @@ export async function sendResendConfirmation(
   const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
   let toEmail = booking.customer_email;
   if (!toEmail && business?.id) {
-    toEmail = getActiveVerifiedEmail(business.id) || "";
+    toEmail = (await getActiveVerifiedEmail(business.id)) || "";
   }
 
   if (!toEmail) {
@@ -186,7 +186,7 @@ export async function sendResendConfirmation(
 
     if (res.ok) {
       const data = await res.json();
-      markBookingConfirmationSent(code);
+      await markBookingConfirmationSent(code);
       return { sent: true, id: data.id };
     }
 

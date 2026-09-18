@@ -59,25 +59,19 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
                       (4. Reads / Writes)   |
                                             v
 +==================================================================================================+
-|                              DUAL-LAYER PERSISTENCE ARCHITECTURE                                 |
+|                        ADAPTIVE DATABASE ENGINE (SQLite vs Supabase)                             |
 |                                                                                                  |
-|         +--------------------------------------------------------------------+                   |
-|         |                   PRIMARY STORAGE (Local SQLite)                   |                   |
-|         |                     path: 'data/omnidesk.db'                       |                   |
-|         |                                                                    |                   |
-|         |  - Zero network latency (< 1ms read/write).                        |                   |
-|         |  - Tables: owners, businesses, services, bookings, conversations.   |                   |
-|         |  - Auto-created and seeded with sample businesses on startup.      |                   |
-|         +--------------------------------------------------------------------+                   |
-|                                            |                                                     |
-|                                            | (5. Optional Background Sync)                       |
-|                                            v                                                     |
-|         +--------------------------------------------------------------------+                   |
-|         |                  CLOUD MIRROR (Supabase Postgres)                  |                   |
-|         |  - Automatically mirrors all bookings, businesses, and call        |                   |
-|         |    transcripts to Supabase when SUPABASE_URL is configured.        |                   |
-|         |  - Silently skipped if left blank (no external DB required).       |                   |
-|         +--------------------------------------------------------------------+                   |
+|   [ PRODUCTION / VERCEL DEPLOYMENT ]                [ LOCAL TESTING / JUDGES EVALUATION ]        |
+|    - Automatic Cloud Mode                            - Automatic Zero-Setup SQLite Mode          |
+|    - All changes populate Supabase PostgreSQL        - No Supabase keys or database setup needed |
+|    - Persistent cloud storage & serverless-safe      - Uses built-in 'data/omnidesk.db'          |
+|    - SQLite bypassed completely                      - Pre-seeded with demo businesses & services|
+|                      |                                                     |                     |
+|                      v                                                     v                     |
+|   +------------------------------------+                +------------------------------------+   |
+|   |          SUPABASE POSTGRES         |                |            LOCAL SQLITE            |   |
+|   |     (Multi-Region Cloud DB)        |                |      (Built-In 'omnidesk.db')      |   |
+|   +------------------------------------+                +------------------------------------+   |
 +==================================================================================================+
 ```
 
@@ -127,7 +121,7 @@ The voice agent executes deterministic server tools during natural conversation 
 
 ```text
 assemblyai-voice-agent-scheduler/
-├── .env                         # Local environment variables (ASSEMBLYAI_API_KEY, etc.)
+├── .env                         # Local environment variables (NEXT_ASSEMBLYAI_API_KEY, etc.)
 ├── .env.example                 # Example template for environment variables
 ├── .gitignore                   # Ignores build artifacts, databases, and local secrets
 ├── components.json              # shadcn/ui configuration
@@ -210,7 +204,7 @@ Open `.env` and paste your **AssemblyAI API Key**:
 
 ```env
 # [REQUIRED] AssemblyAI API Key
-ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
+NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
 # [OPTIONAL] AssemblyAI Voice Agent ID
 # Leave blank to auto-create via the dashboard, or paste an existing agent ID
@@ -224,15 +218,18 @@ PUBLIC_API_BASE_URL=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=onboarding@resend.dev
 
-# [OPTIONAL] Abstract API Key (for live mailbox deliverability checks)
-ABSTRACT_EMAIL_API_KEY=
-
-# [OPTIONAL] Supabase Cloud Backup (SQLite data/omnidesk.db is used by default)
+# [OPTIONAL] Supabase Cloud Database (Required for cloud deployment / Vercel)
+# Local Judges Mode: Leave blank to use zero-setup SQLite (data/omnidesk.db).
+# Deployment Mode: On Vercel / production, OmniDesk automatically populates Supabase!
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ```
 
-> **What is required?** Only `ASSEMBLYAI_API_KEY` is required! The local SQLite database (`data/omnidesk.db`) initializes automatically with zero external database setup.
+> [!NOTE]
+> **No External Database Needed for Local Testing**:
+> Anyone cloning this repository can run and test the app immediately using the built-in **Local SQLite Database (`data/omnidesk.db`)** with zero database setup! You do **not** need a Supabase account or keys to test locally.
+>
+> In **Production (Vercel / Deployed URL)**, OmniDesk automatically populates **Supabase Cloud PostgreSQL** directly, ensuring persistent multi-region cloud storage without relying on local SQLite.
 
 ---
 
@@ -302,6 +299,44 @@ OmniDesk will instantly call AssemblyAI (`POST https://agents.assemblyai.com/v1/
 3. **Voice Tester Tab**: Test the agent with the live frequency visualizer and copy the embeddable `<VoiceWidget />` or `<script>` snippet.
 4. **Bookings CRM Tab**: View booked appointments, search by confirmation code, filter by status, and click **"Send Invite"** to manually re-send a calendar invite.
 5. **Call History Tab**: Review call duration metrics and inspect complete conversation transcripts.
+
+---
+
+## Transactional Email & Calendar Sync (.ics)
+
+OmniDesk features native calendar synchronization and transactional email delivery powered by Resend:
+
+- **What the Email Contains**:
+  - **Rich HTML Confirmation**: Displays client name, business title, service booked, date, time, estimated fee, and unique 6-character confirmation code.
+  - **Attached Native iCalendar (`appointment.ics`)**: Automatically syncs the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook** with a pre-configured 1-hour advance reminder alarm.
+- **How Delivery Works**:
+  - **With `RESEND_API_KEY`**: Emails and calendar invites are dispatched automatically upon booking. Practice owners can also click the **"Send Invite"** button on any row in the **Bookings CRM** tab (`/dashboard`) to dispatch or re-send calendar invites on demand.
+  - **Resend Sandbox Tip**: Under Resend's free tier (`onboarding@resend.dev`), emails are delivered to the address registered with your Resend account. Verifying a custom domain on [resend.com/domains](https://resend.com/domains) allows delivery to any arbitrary customer address.
+  - **Without `RESEND_API_KEY`**: Evaluators can still test the entire booking workflow with zero setup. Appointment bookings complete 100% successfully, confirmation codes are spoken aloud by the voice receptionist, and reservations are saved directly to the database and displayed in the CRM.
+
+---
+
+## Database Architecture: Production (Supabase) vs Local Testing (SQLite)
+
+OmniDesk is built with an **intelligent dual-mode database engine** designed for both scalable production cloud deployments and frictionless local evaluation:
+
+### 1. In Production: Supabase Cloud PostgreSQL
+- When running on a deployed URL (**Vercel** or any cloud platform), OmniDesk automatically operates in **Supabase Mode**.
+- All data modifications made by users from the deployed URL—including creating new businesses, editing prompts or services, booking voice appointments, and saving conversation transcripts—**populate Supabase Cloud PostgreSQL directly**.
+- Local SQLite (`better-sqlite3`) is completely bypassed in production, ensuring zero native binary issues on serverless lambdas and permanent multi-region cloud persistence.
+
+### 2. For Local Testing & Judges: Zero-Setup SQLite (`data/omnidesk.db`)
+- If you clone this repository to test locally, **you do NOT need to set up Supabase, PostgreSQL, or any external database**.
+- Simply leave `SUPABASE_URL` blank in your `.env`.
+- OmniDesk automatically boots in **Local SQLite Mode** using the built-in local database file (`data/omnidesk.db`).
+- The database initializes automatically on your very first request and comes pre-seeded with locked demo accounts:
+  - **Demo Practice Operator**: `owner_demo` (`demo@omnidesk.ai`)
+  - **Hair Salon Business**: `biz_demo_dental` (*OmniDesk Hair Salon & Studio*) with 4 pre-configured haircut, styling, coloring, and blowout services.
+  - **Real Estate Business**: `biz_demo_realestate` (*OmniDesk Real Estate & Property Advisory*) with 4 pre-configured property viewing, consultation, and appraisal services.
+
+### 3. Local Developer Testing: Dual-Sync Mode
+- If a developer running locally provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`, OmniDesk automatically operates in **Dual-Sync Mode**.
+- Writes are saved instantly to local SQLite for `< 1ms` sub-millisecond UI responses and automatically synchronized to Supabase Cloud in the background.
 
 ---
 

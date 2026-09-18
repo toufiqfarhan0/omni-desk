@@ -46,14 +46,18 @@ function getAllBusinessSlots(biz: Business): string[] {
   return slots;
 }
 
-export function getAvailableSlots(biz: Business, dateStr: string): string[] {
+export async function getAvailableSlots(
+  biz: Business,
+  dateStr: string,
+  passedBookings?: Booking[]
+): Promise<string[]> {
   const dateObj = new Date(dateStr + "T00:00:00Z");
   if (!isBusinessOpenOnDate(biz, dateObj)) {
     return [];
   }
 
   const allSlots = getAllBusinessSlots(biz);
-  const bookings = listBookings(biz.id);
+  const bookings = passedBookings || (await listBookings(biz.id));
   const takenTimes = new Set(
     bookings
       .filter((b) => b.appointment_date === dateStr && b.status !== "cancelled")
@@ -71,9 +75,10 @@ export function getAvailableSlots(biz: Business, dateStr: string): string[] {
   return allSlots.filter((slot) => !takenTimes.has(slot));
 }
 
-function getNextOpenDays(biz: Business, startDate: Date, count = 3): Date[] {
+async function getNextOpenDays(biz: Business, startDate: Date, count = 3): Promise<Date[]> {
   const openDays: Date[] = [];
   const cur = new Date(startDate);
+  const bookings = await listBookings(biz.id);
 
   for (let i = 1; i <= 14 && openDays.length < count; i++) {
     cur.setUTCDate(cur.getUTCDate() + 1);
@@ -82,7 +87,7 @@ function getNextOpenDays(biz: Business, startDate: Date, count = 3): Date[] {
       const dStr = `${cur.getUTCFullYear()}-${pad(cur.getUTCMonth() + 1)}-${pad(
         cur.getUTCDate()
       )}`;
-      const slots = getAvailableSlots(biz, dStr);
+      const slots = await getAvailableSlots(biz, dStr, bookings);
       if (slots.length > 0) {
         openDays.push(new Date(cur));
       }
@@ -104,9 +109,9 @@ export async function executeTool(
   args: any = {}
 ): Promise<any> {
   const bizId = businessId || "biz_demo_dental";
-  let biz = getBusiness(bizId);
+  let biz = await getBusiness(bizId);
   if (!biz) {
-    biz = getBusiness("biz_demo_dental");
+    biz = await getBusiness("biz_demo_dental");
   }
   if (!biz) {
     return { ok: false, message: "Business tenant not found" };
@@ -121,7 +126,7 @@ export async function executeTool(
   switch (toolName) {
     case "get_today": {
       const todayDate = new Date(todayStr + "T00:00:00Z");
-      const nextDays = getNextOpenDays(biz, todayDate, 3);
+      const nextDays = await getNextOpenDays(biz, todayDate, 3);
       const weekday = todayDate.toLocaleDateString("en-US", {
         weekday: "long",
       });
@@ -216,14 +221,14 @@ export async function executeTool(
 
       const reqDate = new Date(dateStr + "T00:00:00Z");
       if (!isBusinessOpenOnDate(biz, reqDate)) {
-        const nextDays = getNextOpenDays(biz, reqDate, 1);
+        const nextDays = await getNextOpenDays(biz, reqDate, 1);
         const nextD = nextDays[0];
         let altMsg = "We are closed on that day.";
         if (nextD) {
           const nextDStr = `${nextD.getUTCFullYear()}-${pad(
             nextD.getUTCMonth() + 1
           )}-${pad(nextD.getUTCDate())}`;
-          const nextSlots = getAvailableSlots(biz, nextDStr);
+          const nextSlots = await getAvailableSlots(biz, nextDStr);
           altMsg = `We are closed on that day. The next day we're open is ${formatDaySpoken(
             nextDStr
           )}, with open times at ${formatSlotsSpoken(nextSlots)}.`;
@@ -235,7 +240,7 @@ export async function executeTool(
         };
       }
 
-      const slots = getAvailableSlots(biz, dateStr);
+      const slots = await getAvailableSlots(biz, dateStr);
       const serviceLabel = matchedService?.label || args.service;
       const price = matchedService?.price ?? 0;
       const minutes = matchedService?.minutes ?? 30;
@@ -254,14 +259,14 @@ export async function executeTool(
         };
       }
 
-      const nextDays = getNextOpenDays(biz, reqDate, 1);
+      const nextDays = await getNextOpenDays(biz, reqDate, 1);
       const nextD = nextDays[0];
       let altMsg = "We have nothing open in the next two weeks.";
       if (nextD) {
         const nextDStr = `${nextD.getUTCFullYear()}-${pad(
           nextD.getUTCMonth() + 1
         )}-${pad(nextD.getUTCDate())}`;
-        const nextSlots = getAvailableSlots(biz, nextDStr);
+        const nextSlots = await getAvailableSlots(biz, nextDStr);
         altMsg = `${formatDaySpoken(
           dateStr
         )} is fully booked for ${serviceLabel}. The next opening is ${formatDaySpoken(
@@ -309,7 +314,7 @@ export async function executeTool(
         };
       }
 
-      const availableSlots = getAvailableSlots(biz, dateStr);
+      const availableSlots = await getAvailableSlots(biz, dateStr);
       if (!availableSlots.includes(timeStr)) {
         const altMsg = availableSlots.length
           ? `We do have ${formatSlotsSpoken(availableSlots)}.`
@@ -329,7 +334,7 @@ export async function executeTool(
         : serviceKey || "Appointment";
       const price = matchedService ? matchedService.price : 0;
 
-      const booking = createBookingRecord({
+      const booking = await createBookingRecord({
         business_id: biz.id,
         service_key: matchedService ? matchedService.key : "appointment",
         service_label: serviceLabel,
@@ -375,7 +380,7 @@ export async function executeTool(
 
     case "send_confirmation": {
       const code = (args.confirmation_code || "").trim();
-      let booking: Booking | null = getBookingByCode(code);
+      let booking: Booking | null = await getBookingByCode(code);
 
       // Dual DB: check in-memory store if demo business
       if (!booking && biz.id === "biz_demo_dental") {
@@ -409,7 +414,7 @@ export async function executeTool(
 
       const res = await sendResendConfirmation(booking, biz);
       if (res.sent) {
-        markBookingConfirmationSent(booking.confirmation_code);
+        await markBookingConfirmationSent(booking.confirmation_code);
         if (biz.id === "biz_demo_dental") {
           store.markConfirmationSent(booking.confirmation_code);
         }

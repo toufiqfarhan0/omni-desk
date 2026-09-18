@@ -1,26 +1,72 @@
-import Database from "better-sqlite3";
-import path from "node:path";
-import fs from "node:fs";
+import {
+  supabaseGetOrCreateOwner,
+  supabaseListBusinesses,
+  supabaseGetBusiness,
+  supabaseCreateBusiness,
+  supabaseUpdateBusiness,
+  supabaseListBookings,
+  supabaseGetBookingByCode,
+  supabaseCreateBookingRecord,
+  supabaseMarkBookingConfirmationSent,
+  supabaseListConversations,
+  supabaseRecordConversation,
+  supabaseGetActiveVerifiedEmail,
+  supabaseSetActiveVerifiedEmail,
+  supabaseClearActiveVerifiedEmail,
+} from "./supabase-db";
 
-const ROOT = process.cwd();
-const DB_DIR = process.env.VERCEL ? "/tmp" : path.join(ROOT, "data");
-const DB_PATH = path.join(DB_DIR, "omnidesk.db");
+export type DbMode = "sqlite" | "dual" | "supabase";
 
-try {
-  if (!fs.existsSync(DB_DIR)) {
-    fs.mkdirSync(DB_DIR, { recursive: true });
+/**
+ * Determine the active database mode:
+ * 1. "sqlite": Local mode for judges (zero setup, no Supabase keys required).
+ * 2. "dual": Local testing mode for user (both SQLite and Supabase synced).
+ * 3. "supabase": Deployment mode (on Vercel / production). Zero local SQLite loaded.
+ */
+export function getDbMode(): DbMode {
+  if (process.env.DB_MODE === "sqlite") return "sqlite";
+  if (process.env.DB_MODE === "supabase") return "supabase";
+  if (process.env.DB_MODE === "dual") return "dual";
+
+  // Check if deployed (Vercel, AWS, Render, Railway, Netlify, or Production environment)
+  const isDeployed = Boolean(
+    process.env.VERCEL ||
+    process.env.NEXT_PUBLIC_VERCEL_URL ||
+    process.env.VERCEL_URL ||
+    process.env.NETLIFY ||
+    process.env.RENDER ||
+    process.env.RAILWAY_STATIC_URL ||
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.FLY_APP_NAME ||
+    process.env.DYNO ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.AWS_REGION ||
+    process.env.NODE_ENV === "production" ||
+    (process.env.PUBLIC_API_BASE_URL &&
+      !process.env.PUBLIC_API_BASE_URL.includes("localhost") &&
+      !process.env.PUBLIC_API_BASE_URL.includes("127.0.0.1"))
+  );
+
+  const hasSupabase = Boolean(
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    (process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_KEY)
+  );
+
+  if (isDeployed) {
+    // When user performs any changes from deployed URL, populate Supabase only!
+    return "supabase";
   }
-} catch {}
 
-let dbInstance: Database.Database | null = null;
-
-export function getDb(): Database.Database {
-  if (!dbInstance) {
-    dbInstance = new Database(DB_PATH);
-    dbInstance.pragma("foreign_keys = ON");
-    initDb(dbInstance);
+  if (hasSupabase) {
+    // Local developer dual-testing mode
+    return "dual";
   }
-  return dbInstance;
+
+  // Pure zero-config SQLite for judges
+  return "sqlite";
 }
 
 export interface Owner {
@@ -91,7 +137,41 @@ export interface Conversation {
   tool_calls: Array<{ tool: string; args?: any; result?: any }>;
 }
 
-function initDb(db: Database.Database): void {
+// -----------------------------------------------------------------------------
+// SQLITE SINGLETON & PRE-SEEDED LOCK (Loaded ONLY in sqlite / dual modes)
+// -----------------------------------------------------------------------------
+let sqliteDbInstance: any = null;
+
+export function getDb(): any {
+  if (getDbMode() === "supabase") {
+    // In deployment mode, we do NOT touch SQLite at all.
+    return null;
+  }
+
+  if (!sqliteDbInstance) {
+    // Dynamically require better-sqlite3 so Vercel deployment NEVER fails on missing binaries
+    const Database = require("better-sqlite3");
+    const path = require("node:path");
+    const fs = require("node:fs");
+
+    const ROOT = process.cwd();
+    const DB_DIR = path.join(ROOT, "data");
+    const DB_PATH = path.join(DB_DIR, "omnidesk.db");
+
+    try {
+      if (!fs.existsSync(DB_DIR)) {
+        fs.mkdirSync(DB_DIR, { recursive: true });
+      }
+    } catch {}
+
+    sqliteDbInstance = new Database(DB_PATH);
+    sqliteDbInstance.pragma("foreign_keys = ON");
+    initSqliteDb(sqliteDbInstance);
+  }
+  return sqliteDbInstance;
+}
+
+function initSqliteDb(db: any): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS owners (
       id TEXT PRIMARY KEY,
@@ -170,82 +250,125 @@ function initDb(db: Database.Database): void {
       updated_at TEXT NOT NULL
     );
   `);
-}
 
-// Supabase background sync
-async function syncToSupabaseAsync(
-  pathSegment: string,
-  data: any,
-  method = "POST"
-): Promise<void> {
-  const url = process.env.SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.SUPABASE_KEY;
+  // PRE-LOCK DEMO OPERATOR ACCOUNT
+  const existingOwner = db.prepare("SELECT id FROM owners WHERE id = ?").get("owner_demo");
+  if (!existingOwner) {
+    db.prepare(`
+      INSERT INTO owners (id, email, name, created_at)
+      VALUES ('owner_demo', 'demo@omnidesk.ai', 'OmniDesk Demo Operator', datetime('now'))
+    `).run();
+  }
 
-  if (!url || !key) return;
+  // PRE-LOCK DEMO HAIR SALON BUSINESS
+  const existingSalon = db.prepare("SELECT id FROM businesses WHERE id = ?").get("biz_demo_dental");
+  if (!existingSalon) {
+    db.prepare(`
+      INSERT INTO businesses (
+        id, owner_id, name, industry, tone, greeting, system_prompt, voice_id,
+        slot_minutes, open_hour, close_hour, operating_days, keyterms, created_at, updated_at
+      ) VALUES (
+        'biz_demo_dental',
+        'owner_demo',
+        'OmniDesk Hair Salon & Studio',
+        'salon',
+        'warm',
+        'Thanks for calling OmniDesk Hair Salon & Studio. Are you looking to book a haircut, styling, or coloring appointment?',
+        'You are an autonomous receptionist for OmniDesk Hair Salon & Studio. You speak in a warm, welcoming tone. You answer questions about haircuts, styling, balayage, and coloring, check real calendar slots using your tools, and book appointments for clients.',
+        'alba',
+        30, 9, 17, 'mon-fri',
+        '["OmniDesk", "OmniDesk Hair Salon", "haircut", "styling", "balayage", "hair coloring", "blowout", "highlights", "scalp treatment"]',
+        datetime('now'), datetime('now')
+      )
+    `).run();
 
-  try {
-    const targetUrl = `${url.replace(/\/$/, "")}/rest/v1/${pathSegment}`;
-    await fetch(targetUrl, {
-      method,
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates",
-      },
-      body: JSON.stringify(data),
-    });
-  } catch {
-    // Ignore async background sync failures
+    const insertService = db.prepare(`
+      INSERT OR IGNORE INTO services (business_id, key, label, minutes, price, description)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertService.run("biz_demo_dental", "haircut", "Signature Haircut & Styling", 45, 85, "Custom consultation, precision cut, wash, and luxury blowout.");
+    insertService.run("biz_demo_dental", "coloring", "Full Color & Gloss", 90, 185, "All-over single process coloring, custom formulation, and blowout.");
+    insertService.run("biz_demo_dental", "balayage", "Artisan Balayage & Highlights", 120, 280, "Hand-painted dimensional highlights, toner formulation, deep conditioning mask, and style.");
+    insertService.run("biz_demo_dental", "blowout", "Signature Blowout & Treatment", 45, 65, "Revitalizing scalp massage, clarifying shampoo, hydrating mask, and voluminous blowout styling.");
+  }
+
+  // PRE-LOCK DEMO REAL ESTATE BUSINESS
+  const existingRealEstate = db.prepare("SELECT id FROM businesses WHERE id = ?").get("biz_demo_realestate");
+  if (!existingRealEstate) {
+    db.prepare(`
+      INSERT INTO businesses (
+        id, owner_id, name, industry, tone, greeting, system_prompt, voice_id,
+        slot_minutes, open_hour, close_hour, operating_days, keyterms, created_at, updated_at
+      ) VALUES (
+        'biz_demo_realestate',
+        'owner_demo',
+        'OmniDesk Real Estate & Property Advisory',
+        'realestate',
+        'professional',
+        'Thanks for calling OmniDesk Real Estate. Are you looking to schedule a private property viewing, home appraisal, or buyer consultation?',
+        'You are an autonomous receptionist for OmniDesk Real Estate & Property Advisory. You speak in a confident, polished, and professional tone. You assist callers with scheduling private property viewings, open house tour reservations, home valuation appraisals, and buyer or seller consultations. You check real calendar slots using your tools and book appointments for clients.',
+        'michael',
+        45, 9, 18, 'mon-fri',
+        '["OmniDesk","OmniDesk Real Estate","property viewing","home appraisal","buyer consultation","listing","open house","condo","single family","mortgage pre-approval","escrow"]',
+        datetime('now'), datetime('now')
+      )
+    `).run();
+
+    const insertService = db.prepare(`
+      INSERT OR IGNORE INTO services (business_id, key, label, minutes, price, description)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertService.run("biz_demo_realestate", "viewing", "Private Property Viewing Tour", 45, 0, "Exclusive 1-on-1 guided walkthrough of featured luxury and residential properties.");
+    insertService.run("biz_demo_realestate", "consultation", "Buyer & Investor Consultation", 60, 0, "Detailed market trends, neighborhood pricing comparative analysis, and portfolio matching.");
+    insertService.run("biz_demo_realestate", "appraisal", "Home Valuation & Seller Strategy", 45, 0, "On-site comparative market analysis and listing preparation strategy for property owners.");
+    insertService.run("biz_demo_realestate", "openhouse", "Open House VIP Reservation", 30, 0, "Priority access slot for scheduled weekend open house showings with dedicated agent walkthrough.");
   }
 }
 
-export interface Owner {
-  id: string;
-  email: string;
-  name: string;
-  created_at: string;
-}
+// -----------------------------------------------------------------------------
+// PUBLIC CRUD API (Automatically dispatches between Supabase and SQLite)
+// -----------------------------------------------------------------------------
 
-export function getOrCreateOwner(email: string, name?: string): Owner {
+export async function getOrCreateOwner(email: string, name?: string): Promise<Owner> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseGetOrCreateOwner(email, name);
+  }
+
   const db = getDb();
   const normalized = email.trim().toLowerCase();
-  let owner = db
-    .prepare("SELECT * FROM owners WHERE email = ?")
-    .get(normalized) as Owner | undefined;
+  let owner = db.prepare("SELECT * FROM owners WHERE email = ?").get(normalized) as Owner | undefined;
 
   if (!owner) {
-    const id =
-      normalized === "demo@omnidesk.ai"
-        ? "owner_demo"
-        : `owner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const id = normalized === "demo@omnidesk.ai" ? "owner_demo" : `owner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
     const ownerName = name || email.split("@")[0] || "OmniDesk Operator";
-    db.prepare(
-      "INSERT INTO owners (id, email, name, created_at) VALUES (?, ?, ?, ?)"
-    ).run(id, normalized, ownerName, now);
+    db.prepare("INSERT INTO owners (id, email, name, created_at) VALUES (?, ?, ?, ?)").run(id, normalized, ownerName, now);
     owner = { id, email: normalized, name: ownerName, created_at: now };
-    syncToSupabaseAsync("owners", { ...owner }, "POST");
   } else if (name && owner.name !== name) {
     db.prepare("UPDATE owners SET name = ? WHERE id = ?").run(name, owner.id);
     owner.name = name;
   }
+
+  if (mode === "dual") {
+    // Sync to Supabase in dual mode
+    supabaseGetOrCreateOwner(email, name).catch(() => {});
+  }
+
   return owner;
 }
 
-export function listBusinesses(ownerId = "owner_demo"): Business[] {
+export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseListBusinesses(ownerId);
+  }
+
   const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM businesses WHERE owner_id = ? ORDER BY created_at DESC")
-    .all(ownerId) as any[];
+  const rows = db.prepare("SELECT * FROM businesses WHERE owner_id = ? ORDER BY created_at DESC").all(ownerId) as any[];
 
   return rows.map((r) => {
-    const services = db
-      .prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC")
-      .all(r.id) as Service[];
+    const services = db.prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC").all(r.id) as Service[];
     let keyterms: string[] = [];
     try {
       keyterms = JSON.parse(r.keyterms || "[]");
@@ -260,18 +383,17 @@ export function listBusinesses(ownerId = "owner_demo"): Business[] {
   });
 }
 
-export function getBusiness(businessId: string): Business | null {
-  const db = getDb();
-  const r = db
-    .prepare("SELECT * FROM businesses WHERE id = ?")
-    .get(businessId) as any;
+export async function getBusiness(businessId: string): Promise<Business | null> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseGetBusiness(businessId);
+  }
 
+  const db = getDb();
+  const r = db.prepare("SELECT * FROM businesses WHERE id = ?").get(businessId) as any;
   if (!r) return null;
 
-  const services = db
-    .prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC")
-    .all(businessId) as Service[];
-
+  const services = db.prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC").all(businessId) as Service[];
   let keyterms: string[] = [];
   try {
     keyterms = JSON.parse(r.keyterms || "[]");
@@ -286,12 +408,18 @@ export function getBusiness(businessId: string): Business | null {
   };
 }
 
-export function updateBusiness(
+export async function updateBusiness(
   businessId: string,
   patch: Partial<Business> & { services?: Service[] }
-): Business | null {
+): Promise<Business | null> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    // When user changes from deployed URL, populate Supabase only!
+    return await supabaseUpdateBusiness(businessId, patch);
+  }
+
   const db = getDb();
-  const current = getBusiness(businessId);
+  const current = await getBusiness(businessId);
   if (!current) return null;
 
   const now = new Date().toISOString();
@@ -326,7 +454,6 @@ export function updateBusiness(
 
   fields.push("updated_at = ?");
   vals.push(now);
-
   vals.push(businessId);
 
   db.prepare(`UPDATE businesses SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
@@ -341,27 +468,24 @@ export function updateBusiness(
     const updateTx = db.transaction(() => {
       deleteStmt.run(businessId);
       for (const s of patch.services!) {
-        insertStmt.run(
-          businessId,
-          s.key,
-          s.label,
-          s.minutes || 30,
-          s.price || 0,
-          s.description || ""
-        );
+        insertStmt.run(businessId, s.key, s.label, s.minutes || 30, s.price || 0, s.description || "");
       }
     });
     updateTx();
   }
 
-  const updated = getBusiness(businessId);
-  if (updated) {
-    syncToSupabaseAsync("businesses", { ...updated }, "POST");
+  const updated = await getBusiness(businessId);
+
+  if (mode === "dual" && updated) {
+    supabaseUpdateBusiness(businessId, patch).catch((err) =>
+      console.warn("[Dual Sync] Supabase update business error:", err)
+    );
   }
+
   return updated;
 }
 
-export function createBusiness(data: {
+export async function createBusiness(data: {
   id: string;
   owner_id?: string;
   name: string;
@@ -376,7 +500,13 @@ export function createBusiness(data: {
   operating_days?: string;
   keyterms?: string[];
   services?: Service[];
-}): Business {
+}): Promise<Business> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    // When user changes from deployed URL, populate Supabase only!
+    return await supabaseCreateBusiness(data);
+  }
+
   const db = getDb();
   const now = new Date().toISOString();
   const ownerId = data.owner_id || "owner_demo";
@@ -411,40 +541,45 @@ export function createBusiness(data: {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     for (const s of data.services) {
-      insertStmt.run(
-        data.id,
-        s.key,
-        s.label,
-        s.minutes || 30,
-        s.price || 0,
-        s.description || ""
-      );
+      insertStmt.run(data.id, s.key, s.label, s.minutes || 30, s.price || 0, s.description || "");
     }
   }
 
-  const res = getBusiness(data.id)!;
-  syncToSupabaseAsync("businesses", { ...res }, "POST");
+  const res = (await getBusiness(data.id))!;
+
+  if (mode === "dual") {
+    supabaseCreateBusiness(data).catch((err) =>
+      console.warn("[Dual Sync] Supabase create business error:", err)
+    );
+  }
+
   return res;
 }
 
-export function listBookings(businessId: string): Booking[] {
+export async function listBookings(businessId: string): Promise<Booking[]> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseListBookings(businessId);
+  }
+
   const db = getDb();
   return db
-    .prepare(
-      "SELECT * FROM bookings WHERE business_id = ? ORDER BY appointment_date DESC, appointment_time DESC"
-    )
+    .prepare("SELECT * FROM bookings WHERE business_id = ? ORDER BY appointment_date DESC, appointment_time DESC")
     .all(businessId) as Booking[];
 }
 
-export function getBookingByCode(code: string): Booking | null {
+export async function getBookingByCode(code: string): Promise<Booking | null> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseGetBookingByCode(code);
+  }
+
   const db = getDb();
-  const row = db
-    .prepare("SELECT * FROM bookings WHERE confirmation_code = ?")
-    .get(code) as Booking | undefined;
+  const row = db.prepare("SELECT * FROM bookings WHERE confirmation_code = ?").get(code) as Booking | undefined;
   return row || null;
 }
 
-export function createBookingRecord(data: {
+export async function createBookingRecord(data: {
   business_id: string;
   service_key: string;
   service_label: string;
@@ -453,11 +588,15 @@ export function createBookingRecord(data: {
   name: string;
   email: string;
   price: number;
-}): Booking {
+}): Promise<Booking> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseCreateBookingRecord(data);
+  }
+
   const db = getDb();
   const now = new Date().toISOString();
 
-  // Generate 6-char random alphanumeric uppercase code
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
@@ -485,27 +624,40 @@ export function createBookingRecord(data: {
       now
     );
 
-  const rec = db
-    .prepare("SELECT * FROM bookings WHERE id = ?")
-    .get(info.lastInsertRowid) as Booking;
+  const rec = db.prepare("SELECT * FROM bookings WHERE id = ?").get(info.lastInsertRowid) as Booking;
 
-  syncToSupabaseAsync("bookings", { ...rec }, "POST");
+  if (mode === "dual") {
+    supabaseCreateBookingRecord(data).catch((err) =>
+      console.warn("[Dual Sync] Supabase create booking error:", err)
+    );
+  }
+
   return rec;
 }
 
-export function markBookingConfirmationSent(code: string): void {
+export async function markBookingConfirmationSent(code: string): Promise<void> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseMarkBookingConfirmationSent(code);
+  }
+
   const db = getDb();
-  db.prepare(
-    "UPDATE bookings SET confirmation_sent = 1 WHERE confirmation_code = ?"
-  ).run(code);
+  db.prepare("UPDATE bookings SET confirmation_sent = 1 WHERE confirmation_code = ?").run(code);
+
+  if (mode === "dual") {
+    supabaseMarkBookingConfirmationSent(code).catch(() => {});
+  }
 }
 
-export function listConversations(businessId: string): Conversation[] {
+export async function listConversations(businessId: string): Promise<Conversation[]> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseListConversations(businessId);
+  }
+
   const db = getDb();
   const rows = db
-    .prepare(
-      "SELECT * FROM conversations WHERE business_id = ? ORDER BY started_at DESC LIMIT 50"
-    )
+    .prepare("SELECT * FROM conversations WHERE business_id = ? ORDER BY started_at DESC LIMIT 50")
     .all(businessId) as any[];
 
   return rows.map((r) => {
@@ -525,7 +677,12 @@ export function listConversations(businessId: string): Conversation[] {
   });
 }
 
-export function recordConversation(conv: Conversation): void {
+export async function recordConversation(conv: Conversation): Promise<void> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseRecordConversation(conv);
+  }
+
   const db = getDb();
   db.prepare(`
     INSERT OR REPLACE INTO conversations (
@@ -546,19 +703,29 @@ export function recordConversation(conv: Conversation): void {
     JSON.stringify(conv.tool_calls || [])
   );
 
-  syncToSupabaseAsync("conversations", { ...conv }, "POST");
+  if (mode === "dual") {
+    supabaseRecordConversation(conv).catch(() => {});
+  }
 }
 
-export function getActiveVerifiedEmail(businessId: string): string | null {
+export async function getActiveVerifiedEmail(businessId: string): Promise<string | null> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseGetActiveVerifiedEmail(businessId);
+  }
+
   const db = getDb();
   const key = `active_email:${businessId}`;
-  const row = db
-    .prepare("SELECT value FROM session_store WHERE key = ?")
-    .get(key) as { value: string } | undefined;
+  const row = db.prepare("SELECT value FROM session_store WHERE key = ?").get(key) as { value: string } | undefined;
   return row ? row.value : null;
 }
 
-export function setActiveVerifiedEmail(businessId: string, email: string): void {
+export async function setActiveVerifiedEmail(businessId: string, email: string): Promise<void> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseSetActiveVerifiedEmail(businessId, email);
+  }
+
   const db = getDb();
   const key = `active_email:${businessId}`;
   const now = new Date().toISOString();
@@ -568,7 +735,12 @@ export function setActiveVerifiedEmail(businessId: string, email: string): void 
   `).run(key, email, now);
 }
 
-export function clearActiveVerifiedEmail(businessId: string): void {
+export async function clearActiveVerifiedEmail(businessId: string): Promise<void> {
+  const mode = getDbMode();
+  if (mode === "supabase") {
+    return await supabaseClearActiveVerifiedEmail(businessId);
+  }
+
   const db = getDb();
   db.prepare("DELETE FROM session_store WHERE key = ?").run(`active_email:${businessId}`);
   db.prepare("DELETE FROM session_store WHERE key = ?").run("active_email:default");

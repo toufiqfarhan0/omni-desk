@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const bookings = listBookings(id);
+    const bookings = await listBookings(id);
     return NextResponse.json({ bookings });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

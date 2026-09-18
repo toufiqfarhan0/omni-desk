@@ -8,9 +8,11 @@ export interface AgentProvisionResult {
 }
 
 export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
-  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  const apiKey =
+    process.env.NEXT_ASSEMBLYAI_API_KEY ||
+    process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
-    throw new Error("ASSEMBLYAI_API_KEY is not configured");
+    throw new Error("NEXT_ASSEMBLYAI_API_KEY or ASSEMBLYAI_API_KEY is not configured");
   }
 
   const res = await fetch(
@@ -199,9 +201,14 @@ export async function deployOrUpdateAgent(
   biz: Business,
   publicBaseUrl: string
 ): Promise<AgentProvisionResult> {
-  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  const apiKey =
+    process.env.NEXT_ASSEMBLYAI_API_KEY ||
+    process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
-    return { ok: false, error: "ASSEMBLYAI_API_KEY is not set in environment" };
+    return {
+      ok: false,
+      error: "NEXT_ASSEMBLYAI_API_KEY or ASSEMBLYAI_API_KEY is not set in environment",
+    };
   }
 
   const payload = buildAgentDefinition(biz, publicBaseUrl);

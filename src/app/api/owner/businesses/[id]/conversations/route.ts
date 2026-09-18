@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const conversations = listConversations(id);
+    const conversations = await listConversations(id);
     return NextResponse.json({ conversations });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { AssemblyAIVoiceClient } from "@/lib/audio";
+import { UnderTheHoodPlayground } from "@/components/demo/under-the-hood";
 
 interface TemplateInfo {
   id: string;
@@ -454,8 +455,8 @@ export default function DemoPage() {
           </button>
         </section>
 
-        {/* 2 DEMO TEMPLATE SELECTOR */}
-        <section style={{ marginBottom: "28px" }}>
+        {/* 2 DEMO SHOWCASE CARDS (LIVE CLIENT SITES) */}
+        <section style={{ marginBottom: "36px" }}>
           <div
             style={{
               fontSize: "11.5px",
@@ -463,72 +464,188 @@ export default function DemoPage() {
               textTransform: "uppercase",
               letterSpacing: "0.06em",
               color: "#71717a",
-              marginBottom: "10px",
+              marginBottom: "14px",
             }}
           >
-            Select Agent Template (2 Demos)
+            Live Client Website Showcases (Real-World Embedded Widget)
           </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => setTemplateKey("salon")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "12px 20px",
-                background: templateKey === "salon" ? "#000000" : "#ffffff",
-                color: templateKey === "salon" ? "#ffffff" : "#27272a",
-                border: templateKey === "salon" ? "1px solid #000000" : "1px solid #e4e4e7",
-                borderRadius: "14px",
-                fontFamily: "var(--font)",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <span style={{ width: "18px", height: "18px", display: "grid", placeItems: "center" }}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="6" cy="6" r="3" />
-                  <circle cx="6" cy="18" r="3" />
-                  <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                  <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                  <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                </svg>
-              </span>
-              Hair Salon &amp; Studio
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setTemplateKey("realestate")}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: "18px",
+            }}
+          >
+            {/* CARD 1: HAIR SALON */}
+            <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "12px 20px",
-                background: templateKey === "realestate" ? "#000000" : "#ffffff",
-                color: templateKey === "realestate" ? "#ffffff" : "#27272a",
-                border: templateKey === "realestate" ? "1px solid #000000" : "1px solid #e4e4e7",
-                borderRadius: "14px",
-                fontFamily: "var(--font)",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                transition: "all 0.15s ease",
+                background: templateKey === "salon" ? "#fafafa" : "#ffffff",
+                border: templateKey === "salon" ? "2px solid #10b981" : "1px solid #e4e4e7",
+                borderRadius: "18px",
+                padding: "24px",
+                boxShadow: templateKey === "salon" ? "0 10px 25px -5px rgba(16, 185, 129, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
               }}
             >
-              <span style={{ width: "18px", height: "18px", display: "grid", placeItems: "center" }}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              </span>
-              Real Estate &amp; Property
-            </button>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <span
+                    style={{
+                      background: "rgba(16, 185, 129, 0.1)",
+                      color: "#059669",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: "9999px",
+                      border: "1px solid rgba(16, 185, 129, 0.2)",
+                    }}
+                  >
+                    HAIR SALON &amp; MEDSPA
+                  </span>
+                  <span style={{ fontSize: "12px", color: "#71717a", fontWeight: 500 }}>
+                    45m–120m Appointments
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: "19px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
+                  Luxe &amp; Mane Hair Studio
+                </h3>
+                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 18px" }}>
+                  High-end salon with live calendar booking for precision haircuts, coloring, and balayage. Experience how visitors schedule treatments directly from the homepage.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", paddingTop: "8px" }}>
+                <Link
+                  href="/demo/salon"
+                  style={{
+                    flex: 1,
+                    minWidth: "150px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    background: "#10b981",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <span>Open Salon Website</span>
+                  <span>&rarr;</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setTemplateKey("salon")}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #e4e4e7",
+                    background: templateKey === "salon" ? "#09090b" : "#ffffff",
+                    color: templateKey === "salon" ? "#ffffff" : "#09090b",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {templateKey === "salon" ? "Active in Sandbox" : "Load in Sandbox"}
+                </button>
+              </div>
+            </div>
+
+            {/* CARD 2: REAL ESTATE */}
+            <div
+              style={{
+                background: templateKey === "realestate" ? "#fafafa" : "#ffffff",
+                border: templateKey === "realestate" ? "2px solid #3b82f6" : "1px solid #e4e4e7",
+                borderRadius: "18px",
+                padding: "24px",
+                boxShadow: templateKey === "realestate" ? "0 10px 25px -5px rgba(59, 130, 246, 0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+                transition: "all 0.2s ease",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <span
+                    style={{
+                      background: "rgba(59, 130, 246, 0.1)",
+                      color: "#2563eb",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: "9999px",
+                      border: "1px solid rgba(59, 130, 246, 0.2)",
+                    }}
+                  >
+                    LUXURY REAL ESTATE
+                  </span>
+                  <span style={{ fontSize: "12px", color: "#71717a", fontWeight: 500 }}>
+                    60m Private Tours
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: "19px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
+                  Apex Luxury Property Advisory
+                </h3>
+                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 18px" }}>
+                  Boutique brokerage showcasing multimillion-dollar estates. Demonstrates autonomous voice tour scheduling, buyer consultations, and instant calendar coordination.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", paddingTop: "8px" }}>
+                <Link
+                  href="/demo/real-estate"
+                  style={{
+                    flex: 1,
+                    minWidth: "150px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    background: "#3b82f6",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
+                  }}
+                >
+                  <span>Open Real Estate Website</span>
+                  <span>&rarr;</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setTemplateKey("realestate")}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid #e4e4e7",
+                    background: templateKey === "realestate" ? "#09090b" : "#ffffff",
+                    color: templateKey === "realestate" ? "#ffffff" : "#09090b",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {templateKey === "realestate" ? "Active in Sandbox" : "Load in Sandbox"}
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -848,6 +965,11 @@ export default function DemoPage() {
             </div>
           </div>
         </section>
+
+        {/* ========================================================================= */}
+        {/* HOW EACH INTEGRATION MODE WORKS UNDER THE HOOD (DEVELOPER PLAYGROUND)     */}
+        {/* ========================================================================= */}
+        <UnderTheHoodPlayground />
       </div>
 
       {/* ----------------- AUTH MODAL ----------------- */}

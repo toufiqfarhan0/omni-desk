@@ -5,14 +5,14 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email") || "demo@omnidesk.ai";
-    const owner = getOrCreateOwner(email);
-    let businesses = listBusinesses(owner.id);
+    const owner = await getOrCreateOwner(email);
+    let businesses = await listBusinesses(owner.id);
 
     if (businesses.length === 0 && owner.id !== "owner_demo") {
       const bizName = owner.name
         ? `${owner.name}'s Salon & Studio`
         : "My Business Studio";
-      const starter = createBusiness({
+      const starter = await createBusiness({
         id: `biz_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         owner_id: owner.id,
         name: bizName,

@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const biz = getBusiness(id);
+    const biz = await getBusiness(id);
     if (!biz) {
       return NextResponse.json(
         { error: "Business not found" },
@@ -27,7 +27,7 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const updated = updateBusiness(id, body);
+    const updated = await updateBusiness(id, body);
     if (!updated) {
       return NextResponse.json(
         { error: "Business not found" },

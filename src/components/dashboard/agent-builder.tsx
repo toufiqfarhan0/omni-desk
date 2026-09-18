@@ -231,7 +231,7 @@ export function AgentBuilder({
       if (!res.ok) throw new Error("Failed to save changes");
       const data = await res.json();
       onUpdateBusiness(data.business);
-      toast.success("Settings saved locally");
+      toast.success("Settings saved successfully");
     } catch (err: any) {
       toast.error(err.message || "Failed to save");
     } finally {

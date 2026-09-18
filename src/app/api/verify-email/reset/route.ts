@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       if (body.business_id) businessId = body.business_id;
     } catch {}
 
-    clearActiveVerifiedEmail(businessId);
+    await clearActiveVerifiedEmail(businessId);
     return NextResponse.json({ ok: true, message: "Email session reset" });
   } catch (err: any) {
     return NextResponse.json(

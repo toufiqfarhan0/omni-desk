@@ -3,7 +3,7 @@ import { listBusinesses, createBusiness } from "@/lib/db";
 
 export async function GET() {
   try {
-    const businesses = listBusinesses("owner_demo");
+    const businesses = await listBusinesses("owner_demo");
     return NextResponse.json({ businesses });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const id =
       body.id || `biz_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const biz = createBusiness({
+    const biz = await createBusiness({
       ...body,
       id,
       owner_id: "owner_demo",

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get("businessId") || "biz_demo_dental";
-    const bookings = listBookings(businessId);
+    const bookings = await listBookings(businessId);
     return NextResponse.json({ bookings });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const booking = getBookingByCode(confirmation_code);
+    const booking = await getBookingByCode(confirmation_code);
     if (!booking) {
       return NextResponse.json(
         { error: "Booking not found" },
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const biz = getBusiness(business_id || booking.business_id);
+    const biz = await getBusiness(business_id || booking.business_id);
     const result = await sendResendConfirmation(booking, biz);
 
     if (result.sent) {

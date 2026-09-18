@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get("businessId") || "biz_demo_dental";
-    const conversations = listConversations(businessId);
+    const conversations = await listConversations(businessId);
     return NextResponse.json({ conversations });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       tool_calls: body.tool_calls || [],
     };
 
-    recordConversation(conv);
+    await recordConversation(conv);
     return NextResponse.json({ ok: true, conversation: conv }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

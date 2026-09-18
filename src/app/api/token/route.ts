@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get("businessId") || "biz_demo_dental";
 
-    const biz = getBusiness(businessId);
+    const biz = await getBusiness(businessId);
     const agentId =
       biz?.assemblyai_agent_id ||
       process.env.AGENT_ID ||

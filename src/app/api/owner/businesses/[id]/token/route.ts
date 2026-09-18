@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const biz = getBusiness(id);
+    const biz = await getBusiness(id);
     if (!biz) {
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }

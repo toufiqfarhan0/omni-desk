@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       tool_calls: Array.isArray(body.tool_calls) ? body.tool_calls : [],
     };
 
-    recordConversation(conversation);
+    await recordConversation(conversation);
     return NextResponse.json({ ok: true, conversation });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

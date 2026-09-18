@@ -6,14 +6,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const email = body.email || "demo@omnidesk.ai";
     const name = body.name || "";
-    const owner = getOrCreateOwner(email, name);
-    let businesses = listBusinesses(owner.id);
+    const owner = await getOrCreateOwner(email, name);
+    let businesses = await listBusinesses(owner.id);
 
     if (businesses.length === 0 && owner.id !== "owner_demo") {
       const bizName = owner.name
         ? `${owner.name}'s Salon & Studio`
         : "My Business Studio";
-      const starter = createBusiness({
+      const starter = await createBusiness({
         id: `biz_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         owner_id: owner.id,
         name: bizName,

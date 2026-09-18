@@ -193,8 +193,8 @@ export async function validateAndVerifyEmail(
 
   const bizKey = bizId || "default";
   try {
-    setActiveVerifiedEmail(bizKey, s);
-    setActiveVerifiedEmail("default", s);
+    await setActiveVerifiedEmail(bizKey, s);
+    await setActiveVerifiedEmail("default", s);
   } catch {}
 
   return {
@@ -228,7 +228,7 @@ export async function normalizeEmail(
     return { email: res.email, problem: "" };
   }
 
-  const cached = getActiveVerifiedEmail(bizId || "default");
+  const cached = await getActiveVerifiedEmail(bizId || "default");
   if (cached) {
     return { email: cached, problem: "" };
   }

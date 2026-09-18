@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const biz = getBusiness(id);
+    const biz = await getBusiness(id);
     if (!biz) {
       return NextResponse.json(
         { error: "Business not found" },
@@ -23,7 +23,7 @@ export async function POST(
     const result = await deployOrUpdateAgent(biz, publicBaseUrl);
 
     if (result.ok && result.agent_id) {
-      updateBusiness(id, { assemblyai_agent_id: result.agent_id });
+      await updateBusiness(id, { assemblyai_agent_id: result.agent_id });
       try {
         const fs = await import("fs");
         const path = await import("path");
