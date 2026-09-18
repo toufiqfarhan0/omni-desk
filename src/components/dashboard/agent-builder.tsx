@@ -390,7 +390,7 @@ export function AgentBuilder({
                 </span>
               ) : (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--text-muted)" }}>
-                  {formData.id === "biz_demo_dental" ? "Environment Default Active" : "Undeployed"}
+                  Undeployed (Click Save & Deploy)
                 </span>
               )}
             </div>
@@ -399,7 +399,7 @@ export function AgentBuilder({
                 style={{
                   ...cs.input,
                   backgroundColor: "#f9fafb",
-                  color: formData.assemblyai_agent_id || formData.id === "biz_demo_dental" ? "#18181b" : "var(--text-muted)",
+                  color: formData.assemblyai_agent_id ? "#18181b" : "var(--text-muted)",
                   fontFamily: "var(--mono)",
                   fontSize: "12.5px",
                   cursor: "default",
@@ -410,20 +410,14 @@ export function AgentBuilder({
                 type="text"
                 readOnly
                 placeholder="Auto-generated on deployment — Click 'Save & Deploy' above"
-                value={
-                  formData.assemblyai_agent_id ||
-                  (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "")
-                }
+                value={formData.assemblyai_agent_id || ""}
               />
-              {(formData.assemblyai_agent_id || formData.id === "biz_demo_dental") && (
+              {Boolean(formData.assemblyai_agent_id) && (
                 <button
                   type="button"
                   onClick={() => {
-                    const idToCopy =
-                      formData.assemblyai_agent_id ||
-                      (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "");
-                    if (idToCopy) {
-                      navigator.clipboard.writeText(idToCopy);
+                    if (formData.assemblyai_agent_id) {
+                      navigator.clipboard.writeText(formData.assemblyai_agent_id);
                       toast.success("Copied Agent ID to clipboard");
                     }
                   }}
@@ -445,7 +439,7 @@ export function AgentBuilder({
               )}
             </div>
             <p style={{ ...cs.hint, marginTop: "6px" }}>
-              🔒 <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying your environment agent.
+              🔒 <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying any environment variables.
             </p>
           </div>
 
@@ -579,21 +573,15 @@ export function AgentBuilder({
                   Active AssemblyAI Agent ID
                 </div>
                 <div style={{ fontSize: "11.5px", fontFamily: "var(--mono)", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
-                  {formData.assemblyai_agent_id ||
-                    (formData.id === "biz_demo_dental"
-                      ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
-                      : "Not Deployed Yet (Click Save & Deploy)")}
+                  {formData.assemblyai_agent_id || "Undeployed (Click Save & Deploy above)"}
                 </div>
               </div>
-              {(formData.assemblyai_agent_id || formData.id === "biz_demo_dental") && (
+              {Boolean(formData.assemblyai_agent_id) && (
                 <button
                   type="button"
                   onClick={() => {
-                    const idToCopy =
-                      formData.assemblyai_agent_id ||
-                      (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "");
-                    if (idToCopy) {
-                      navigator.clipboard.writeText(idToCopy);
+                    if (formData.assemblyai_agent_id) {
+                      navigator.clipboard.writeText(formData.assemblyai_agent_id);
                       toast.success("Copied Agent ID");
                     }
                   }}

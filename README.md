@@ -63,15 +63,17 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 |   /api/events                      --> Server-Sent Events (SSE) real-time dashboard notifications|
 +===========================================|======================================================+
                                             |
-                      (4. Reads / Writes)   |
-                                            v
+                      (4. Reads / Writes:   |
+                          businesses,       |
+                          agent_id,         |
+                          bookings)         v
 +==================================================================================================+
 |                        ADAPTIVE DATABASE ENGINE (Supabase vs SQLite)                             |
 |                                                                                                  |
 |   [ PRODUCTION / VERCEL DEPLOYMENT ]                [ LOCAL TESTING / JUDGES EVALUATION ]        |
 |    - Automatic Cloud Mode                            - Automatic Zero-Setup SQLite Mode          |
-|    - All changes populate Supabase PostgreSQL        - No external accounts or setup needed      |
-|    - Persistent multi-region cloud storage           - Uses built-in 'data/omnidesk.db'          |
+|    - Queries & commits to Supabase PostgreSQL        - No external accounts or setup needed      |
+|    - Stores assemblyai_agent_id persistently in cloud- Uses built-in 'data/omnidesk.db'          |
 |    - SQLite bypassed completely on Vercel            - Pre-seeded with Hair Salon demo business  |
 |                      |                                                     |                     |
 |                      v                                                     v                     |
@@ -84,6 +86,93 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 
 ---
 
+## How OmniDesk Works (Step-by-Step Flow)
+
+```text
+[1. User Initiates Call] ──> [2. Ephemeral Token Minted] ──> [3. 16kHz WebSocket Stream]
+                                                                        │
+[6. Real-Time Dashboard] <── [5. Calendar Sync (.ics)] <── [4. Autonomous Webhook Tools]
+```
+
+### Step 1: Session Initiation & Secure Token Minting
+1. The user clicks **"Start Voice Call"** on `/demo/salon`, via the embeddable `<VoiceWidget />`, or inside the Dashboard.
+2. The browser requests a short-lived token from `/api/token?businessId=...`.
+3. The server retrieves the business's `assemblyai_agent_id` from the database (**Supabase PostgreSQL** in production or **SQLite** locally).
+4. The server calls AssemblyAI's token API (`GET https://agents.assemblyai.com/v1/token`) with the private `NEXT_ASSEMBLYAI_API_KEY` to mint a temporary 10-minute session token.
+5. The secret API key is never exposed to the client browser.
+
+### Step 2: Bidirectional Audio Streaming & Real-Time Voice Processing
+1. The client browser opens a direct WebSocket to AssemblyAI (`wss://agents.assemblyai.com/v1/stream?token=...`).
+2. The browser's Web Audio API captures microphone input, resamples it to 16kHz 16-bit linear PCM, and streams audio packets.
+3. AssemblyAI's **Universal-1 Speech-to-Text (STT)** transcribes spoken words in real time.
+4. The **LLM Reasoning Engine** evaluates the conversation using the business's custom prompt, tone, and operational rules.
+5. Synthesized voice audio streams back to the browser via Cartesia / ElevenLabs TTS for natural, conversational playback.
+6. **Instant Barge-In / Interruption**: If the caller speaks while the agent is talking, the engine silences itself and clears audio buffers in under 100ms.
+
+### Step 3: Server-Side Autonomous Tool Execution
+When the caller asks for information or requests an appointment, AssemblyAI triggers HTTP POST webhooks to OmniDesk (`https://omni-desk-rho.vercel.app/tools/[businessId]/[tool]`):
+- **`get_today`**: Anchors relative terms ("tomorrow", "this Friday") to the practice's real calendar.
+- **`get_services_and_pricing`**: Returns exact service names, durations, and pricing.
+- **`verify_customer_email`**: Normalizes spoken email formats (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`) and checks DNS/MX records.
+- **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present available time slots.
+- **`book_appointment`**: Validates the selected slot, commits the reservation to the database, and generates a unique 6-character confirmation code.
+- **`send_confirmation`**: Dispatches the confirmation email with the calendar invite file.
+
+### Step 4: Multi-Tenant Database Storage
+- All reservation commits, customer details, and conversation logs are immediately saved to the database.
+- **In Production**: Committed directly to **Supabase Cloud PostgreSQL** across serverless instances.
+- **In Local Dev**: Committed to **SQLite** (`data/omnidesk.db`).
+
+### Step 5: Transactional Email & RFC 5545 Calendar Dispatch (.ics)
+- The system generates an RFC 5545 compliant `.ics` iCalendar file containing start time, end time, timezone, and a 1-hour alarm reminder.
+- Dispatches a transactional HTML email via Google Gmail SMTP to the verified customer email address.
+- The customer clicks the `.ics` file to instantly add the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook**.
+
+### Step 6: Real-Time Practice Dashboard & Monitoring
+- The Owner Dashboard (`/dashboard`) receives live updates over Server-Sent Events (SSE) via `/api/events`.
+- Practice managers see instant KPI updates, review live transcripts in Call History, search bookings, or manually resend calendar invites.
+
+---
+
+## Agent ID Architecture: Local (SQLite) vs. Production (Supabase)
+
+To ensure multi-tenant security, privacy, and zero risk of accidental overwrites, **OmniDesk treats the Database as the single source of truth for Agent IDs**:
+
+```text
++-------------------------------------------------------------------------------+
+|                       DATABASE AS SOURCE OF TRUTH                             |
+|                                                                               |
+|   LOCAL DEVELOPMENT (SQLite)               PRODUCTION / VERCEL (Supabase)     |
+|   Table: businesses                        Table: businesses                  |
+|   Column: assemblyai_agent_id              Column: assemblyai_agent_id        |
+|                                                                               |
+|   - Saved in 'data/omnidesk.db'            - Saved in Supabase PostgreSQL     |
+|   - Read directly by /api/token            - Read directly by /api/token      |
+|   - Updated on 'Save & Deploy'             - Updated on 'Save & Deploy'       |
++-------------------------------------------------------------------------------+
+```
+
+### 1. Why `AGENT_ID=` is Kept Blank in `.env`
+- **Security & Privacy**: Hardcoding an active AssemblyAI agent ID in `.env` or in a public repository exposes it to unauthorized usage and quota exhaustion.
+- **Independent Provisioning**: OmniDesk does not require a hardcoded `AGENT_ID` in `.env`. Each business stores its own dedicated `assemblyai_agent_id` inside the database.
+
+### 2. How the Agent ID is Handled in Local SQLite
+- The local database (`data/omnidesk.db`) stores the `assemblyai_agent_id` column for each business.
+- When running locally, `/api/token` looks up the business in SQLite. If a developer provides an optional `AGENT_ID` in their private `.env`, it can serve as a local fallback, but the database value always takes precedence.
+- When you click **"Save & Deploy"** in the Dashboard, OmniDesk calls AssemblyAI's API, receives a new agent ID, and writes it directly to SQLite.
+
+### 3. How the Agent ID is Handled in Production (Supabase)
+- On Vercel, OmniDesk connects directly to **Supabase Cloud PostgreSQL**.
+- The `businesses` table in Supabase persistently holds `assemblyai_agent_id` for every tenant.
+- When an owner clicks **"Save & Deploy"** on the deployed URL, OmniDesk provisions the agent on AssemblyAI and writes the returned `agent_id` into Supabase.
+- All serverless API routes (`/api/token`, `/api/owner/businesses`) query Supabase directly, providing multi-region cloud persistence without depending on local environment files.
+
+### 4. Strict Overwrite Protection
+- The **AssemblyAI Voice Agent ID** field in the dashboard is strictly **`readOnly`** with a one-click copy button, preventing manual tampering.
+- When deploying any new business, OmniDesk issues a `POST` request to AssemblyAI (`https://agents.assemblyai.com/v1/agents`) to create a **brand-new, independent agent**. Existing agents are never overwritten.
+
+---
+
 ## Key Capabilities
 
 ### 1. AssemblyAI Voice Agent Integration
@@ -93,8 +182,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 - **Live Tool Event Visualizer**: Transcripts, tool execution arguments, and results stream in real time.
 
 ### 2. Autonomous Webhook Tools
-The voice agent executes deterministic server tools during natural conversation:
-- **`get_today`**: Anchors relative date references ("tomorrow", "this Friday") to the real calendar and returns upcoming open days.
+- **`get_today`**: Anchors relative date references to the real calendar and returns upcoming open days.
 - **`get_services_and_pricing`**: Returns exact service catalog keys, labels, pricing, and duration metadata.
 - **`verify_customer_email`**: Converts spoken email representations (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`), autocorrects common domain typos, and checks DNS/MX records.
 - **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present open appointment slots.
@@ -102,8 +190,8 @@ The voice agent executes deterministic server tools during natural conversation:
 - **`send_confirmation`**: Dispatches a transactional email (via Free Gmail SMTP) with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
 
 ### 3. Practice Management Dashboard (`/dashboard`)
-- **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, and one-click **"Save & Deploy"** to sync tools with AssemblyAI. Includes a **read-only AssemblyAI Agent ID display** with one-click copy, automated agent provisioning, and environment agent protection.
-- **Multi-Tenant Agent Isolation**: Each business maintains its own distinct `assemblyai_agent_id` in the database. Deploying a new business automatically provisions a brand-new agent ID via `POST`, strictly protecting the default salon agent (`process.env.AGENT_ID`) from being overwritten.
+- **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, read-only Agent ID display with copy button, and one-click **"Save & Deploy"**.
+- **Multi-Tenant Agent Isolation**: Each business maintains its own distinct `assemblyai_agent_id` in the database.
 - **Live Voice Tester**: Interactive in-browser tester with frequency visualizer, real-time transcript stream, and an **agent deployment guard** (verifies agent is deployed before starting calls).
 - **Bookings CRM**: Search, filter by status, and one-click manual Resend `.ics` confirmation trigger.
 - **Call History**: Recorded conversation logs with duration, token counts, and full transcript dialogs.
@@ -172,10 +260,10 @@ Configure the variables:
 # [REQUIRED] AssemblyAI API Key (from https://www.assemblyai.com/dashboard)
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# [REQUIRED FOR DEMO OUT-OF-THE-BOX]
-# Pre-configured AssemblyAI Voice Agent ID (e.g. agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794)
-# Strictly protected & immutable: new businesses auto-provision their own new IDs without overwriting this.
-AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
+# [OPTIONAL] Pre-configured AssemblyAI Voice Agent ID
+# Leave blank by default! OmniDesk fetches and stores the agent ID directly
+# in your database (SQLite locally or Supabase in production).
+AGENT_ID=
 
 # [OPTIONAL] Public HTTPS Base URL for AssemblyAI Webhook Tools
 # In production on Vercel: NOT NEEDED. Tools auto-route to https://omni-desk-rho.vercel.app!
@@ -203,11 +291,7 @@ pnpm dev
 
 ---
 
-## Understanding Webhook Tools & Agent Provisioning
-
-### Multi-Agent Isolation & Environment Protection
-- **Protected Environment Agent**: The default `AGENT_ID` in `.env` is strictly immutable.
-- **No Manual Typing or Accidental Overwrite**: The Agent ID input in the dashboard is strictly **read-only** with a one-click copy button. When clicking **"Save & Deploy"** on any new business, OmniDesk automatically calls AssemblyAI's `POST /v1/agents` API to provision a fresh, independent Agent ID and saves it directly to that business's record in the database. The Hair Salon demo agent is never overwritten.
+## Understanding Webhook Tools & `PUBLIC_API_BASE_URL`
 
 ### Why Webhooks Need a Public HTTPS URL
 During a call, the caller's audio streams to AssemblyAI's cloud. When the AI decides to call a tool (like `check_availability` or `book_appointment`), AssemblyAI sends an HTTP POST request to your server's tool URL.
@@ -254,7 +338,7 @@ OmniDesk includes automated calendar synchronization powered by **Free Google Gm
 
 | Environment | Engine | Configuration | Behavior |
 | :--- | :--- | :--- | :--- |
-| **Production (Vercel)** | **Supabase PostgreSQL** | `SUPABASE_URL` + `SUPABASE_ANON_KEY` | Serverless-safe, multi-region cloud persistence. SQLite is completely bypassed. |
+| **Production (Vercel)** | **Supabase PostgreSQL** | `SUPABASE_URL` + `SUPABASE_ANON_KEY` | Serverless-safe, multi-region cloud persistence. Stores `assemblyai_agent_id` in cloud. SQLite is completely bypassed. |
 | **Local Testing** | **Local SQLite** | None (leave Supabase keys empty) | Instant zero-setup evaluation using built-in `data/omnidesk.db` pre-seeded with the Hair Salon demo. |
 
 ---
