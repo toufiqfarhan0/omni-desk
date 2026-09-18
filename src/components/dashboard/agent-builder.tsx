@@ -519,7 +519,7 @@ export function AgentBuilder({
           {/* Action buttons */}
           <div style={{ display: "flex", gap: "12px", marginTop: "auto", paddingTop: "20px" }}>
             <button type="button" onClick={handleSaveOnly} disabled={isSaving || isDeploying} style={{ ...cs.btnSecondary, flex: 1, justifyContent: "center", opacity: isSaving ? 0.6 : 1 }}>
-              {isSaving ? "Saving Settings..." : "Save Settings"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
             <button type="button" onClick={handleDeployOnly} disabled={isSaving || isDeploying} style={{ ...cs.btnPrimary, flex: 1, justifyContent: "center", opacity: isDeploying ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: "8px" }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
