@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { Booking, Business, getActiveVerifiedEmail, markBookingConfirmationSent } from "./db";
 
 export function formatTimeSpoken(timeStr: string): string {
@@ -83,12 +84,14 @@ export async function sendResendConfirmation(
   booking: Booking,
   business?: Business | null
 ): Promise<{ sent: boolean; reason?: string; id?: string }> {
+  const smtpUser = process.env.SMTP_USER || "omni.desk.com@gmail.com";
+  const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    return { sent: false, reason: "no_api_key" };
+
+  if (!smtpPass && !resendApiKey) {
+    return { sent: false, reason: "no_email_credentials" };
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
   let toEmail = booking.customer_email;
   if (!toEmail && business?.id) {
     toEmail = (await getActiveVerifiedEmail(business.id)) || "";
@@ -163,36 +166,81 @@ export async function sendResendConfirmation(
 </body>
 </html>`;
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: `${bizName} <${fromEmail}>`,
-        to: [toEmail],
+  // 1. FREE GMAIL SMTP ENGINE (Zero domain required, delivers to ANY recipient globally)
+  if (smtpPass) {
+    try {
+      const cleanPass = smtpPass.replace(/\s+/g, "");
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: smtpUser,
+          pass: cleanPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"${bizName}" <${smtpUser}>`,
+        to: toEmail,
         subject: `Appointment Confirmed: ${serviceLabel} - ${bizName}`,
         html: htmlContent,
         attachments: [
           {
             filename: "appointment.ics",
-            content: icsBase64,
+            content: icsString,
+            contentType: "text/calendar; charset=utf-8; method=REQUEST",
           },
         ],
-      }),
-    });
+      });
 
-    if (res.ok) {
-      const data = await res.json();
       await markBookingConfirmationSent(code);
-      return { sent: true, id: data.id };
+      return { sent: true, id: info.messageId };
+    } catch (smtpErr: any) {
+      console.error("Gmail SMTP delivery error:", smtpErr);
+      if (!resendApiKey) {
+        return { sent: false, reason: smtpErr.message };
+      }
+      // If Resend API key is also available, proceed to fallback below
     }
-
-    const errText = await res.text();
-    return { sent: false, reason: errText };
-  } catch (err: any) {
-    return { sent: false, reason: err.message };
   }
+
+  // 2. RESEND API ENGINE (Fallback or primary when RESEND_API_KEY is configured)
+  if (resendApiKey) {
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: `${bizName} <${fromEmail}>`,
+          to: [toEmail],
+          subject: `Appointment Confirmed: ${serviceLabel} - ${bizName}`,
+          html: htmlContent,
+          attachments: [
+            {
+              filename: "appointment.ics",
+              content: icsBase64,
+            },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        await markBookingConfirmationSent(code);
+        return { sent: true, id: data.id };
+      }
+
+      const errText = await res.text();
+      return { sent: false, reason: errText };
+    } catch (err: any) {
+      return { sent: false, reason: err.message };
+    }
+  }
+
+  return { sent: false, reason: "delivery_failed" };
 }
+
+export const sendConfirmationEmail = sendResendConfirmation;
