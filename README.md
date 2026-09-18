@@ -1,10 +1,17 @@
 # OmniDesk — Autonomous Voice Receptionist & Scheduling Platform
 
-OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It combines real-time bidirectional Web Audio streaming with deterministic server-side webhook tools to execute live calendar availability checks, appointment booking, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-omni--desk--rho.vercel.app-blue?style=flat&logo=vercel)](https://omni-desk-rho.vercel.app)
+[![AssemblyAI](https://img.shields.io/badge/Powered%20by-AssemblyAI%20Voice%20Agents-blueviolet?style=flat)](https://www.assemblyai.com)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=flat&logo=next.js)](https://nextjs.org)
+[![React 19](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev)
 
-Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailwind CSS v4**, and **shadcn/ui** components, OmniDesk is an enterprise-grade multi-tenant voice platform designed for salons, wellness medspas, clinics, and professional service firms.
+OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time bidirectional 16kHz Web Audio streaming with deterministic server-side webhook tools to execute live calendar checks, appointment bookings, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
 
-> **Architecture Guarantee**: OmniDesk is a unified, standalone **Next.js full-stack platform**. All client interfaces, voice audio streaming, server API routes, database operations, and AssemblyAI voice integrations are developed and maintained **exclusively within `src/`**. No separate Python or external microservice backend is required.
+- **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
+- **Premier Showcase**: **OmniDesk Hair Salon & Studio (Luxe & Mane)** at [`/demo/salon`](https://omni-desk-rho.vercel.app/demo/salon)
+- **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
+
+> **Unified Next.js Full-Stack Architecture**: OmniDesk is self-contained within `src/`. All client interfaces, WebSocket voice streaming, serverless API route handlers, database persistence, and AssemblyAI tool integrations run without separate Python or microservice backends.
 
 ---
 
@@ -21,9 +28,9 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
 |          v                                                  v                                    |
 |  +--------------------------------------------------------------------------------------------+  |
 |  | NEXT.JS FRONTEND (React 19 / App Router)                                                   |  |
-|  |   - Landing Page (/) & Interactive Sandbox (/demo)                                         |  |
+|  |   - Landing Page (/) & Premier Hair Salon Showcase (/demo/salon)                           |  |
 |  |   - Floating Voice Widget (<VoiceWidget /> & /widget.js embed script)                      |  |
-|  |   - Live Dashboard (/dashboard) with Server-Sent Events (SSE) Live Feed                    |  |
+|  |   - Practice Owner Dashboard (/dashboard) with SSE Live Feed & Live Voice Tester           |  |
 |  +--------------------------------------------------------------------------------------------+  |
 +=============================================|====================================================+
                                               |
@@ -39,19 +46,19 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
 |   +-------------------+       +-----------------------+       +------------------------------+   |
 |                                           |                                                      |
 |                                           | (3. Function Webhook POST                            |
-|                                           |     https://yourdomain.com/api/tools/...)            |
+|                                           |     https://omni-desk-rho.vercel.app/tools/...)      |
 +===========================================|======================================================+
                                             v
 +==================================================================================================+
 |                            NEXT.JS BACKEND (API Route Handlers)                                  |
 |                                                                                                  |
 |   /api/token                       --> Mints temporary AssemblyAI WebSocket session tokens       |
-|   /api/tools/[id]/get_today        --> Returns calendar reference & upcoming open business days  |
-|   /api/tools/[id]/get_services     --> Dynamic pricing & duration service catalog                |
-|   /api/tools/[id]/verify_email     --> Normalizes voice emails, DNS/MX check, spam validation    |
-|   /api/tools/[id]/check_avail      --> Computes open time slots for operating schedule           |
-|   /api/tools/[id]/book_appointment --> Commits reservation, generates 6-char confirmation code   |
-|   /api/tools/[id]/send_confirm     --> Dispatches calendar invite with .ics (Gmail SMTP)         |
+|   /tools/[id]/get_today            --> Real calendar reference & upcoming open business days     |
+|   /tools/[id]/get_services         --> Dynamic pricing, duration & service catalog               |
+|   /tools/[id]/verify_email         --> Normalizes spoken emails, DNS/MX check & spam validation  |
+|   /tools/[id]/check_avail          --> Computes open time slots for operating schedule           |
+|   /tools/[id]/book_appointment     --> Commits reservation, generates 6-char confirmation code   |
+|   /tools/[id]/send_confirm         --> Dispatches calendar invite with .ics (Gmail SMTP)         |
 |   /api/owner/businesses/[id]/deploy--> Syncs agent instructions & webhook tools to AssemblyAI    |
 |   /api/events                      --> Server-Sent Events (SSE) real-time dashboard notifications|
 +===========================================|======================================================+
@@ -59,13 +66,13 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
                       (4. Reads / Writes)   |
                                             v
 +==================================================================================================+
-|                        ADAPTIVE DATABASE ENGINE (SQLite vs Supabase)                             |
+|                        ADAPTIVE DATABASE ENGINE (Supabase vs SQLite)                             |
 |                                                                                                  |
 |   [ PRODUCTION / VERCEL DEPLOYMENT ]                [ LOCAL TESTING / JUDGES EVALUATION ]        |
 |    - Automatic Cloud Mode                            - Automatic Zero-Setup SQLite Mode          |
-|    - All changes populate Supabase PostgreSQL        - No Supabase keys or database setup needed |
-|    - Persistent cloud storage & serverless-safe      - Uses built-in 'data/omnidesk.db'          |
-|    - SQLite bypassed completely                      - Pre-seeded with demo businesses & services|
+|    - All changes populate Supabase PostgreSQL        - No external accounts or setup needed      |
+|    - Persistent multi-region cloud storage           - Uses built-in 'data/omnidesk.db'          |
+|    - SQLite bypassed completely on Vercel            - Pre-seeded with Hair Salon demo business  |
 |                      |                                                     |                     |
 |                      v                                                     v                     |
 |   +------------------------------------+                +------------------------------------+   |
@@ -81,39 +88,24 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
 
 ### 1. AssemblyAI Voice Agent Integration
 - **Real-Time Bidirectional Streaming**: Ultra-low-latency 16kHz PCM audio streaming directly between the caller's browser and AssemblyAI via WebSockets.
-- **Dynamic Token Minting**: Authentication tokens are securely minted on the server (`GET https://agents.assemblyai.com/v1/token`) so API keys are never exposed to the client.
+- **Server Token Minting**: Tokens are securely minted server-side (`GET https://agents.assemblyai.com/v1/token`) so private API keys are never exposed to the client.
 - **Instant Interruption Handling**: The voice engine automatically silences agent speech and clears playback buffers the millisecond the caller starts speaking.
-- **Live Tool Event Visualizer**: Transcripts, tool arguments, and execution results appear in the UI in real time as the caller speaks.
+- **Live Tool Event Visualizer**: Transcripts, tool execution arguments, and results stream in real time.
 
 ### 2. Autonomous Webhook Tools
-The voice agent executes deterministic server tools during natural conversation without user intervention:
-- **`get_today`**: Anchors relative date references ("tomorrow", "next Tuesday", "this Friday") to the practice's real calendar and outputs upcoming open business days.
+The voice agent executes deterministic server tools during natural conversation:
+- **`get_today`**: Anchors relative date references ("tomorrow", "this Friday") to the real calendar and returns upcoming open days.
 - **`get_services_and_pricing`**: Returns exact service catalog keys, labels, pricing, and duration metadata.
-- **`verify_customer_email`**: Converts spoken email representations (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`), autocorrects common domain typos, verifies DNS/MX records, and checks deliverability.
-- **`check_availability`**: Evaluates operating hours, business days, and existing calendar reservations to present open appointment slots.
+- **`verify_customer_email`**: Converts spoken email representations (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`), autocorrects common domain typos, and checks DNS/MX records.
+- **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present open appointment slots.
 - **`book_appointment`**: Commits verified reservations, generates a unique 6-character confirmation code, and prevents double-booking.
 - **`send_confirmation`**: Dispatches a transactional email (via Free Gmail SMTP) with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
 
 ### 3. Practice Management Dashboard (`/dashboard`)
-- **Agent Builder**:
-  - Persona & system prompt editor with live configuration.
-  - ElevenLabs voice picker with speed and pitch controls.
-  - Dynamic Services & Pricing catalog (add, edit, and delete services on the fly).
-  - Business operating schedule and slot duration configuration.
-  - One-click **"Save Settings"** (saves to database) and **"Save & Deploy"** (registers webhook tools with AssemblyAI).
-- **Voice Agent Tester**:
-  - Live interactive audio tester with animated frequency visualizer.
-  - Real-time conversation transcript stream with caller/agent turn indicators.
-  - Tool call trace logs showing exact arguments and outputs during speech.
-  - Embeddable script generator with customizable themes (`dark`, `light`, `minimal`) and position picker.
-- **Bookings CRM**:
-  - Real-time KPI metrics: Total Appointments, Confirmed Bookings, Pipeline Revenue, Confirmation Rate.
-  - Search by customer name, email, confirmation code, or service.
-  - Status filters (`All`, `Confirmed`, `Pending`, `Cancelled`).
-  - One-click manual Resend `.ics` confirmation trigger.
-- **Call History**:
-  - Comprehensive call logs with duration, token counts, and tool invocation tallies.
-  - Full transcript viewer dialog for audit and review.
+- **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, and one-click **"Save & Deploy"** to sync tools with AssemblyAI.
+- **Live Voice Tester**: Interactive in-browser tester with frequency visualizer, real-time transcript stream, and an **agent deployment guard** (verifies agent is deployed before starting calls).
+- **Bookings CRM**: Search, filter by status, and one-click manual Resend `.ics` confirmation trigger.
+- **Call History**: Recorded conversation logs with duration, token counts, and full transcript dialogs.
 
 ---
 
@@ -121,238 +113,143 @@ The voice agent executes deterministic server tools during natural conversation 
 
 ```text
 assemblyai-voice-agent-scheduler/
-├── .env                         # Local environment variables (NEXT_ASSEMBLYAI_API_KEY, etc.)
 ├── .env.example                 # Example template for environment variables
-├── .gitignore                   # Ignores build artifacts, databases, and local secrets
-├── components.json              # shadcn/ui configuration
 ├── package.json                 # Next.js 16 & React 19 dependencies
-├── pnpm-lock.yaml               # Deterministic pnpm lockfile
-├── tsconfig.json                # TypeScript path aliases (@/* -> src/*)
 ├── public/
 │   ├── widget.js                # Standalone embeddable launcher script
-│   ├── favicon.svg              # OmniDesk brand favicon
-│   └── logo.svg                 # OmniDesk brand logo
+│   └── favicon.svg              # OmniDesk brand favicon
 ├── data/
-│   └── omnidesk.db              # Multi-tenant SQLite database (auto-migrated)
+│   └── omnidesk.db              # Zero-setup local SQLite database
 └── src/
     ├── app/
-    │   ├── layout.tsx           # Root layout with TooltipProvider & Sonner Toaster
-    │   ├── page.tsx             # Public marketing landing page
-    │   ├── globals.css          # Tailwind CSS v4 design tokens
-    │   ├── dashboard/
-    │   │   └── page.tsx         # Full 4-tab practice management console
+    │   ├── page.tsx             # Marketing landing page
+    │   ├── dashboard/page.tsx   # Practice management console (4 tabs)
     │   ├── demo/
-    │   │   └── page.tsx         # Interactive voice showroom with archetype switchers
-    │   ├── api/
-    │   │   ├── token/route.ts   # Temporary WebSocket session token minting
-    │   │   ├── verify-email/    # Direct email validation & session reset
-    │   │   ├── owner/           # Businesses, bookings, conversations API routes
-    │   │   ├── events/          # Server-Sent Events (SSE) live feed
-    │   │   └── tools/[...slug]/ # Server-side HTTP webhook tools called by AssemblyAI
-    │   └── tools/[...slug]/     # Direct root webhook fallback route
+    │   │   ├── page.tsx         # Interactive showroom index
+    │   │   └── salon/page.tsx   # Premier Hair Salon & Studio voice booking page
+    │   ├── tools/[...slug]/     # Direct root webhook tool endpoints
+    │   └── api/
+    │       ├── token/route.ts   # Temporary WebSocket session token minting
+    │       ├── tools/[...slug]/ # API webhook tool route handlers
+    │       ├── owner/           # Businesses, bookings, deployment API routes
+    │       └── events/          # Server-Sent Events (SSE) live feed
     ├── components/
-    │   ├── voice-widget.tsx     # Standalone embeddable floating voice widget
-    │   ├── dashboard/
-    │   │   ├── sidebar.tsx      # Sidebar navigation & business tenant selector
-    │   │   ├── agent-builder.tsx# Persona prompt, voice picker, catalog manager
-    │   │   ├── voice-tester.tsx # Live audio tester & website embedder
-    │   │   ├── bookings-crm.tsx # KPI metric cards, appointments table, .ics sender
-    │   │   └── call-history.tsx # Recorded conversation logs & transcript dialog
-    │   └── ui/                  # shadcn/ui accessible Radix primitives
+    │   ├── voice-widget.tsx     # Embeddable floating voice widget
+    │   └── dashboard/
+    │       ├── agent-builder.tsx# Persona prompt, voice picker, catalog manager
+    │       ├── voice-tester.tsx # Live audio tester with deployment guard
+    │       ├── bookings-crm.tsx # Appointments table & calendar invite trigger
+    │       └── call-history.tsx # Recorded conversation logs & transcripts
     └── lib/
-        ├── db.ts                # Multi-tenant SQLite persistence & Supabase sync
-        ├── assemblyai.ts        # AssemblyAI token minting, provisioning, DNS retries
-        ├── audio.ts             # Browser PCM16 audio capture, player & visualizer
-        ├── calendar.ts          # RFC 5545 .ics generator & Resend email client
+        ├── assemblyai.ts        # Token minting, tool registration, agent deploy
+        ├── audio.ts             # Browser PCM16 audio capture, playback & visualizer
+        ├── calendar.ts          # RFC 5545 .ics generator & Gmail SMTP client
         ├── email-verify.ts      # Spoken email normalizer & DNS MX validator
-        ├── store.ts             # In-memory fast state store for active sessions
-        ├── tools-handler.ts     # Core tool execution business logic
-        └── utils.ts             # Tailwind class merging utility (clsx + twMerge)
+        ├── db.ts                # Local SQLite persistence (better-sqlite3)
+        ├── supabase-db.ts       # Cloud Supabase PostgreSQL persistence
+        └── tools-handler.ts     # Core tool execution business logic
 ```
 
 ---
 
-## Local Setup Guide
+## Quick Setup Guide
 
-Getting OmniDesk running locally takes **less than 2 minutes**.
-
-### Prerequisites
-- **Node.js**: 20.x or 22.x LTS installed
-- **Package Manager**: `pnpm` (recommended) or `npm`
-- **AssemblyAI API Key**: Free key from the [AssemblyAI Dashboard](https://www.assemblyai.com/dashboard)
-
----
-
-### Step 1: Install Dependencies
-
+### 1. Install Dependencies
 ```bash
 pnpm install
 # or: npm install
 ```
 
----
-
-### Step 2: Configure Environment Variables
-
-Create your `.env` file from `.env.example`:
-
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and paste your **AssemblyAI API Key**:
-
+Configure the variables:
 ```env
-# [REQUIRED] AssemblyAI API Key
+# [REQUIRED] AssemblyAI API Key (from https://www.assemblyai.com/dashboard)
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# [OPTIONAL] AssemblyAI Voice Agent ID
-# Leave blank to auto-create via the dashboard, or paste an existing agent ID
-AGENT_ID=
+# [REQUIRED FOR DEMO OUT-OF-THE-BOX]
+# Pre-configured AssemblyAI Voice Agent ID (e.g. agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794)
+AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
 
-# [OPTIONAL] Public HTTPS URL for AssemblyAI Webhook Tools
-# Required if you want AssemblyAI to call your local tools (see Tunnel section below)
+# [OPTIONAL] Public HTTPS Base URL for AssemblyAI Webhook Tools
+# In production on Vercel: NOT NEEDED. Tools auto-route to https://omni-desk-rho.vercel.app!
+# In local dev: Leave empty to route tools to the production deployment,
+# or set to your Cloudflare Tunnel URL if actively modifying local tool code.
 PUBLIC_API_BASE_URL=
 
-# [OPTIONAL] Free Gmail SMTP (Deliver to ANY email in the world — 0 domain required!)
-# Set up in 1 min: Google Account > Security > 2-Step Verification > App Passwords
+# [OPTIONAL] Free Gmail SMTP for Calendar Invites (.ics)
 SMTP_USER=omni.desk.com@gmail.com
-SMTP_PASS=your_16_char_app_password
+SMTP_PASS=your_16_char_google_app_password
 
-# [OPTIONAL] Supabase Cloud Database (Required for cloud deployment / Vercel)
-# Local Judges Mode: Leave blank to use zero-setup SQLite (data/omnidesk.db).
-# Deployment Mode: On Vercel / production, OmniDesk automatically populates Supabase!
+# [OPTIONAL] Supabase Cloud Database (Required for Vercel deployment)
+# Local testing: Leave blank to use zero-setup SQLite (data/omnidesk.db).
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ```
 
-> [!NOTE]
-> **No External Database Needed for Local Testing**:
-> Anyone cloning this repository can run and test the app immediately using the built-in **Local SQLite Database (`data/omnidesk.db`)** with zero database setup! You do **not** need a Supabase account or keys to test locally.
->
-> In **Production (Vercel / Deployed URL)**, OmniDesk automatically populates **Supabase Cloud PostgreSQL** directly, ensuring persistent multi-region cloud storage without relying on local SQLite.
-
----
-
-### Step 3: Start the Development Server
-
+### 3. Start Development Server
 ```bash
 pnpm dev
-# or: npm run dev
 ```
-
-The application is now live at:
-- **Landing Page**: [http://localhost:3000/](http://localhost:3000/)
-- **Practice Owner Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
-- **Interactive Voice Sandbox**: [http://localhost:3000/demo](http://localhost:3000/demo)
+- **Landing Page**: [http://localhost:3000](http://localhost:3000)
+- **Hair Salon Showcase**: [http://localhost:3000/demo/salon](http://localhost:3000/demo/salon)
+- **Owner Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
 ---
 
-## Enabling Webhook Tools for Local Development
+## Understanding Webhook Tools & `PUBLIC_API_BASE_URL`
 
-When you speak to the voice agent in your browser, AssemblyAI’s cloud brain decides when to call tools (e.g. `check_availability` or `book_appointment`). Because AssemblyAI runs in the cloud, it needs an HTTPS URL to reach your local computer.
+### Why Webhooks Need a Public HTTPS URL
+During a call, the caller's audio streams to AssemblyAI's cloud. When the AI decides to call a tool (like `check_availability` or `book_appointment`), AssemblyAI sends an HTTP POST request to your server's tool URL.
 
-Follow these simple steps to connect AssemblyAI to your local server:
-
-### 1. Start a Free Tunnel (Cloudflare Tunnel)
-In a separate terminal, expose your local port 3000:
-
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
-*(Alternatively, use `npx localtunnel --port 3000` or ngrok).*
-
-### 2. Copy the HTTPS URL into `.env`
-Cloudflare will output a public URL like:
-```text
-https://random-words.trycloudflare.com
-```
-
-Add it to your `.env` file:
-```env
-PUBLIC_API_BASE_URL=https://random-words.trycloudflare.com
-```
-
-### 3. Click "Save & Deploy" on the Dashboard
-1. Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
-2. Go to the **Agent Builder** tab.
-3. Click the **"Save & Deploy"** button.
-
-OmniDesk will instantly call AssemblyAI (`POST https://agents.assemblyai.com/v1/agents`), register your tools pointing to your tunnel URL, and save the active `AGENT_ID` into your local database. Now AssemblyAI can execute your local tools in real time during live voice calls!
+### Do You Need `PUBLIC_API_BASE_URL`?
+- **In Production (Vercel)**: **NO**. OmniDesk automatically resolves its own production host (`https://omni-desk-rho.vercel.app` or `VERCEL_URL`). You do not need to configure `PUBLIC_API_BASE_URL`.
+- **In Local Development**:
+  - **Standard Testing**: **NO**. The pre-configured demo agent routes tool calls to the live production endpoint (`https://omni-desk-rho.vercel.app/tools/...`), so local voice testing works instantly without setting up any tunnels.
+  - **Modifying Tool Logic Locally**: If you make edits to the local tool handler code and want AssemblyAI to call your local machine, start a tunnel (`cloudflared tunnel --url http://localhost:3000`), paste the URL into `PUBLIC_API_BASE_URL`, and click **"Save & Deploy"** in the Dashboard.
 
 ---
 
-## How to Test as a Judge
+## How to Test as an Evaluator
 
-### 1. Test the Live Voice Receptionist (`/demo`)
-1. Navigate to [http://localhost:3000/demo](http://localhost:3000/demo).
-2. Select a business archetype (e.g., **Hair Salon**, **Real Estate**, or **Wellness MedSpa**).
-3. Click **"Start Voice Call"** and grant microphone access.
-4. Speak naturally:
-   - *"Hi, what services do you offer and how much do they cost?"* &rarr; Agent calls `get_services_and_pricing`.
-   - *"What's your availability tomorrow afternoon?"* &rarr; Agent calls `get_today` and `check_availability`.
-   - *"Can I book the signature haircut for tomorrow at 2 PM? My name is Alex and my email is alex at gmail dot com"* &rarr; Agent validates email, books the slot, and generates a confirmation code.
-5. Watch the real-time transcript and tool call logs update live in the UI.
+### 1. Test the Hair Salon Voice Receptionist (`/demo/salon`)
+1. Open [https://omni-desk-rho.vercel.app/demo/salon](https://omni-desk-rho.vercel.app/demo/salon) (or [http://localhost:3000/demo/salon](http://localhost:3000/demo/salon)).
+2. Click **"Start Voice Call"** and grant microphone access.
+3. Converse naturally with the AI receptionist:
+   - *"Hi, what hair services do you offer and what are your prices?"* &rarr; Calls `get_services_and_pricing`.
+   - *"What times are open tomorrow afternoon?"* &rarr; Calls `get_today` and `check_availability`.
+   - *"Can I book the Signature Haircut for tomorrow at 2 PM? My name is Alex and my email is alex at gmail dot com"* &rarr; Calls `verify_customer_email`, `book_appointment`, and speaks your 6-character confirmation code.
+4. Watch the real-time transcript and tool event logs update live in the interface.
 
 ### 2. Test Practice Owner Dashboard (`/dashboard`)
-1. Navigate to [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
-2. **Agent Builder Tab**: Edit the business prompt, switch voice personas, add or remove services from the pricing catalog, and click **"Save Settings"**.
-3. **Voice Tester Tab**: Test the agent with the live frequency visualizer and copy the embeddable `<VoiceWidget />` or `<script>` snippet.
-4. **Bookings CRM Tab**: View booked appointments, search by confirmation code, filter by status, and click **"Send Invite"** to manually re-send a calendar invite.
-5. **Call History Tab**: Review call duration metrics and inspect complete conversation transcripts.
+1. Open [https://omni-desk-rho.vercel.app/dashboard](https://omni-desk-rho.vercel.app/dashboard).
+2. **AI Agent Builder**: Customize the persona instructions, voice, service pricing, or operating hours. Click **"Save & Deploy"** to sync changes to AssemblyAI.
+3. **Live Voice Tester**: Live audio tester with frequency visualizer. Notice the **Deployment Guard**: if a new custom business is undeployed, it requires clicking "Deploy Agent" first.
+4. **Bookings CRM**: View all confirmed appointments, filter by status, or click **"Send Invite"** to manually dispatch a calendar `.ics` email.
+5. **Call History**: Review past call durations, tool invocations, and read full conversation transcripts.
 
 ---
 
 ## Transactional Email & Calendar Sync (.ics)
 
-OmniDesk features native calendar synchronization and transactional email delivery powered by **Free Google Gmail SMTP**:
-
-- **What the Email Contains**:
-  - **Rich HTML Confirmation**: Displays client name, business title, service booked, date, time, estimated fee, and unique 6-character confirmation code.
-  - **Attached Native iCalendar (`appointment.ics`)**: Automatically syncs the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook** with a pre-configured 1-hour advance reminder alarm.
-
-### 1. Free Gmail SMTP (Deliver to ANY recipient worldwide — 0 Domain Required!)
-- **Cost**: 100% Free forever (up to 500 real emails per day via Google).
-- **No Custom Domain Needed**: Sends from branded Google account (`omni.desk.com@gmail.com`).
-- **Global Deliverability**: Delivers confirmation emails to **ANY email address on Earth** (`@gmail.com`, `@yahoo.com`, `@outlook.com`, iCloud, corporate emails).
-- **Quick 1-Minute Setup**:
-  1. Go to your Google Account: [myaccount.google.com/security](https://myaccount.google.com/security).
-  2. Enable **2-Step Verification**.
-  3. Search for **"App passwords"** ([myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)).
-  4. Create an app named `OmniDesk` and copy the 16-character code.
-  5. Add to your `.env` (or Vercel Environment Variables):
-     ```env
-     SMTP_USER=omni.desk.com@gmail.com
-     SMTP_PASS=your_16_character_code
-     ```
-
-### 2. Zero-Setup Offline Mode
-- Evaluators can test the entire voice booking workflow without any email credentials configured.
-- Bookings complete 100% successfully, confirmation codes are spoken aloud by the voice receptionist, and reservations are saved directly to the database and displayed in the **Bookings CRM** (`/dashboard`). Practice owners can dispatch or re-send invites anytime via the **"Send Invite"** button.
+OmniDesk includes automated calendar synchronization powered by **Free Google Gmail SMTP**:
+- **Rich HTML Confirmation**: Client name, business, service, date, time, price, and confirmation code.
+- **Attached Native iCalendar (`appointment.ics`)**: Direct sync with Google Calendar, Apple Calendar, and Microsoft Outlook with a 1-hour advance reminder alarm.
+- **1-Minute Setup**: Create a Google App Password ([myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)) and add `SMTP_USER` and `SMTP_PASS` to `.env`.
+- **Zero-Setup Offline Fallback**: If SMTP credentials are not configured, bookings still succeed 100%, codes are spoken aloud, and appointments appear immediately in the Bookings CRM.
 
 ---
 
-## Database Architecture: Production (Supabase) vs Local Testing (SQLite)
+## Database Modes: Cloud vs Local
 
-OmniDesk is built with an **intelligent dual-mode database engine** designed for both scalable production cloud deployments and frictionless local evaluation:
-
-### 1. In Production: Supabase Cloud PostgreSQL
-- When running on a deployed URL (**Vercel** or any cloud platform), OmniDesk automatically operates in **Supabase Mode**.
-- All data modifications made by users from the deployed URL—including creating new businesses, editing prompts or services, booking voice appointments, and saving conversation transcripts—**populate Supabase Cloud PostgreSQL directly**.
-- Local SQLite (`better-sqlite3`) is completely bypassed in production, ensuring zero native binary issues on serverless lambdas and permanent multi-region cloud persistence.
-
-### 2. For Local Testing & Judges: Zero-Setup SQLite (`data/omnidesk.db`)
-- If you clone this repository to test locally, **you do NOT need to set up Supabase, PostgreSQL, or any external database**.
-- Simply leave `SUPABASE_URL` blank in your `.env`.
-- OmniDesk automatically boots in **Local SQLite Mode** using the built-in local database file (`data/omnidesk.db`).
-- The database initializes automatically on your very first request and comes pre-seeded with locked demo accounts:
-  - **Demo Practice Operator**: `owner_demo` (`demo@omnidesk.ai`)
-  - **Hair Salon Business**: `biz_demo_dental` (*OmniDesk Hair Salon & Studio*) with 4 pre-configured haircut, styling, coloring, and blowout services.
-  - **Real Estate Business**: `biz_demo_realestate` (*OmniDesk Real Estate & Property Advisory*) with 4 pre-configured property viewing, consultation, and appraisal services.
-
-### 3. Local Developer Testing: Dual-Sync Mode
-- If a developer running locally provides `SUPABASE_URL` and `SUPABASE_ANON_KEY`, OmniDesk automatically operates in **Dual-Sync Mode**.
-- Writes are saved instantly to local SQLite for `< 1ms` sub-millisecond UI responses and automatically synchronized to Supabase Cloud in the background.
+| Environment | Engine | Configuration | Behavior |
+| :--- | :--- | :--- | :--- |
+| **Production (Vercel)** | **Supabase PostgreSQL** | `SUPABASE_URL` + `SUPABASE_ANON_KEY` | Serverless-safe, multi-region cloud persistence. SQLite is completely bypassed. |
+| **Local Testing** | **Local SQLite** | None (leave Supabase keys empty) | Instant zero-setup evaluation using built-in `data/omnidesk.db` pre-seeded with the Hair Salon demo. |
 
 ---
 
@@ -360,124 +257,39 @@ OmniDesk is built with an **intelligent dual-mode database engine** designed for
 
 All webhook tools accept `POST` requests and respond with structured JSON:
 
-### 1. `get_today`
-Returns the current date, weekday, and the next open calendar days.
-```json
-// Response
-{
-  "ok": true,
-  "business": "OmniDesk Hair Salon & Studio",
-  "today": "2026-09-17",
-  "weekday": "Thursday",
-  "next_open_days": [
-    { "date": "2026-09-18", "weekday": "Friday" },
-    { "date": "2026-09-21", "weekday": "Monday" }
-  ],
-  "message": "Today is Thursday, September 17."
-}
-```
+```text
+POST /tools/[businessId]/get_today
+Response: { "ok": true, "business": "OmniDesk Hair Salon & Studio", "today": "2026-09-18", "weekday": "Friday", "next_open_days": [...] }
 
-### 2. `get_services_and_pricing`
-Returns the complete service catalog with durations and fees.
-```json
-// Response
-{
-  "ok": true,
-  "business": "OmniDesk Hair Salon & Studio",
-  "services": [
-    { "key": "haircut", "label": "Signature Haircut & Styling", "minutes": 45, "price": 85 },
-    { "key": "color", "label": "Full Color & Highlights", "minutes": 90, "price": 160 },
-    { "key": "blowout", "label": "Blowout & Conditioning", "minutes": 30, "price": 55 },
-    { "key": "keratin", "label": "Keratin Smoothing Treatment", "minutes": 120, "price": 250 }
-  ]
-}
-```
+POST /tools/[businessId]/get_services_and_pricing
+Response: { "ok": true, "services": [{ "key": "haircut", "label": "Signature Haircut & Styling", "minutes": 45, "price": 85 }, ...] }
 
-### 3. `verify_customer_email`
-Validates spoken or written customer emails, autocorrects common domain mistakes, and runs DNS/MX resolution.
-```json
-// Request
-{ "email": "alex dot smith at gmail dot com" }
+POST /tools/[businessId]/verify_customer_email
+Body:     { "email": "alex dot smith at gmail dot com" }
+Response: { "ok": true, "valid": true, "email": "alex.smith@gmail.com", "auto_corrected": false }
 
-// Response
-{
-  "ok": true,
-  "valid": true,
-  "email": "alex.smith@gmail.com",
-  "auto_corrected": false,
-  "message": "Email verified: alex.smith@gmail.com."
-}
-```
+POST /tools/[businessId]/check_availability
+Body:     { "service": "haircut", "date": "2026-09-19" }
+Response: { "ok": true, "slots": ["09:30", "10:00", "10:30", "14:00"], "price": 85, "duration_minutes": 45 }
 
-### 4. `check_availability`
-Evaluates availability for a specific service and date against operating hours and booked appointments.
-```json
-// Request
-{ "service": "haircut", "date": "2026-09-18" }
+POST /tools/[businessId]/book_appointment
+Body:     { "service": "haircut", "date": "2026-09-19", "time": "10:00", "customer_name": "Alex", "email": "alex.smith@gmail.com" }
+Response: { "ok": true, "confirmation_code": "7JFREK", "service_label": "Signature Haircut & Styling", "date": "2026-09-19", "time": "10:00" }
 
-// Response
-{
-  "ok": true,
-  "date": "2026-09-18",
-  "service": "Signature Haircut & Styling",
-  "price": 85,
-  "duration_minutes": 45,
-  "slots": ["09:30", "10:00", "10:30", "11:00", "14:00", "14:30"],
-  "message": "On Friday, September 18 for Signature Haircut & Styling, we have open times at 9:30 am, 10:00 am, or 10:30 am."
-}
-```
-
-### 5. `book_appointment`
-Validates slot availability and commits the reservation to the database.
-```json
-// Request
-{
-  "service": "haircut",
-  "date": "2026-09-18",
-  "time": "10:00",
-  "customer_name": "Eleanor Vance",
-  "email": "eleanor.vance@gmail.com"
-}
-
-// Response
-{
-  "ok": true,
-  "confirmation_code": "7JFREK",
-  "service": "haircut",
-  "service_label": "Signature Haircut & Styling",
-  "date": "2026-09-18",
-  "time": "10:00",
-  "customer_name": "Eleanor Vance",
-  "email": "eleanor.vance@gmail.com",
-  "price": 85,
-  "message": "I have scheduled your Signature Haircut & Styling for Friday, September 18 at 10:00 am. Your confirmation code is 7JFREK."
-}
-```
-
-### 6. `send_confirmation`
-Triggers transactional email delivery with the attached `.ics` calendar file.
-```json
-// Request
-{ "confirmation_code": "7JFREK" }
-
-// Response
-{
-  "ok": true,
-  "sent": true,
-  "email": "eleanor.vance@gmail.com",
-  "message": "Confirmation email with calendar invite (.ics) sent to eleanor.vance@gmail.com."
-}
+POST /tools/[businessId]/send_confirmation
+Body:     { "confirmation_code": "7JFREK" }
+Response: { "ok": true, "sent": true, "email": "alex.smith@gmail.com" }
 ```
 
 ---
 
 ## Embeddable Website Widget
 
-Embed the voice receptionist into any external website with a single `<script>` tag:
+Embed the OmniDesk voice receptionist into any external website with a single script tag:
 
 ```html
 <script 
-  src="https://yourdomain.com/widget.js" 
+  src="https://omni-desk-rho.vercel.app/widget.js" 
   data-business="biz_demo_dental" 
   data-theme="dark" 
   data-position="bottom-right" 
@@ -512,8 +324,6 @@ To verify the production build locally:
 pnpm build
 # or: npm run build
 ```
-
-The build compiles TypeScript, optimizes Turbopack bundles, and generates all static pages with zero errors.
 
 ---
 
