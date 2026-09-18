@@ -2,11 +2,16 @@ import { VanillaOmniDeskConfig, CallStatus, TranscriptMessage, VoiceSessionToken
 import { AssemblyAIVoiceClient } from "./audio-client";
 
 const ACCENT_MAP: Record<string, string> = {
-  slate: "#18181b",
-  purple: "#7c3aed",
+  emerald: "#10b981",
+  green: "#10b981",
   blue: "#2563eb",
-  emerald: "#059669",
+  purple: "#8b5cf6",
+  amber: "#f59e0b",
+  rose: "#f43f5e",
+  slate: "#10b981",
 };
+
+const FREQ_BARS = [8, 14, 18, 11, 16, 20, 12, 6, 15];
 
 export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   if (typeof window === "undefined") return;
@@ -18,15 +23,16 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     theme = "dark",
     position = "bottom-right",
     label = "Talk to Receptionist",
-    accent = "slate",
+    accent = "emerald",
     accentColor,
-    suggestions,
+    businessName: propBusinessName,
+    greeting: propGreeting,
     onCallStart,
     onCallEnd,
     onTranscript,
   } = config;
 
-  const activeAccent = accentColor || ACCENT_MAP[accent] || accent || "#18181b";
+  const activeAccent = accentColor || ACCENT_MAP[accent] || accent || "#10b981";
 
   // Prevent duplicate mounts
   const existing = document.getElementById("omnidesk-voice-widget-root");
@@ -38,198 +44,161 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
 
   const isDark = theme === "dark" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const colors = {
-    bg: isDark ? "#09090b" : "#ffffff",
-    cardBg: isDark ? "#121215" : "#f4f4f5",
+    bg: isDark ? "#18181b" : "#ffffff",
+    headerBg: isDark ? "#09090b" : "#f4f4f5",
     border: isDark ? "#27272a" : "#e4e4e7",
     text: isDark ? "#fafafa" : "#09090b",
     textMuted: isDark ? "#a1a1aa" : "#71717a",
-    bubbleAgent: isDark ? "#18181b" : "#f4f4f5",
+    bubbleAgent: isDark ? "#27272a" : "#f4f4f5",
     bubbleUser: activeAccent,
     userText: "#ffffff",
+    agentText: isDark ? "#f4f4f5" : "#09090b",
   };
 
   let client: AssemblyAIVoiceClient | null = null;
   let callStatus: CallStatus = "idle";
-  let isMuted = false;
   let callStartTime = 0;
-  let isExpanded = false;
+  let isOpen = false;
+  let userLevel = 0;
+  let agentLevel = 0;
 
   const isLeft = position === "bottom-left";
+  const defaultGreeting = propGreeting || "Hello! Welcome to OmniDesk. Would you like to check availability or book a consultation?";
 
   // Floating Trigger Container
   const btnContainer = document.createElement("div");
   btnContainer.style.cssText = `
-    position: fixed; bottom: 24px; ${isLeft ? "left: 24px;" : "right: 24px;"}
+    position: fixed; bottom: 20px; ${isLeft ? "left: 20px;" : "right: 20px;"};
     z-index: 999999;
   `;
 
-  // Trigger Button
+  // Trigger Button matching Image 1
   const btn = document.createElement("button");
   btn.style.cssText = `
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 20px; border-radius: 9999px;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 9999px;
     background: ${colors.bg}; color: ${colors.text};
     border: 1px solid ${colors.border};
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
-    cursor: pointer; font-weight: 600; font-size: 14px;
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    cursor: pointer; font-weight: 600; font-size: 13px;
+    transition: transform 0.15s ease, background 0.15s ease;
   `;
   btn.innerHTML = `
-    <span style="width:10px;height:10px;border-radius:50%;background:#71717a;display:inline-block;"></span>
+    <span id="omnidesk-trigger-dot" style="width:8px;height:8px;border-radius:50%;background:${activeAccent};box-shadow:0 0 8px ${activeAccent};display:inline-block;"></span>
     <span>${label}</span>
+    <span id="omnidesk-trigger-arrow" style="font-size:11px;opacity:0.6;">▲</span>
   `;
   btnContainer.appendChild(btn);
 
-  // Backdrop when expanded
-  const backdrop = document.createElement("div");
-  backdrop.style.cssText = `
-    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    z-index: 999998; display: none;
-  `;
-
-  // Modal Container
+  // Modal Container matching Image 1
   const modal = document.createElement("div");
   modal.style.cssText = `
-    position: fixed; bottom: 24px; ${isLeft ? "left: 24px;" : "right: 24px;"}
-    width: 370px; height: 560px; max-height: 85vh;
+    position: fixed; bottom: 70px; ${isLeft ? "left: 20px;" : "right: 20px;"};
+    width: 320px; height: 280px;
     background: ${colors.bg}; border: 1px solid ${colors.border};
-    border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+    border-radius: 18px; box-shadow: 0 20px 30px -10px rgba(0,0,0,0.4);
     display: none; flex-direction: column; overflow: hidden; z-index: 999999;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
 
-  // Header
+  // Header matching Image 1
   const header = document.createElement("div");
   header.style.cssText = `
-    padding: 14px 18px; border-bottom: 1px solid ${colors.border};
+    padding: 12px 16px; border-bottom: 1px solid ${colors.border};
     display: flex; align-items: center; justify-content: space-between;
-    background: ${colors.cardBg};
+    background: ${colors.headerBg};
   `;
   header.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <div style="width: 34px; height: 34px; border-radius: 50%; background: ${activeAccent}; color: #fff; display: grid; place-items: center; font-size: 14px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-      </div>
-      <div>
-        <div style="font-weight:700;font-size:14px;color:${colors.text};" id="omnidesk-biz-title">AI Receptionist</div>
-        <div style="font-size:11px;color:${colors.textMuted};margin-top:2px;display:flex;align-items:center;gap:6px;" id="omnidesk-status-text">
-          <span style="width:7px;height:7px;border-radius:50%;background:#71717a;display:inline-block;"></span> Ready
-        </div>
-      </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:${colors.text};" id="omnidesk-biz-title">${propBusinessName || "OmniDesk AI Receptionist"}</div>
+      <div style="font-size:10.5px;color:${activeAccent};font-weight:600;" id="omnidesk-status-text">Ready to connect</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <button id="omnidesk-expand-btn" style="background:transparent;border:none;color:${colors.textMuted};cursor:pointer;padding:6px;font-size:15px;" title="Expand">⤢</button>
-      <button id="omnidesk-close-btn" style="background:transparent;border:none;color:${colors.textMuted};cursor:pointer;padding:6px;font-size:15px;" title="Close">✕</button>
-    </div>
+    <button id="omnidesk-close-btn" style="background:transparent;border:none;color:${colors.textMuted};cursor:pointer;padding:4px;font-size:14px;" title="Close">✕</button>
   `;
 
   // Transcript Area
   const transcriptArea = document.createElement("div");
   transcriptArea.style.cssText = `
-    flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+    flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;
   `;
 
-  // Footer Controls
+  // Initial greeting bubble
+  const greetingBubble = document.createElement("div");
+  greetingBubble.style.cssText = `
+    align-self: flex-start; background: ${colors.bubbleAgent}; color: ${colors.agentText};
+    padding: 8px 12px; border-radius: 12px; font-size: 12px; max-width: 85%; line-height: 1.4;
+  `;
+  greetingBubble.innerText = defaultGreeting;
+  transcriptArea.appendChild(greetingBubble);
+
+  // Footer matching Image 1
   const footer = document.createElement("div");
   footer.style.cssText = `
-    padding: 14px 16px; border-top: 1px solid ${colors.border};
-    background: ${colors.cardBg}; display: flex; gap: 10px;
+    padding: 10px 14px; border-top: 1px solid ${colors.border};
+    display: flex; align-items: center; justify-content: space-between;
   `;
 
-  const muteBtn = document.createElement("button");
-  muteBtn.style.cssText = `
-    display: none; flex: 1; padding: 10px; border-radius: 10px; border: 1px solid ${colors.border};
-    background: ${colors.bg}; color: ${colors.text}; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  // Waveform dots container
+  const waveformContainer = document.createElement("div");
+  waveformContainer.style.cssText = `
+    display: flex; align-items: center; gap: 3px; height: 18px;
   `;
-  muteBtn.innerText = "Mute Mic";
+  FREQ_BARS.forEach(() => {
+    const bar = document.createElement("div");
+    bar.className = "omnidesk-freq-bar";
+    bar.style.cssText = `
+      width: 3px; height: 4px; border-radius: 2px;
+      background: ${activeAccent}; opacity: 0.7; transition: height 0.15s ease;
+    `;
+    waveformContainer.appendChild(bar);
+  });
 
   const actionBtn = document.createElement("button");
   actionBtn.style.cssText = `
-    width: 100%; padding: 11px; border-radius: 10px; border: none;
-    background: ${activeAccent}; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: all 0.15s ease;
+    padding: 7px 16px; border-radius: 9999px; border: none;
+    background: ${activeAccent}; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.15s ease;
   `;
   actionBtn.innerText = "Start Call";
 
-  footer.appendChild(muteBtn);
+  footer.appendChild(waveformContainer);
   footer.appendChild(actionBtn);
 
   modal.appendChild(header);
   modal.appendChild(transcriptArea);
   modal.appendChild(footer);
 
-  root.appendChild(backdrop);
   root.appendChild(btnContainer);
   root.appendChild(modal);
   document.body.appendChild(root);
 
-  function applyExpansion(expanded: boolean) {
-    isExpanded = expanded;
-    if (expanded) {
-      backdrop.style.display = "block";
-      modal.style.top = "50%";
-      modal.style.left = "50%";
-      modal.style.bottom = "auto";
-      modal.style.right = "auto";
-      modal.style.transform = "translate(-50%, -50%)";
-      modal.style.width = "min(640px, 92vw)";
-      modal.style.height = "min(720px, 86vh)";
-      modal.style.maxHeight = "800px";
-      modal.style.borderRadius = "24px";
-      header.querySelector("#omnidesk-expand-btn")!.innerHTML = "↙";
-    } else {
-      backdrop.style.display = "none";
-      modal.style.top = "auto";
-      modal.style.left = isLeft ? "24px" : "auto";
-      modal.style.bottom = "24px";
-      modal.style.right = isLeft ? "auto" : "24px";
-      modal.style.transform = "none";
-      modal.style.width = "370px";
-      modal.style.height = "560px";
-      modal.style.maxHeight = "85vh";
-      modal.style.borderRadius = "20px";
-      header.querySelector("#omnidesk-expand-btn")!.innerHTML = "⤢";
-    }
+  function updateBars(active: boolean, level: number) {
+    const bars = modal.querySelectorAll<HTMLDivElement>(".omnidesk-freq-bar");
+    bars.forEach((b, i) => {
+      const h = FREQ_BARS[i];
+      const activeHeight = active ? Math.max(5, Math.min(18, Math.round(h * (0.35 + level * 1.5)))) : 4;
+      b.style.height = `${activeHeight}px`;
+      b.style.opacity = active ? "1" : "0.7";
+    });
   }
 
-  // Toggle Visibility
+  function toggleWidget(open: boolean) {
+    isOpen = open;
+    modal.style.display = open ? "flex" : "none";
+  }
+
   btn.onclick = () => {
-    btnContainer.style.display = "none";
-    modal.style.display = "flex";
-    if (callStatus === "idle") {
-      startCall();
-    }
+    toggleWidget(!isOpen);
   };
 
   header.querySelector("#omnidesk-close-btn")!.addEventListener("click", () => {
-    modal.style.display = "none";
-    backdrop.style.display = "none";
-    btnContainer.style.display = "block";
-    applyExpansion(false);
+    toggleWidget(false);
   });
-
-  header.querySelector("#omnidesk-expand-btn")!.addEventListener("click", () => {
-    applyExpansion(!isExpanded);
-  });
-
-  backdrop.addEventListener("click", () => {
-    applyExpansion(false);
-  });
-
-  muteBtn.onclick = () => {
-    if (client) {
-      isMuted = !isMuted;
-      client.setMuted(isMuted);
-      muteBtn.innerText = isMuted ? "Unmute Mic" : "Mute Mic";
-      muteBtn.style.background = isMuted ? "#ef4444" : colors.bg;
-      muteBtn.style.color = isMuted ? "#fff" : colors.text;
-    }
-  };
 
   async function startCall() {
     const statusText = header.querySelector("#omnidesk-status-text") as HTMLElement;
-    statusText.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> Connecting...`;
+    const triggerDot = btnContainer.querySelector("#omnidesk-trigger-dot") as HTMLElement;
+    statusText.innerText = "Connecting...";
     actionBtn.innerText = "Connecting...";
     actionBtn.disabled = true;
 
@@ -239,9 +208,9 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       if (!res.ok) throw new Error("Failed to get session token");
       const data: VoiceSessionTokenResponse = await res.json();
 
-      if (data.business_name) {
+      if (data.business_name && !propBusinessName) {
         const title = header.querySelector("#omnidesk-biz-title") as HTMLElement;
-        if (title) title.innerText = data.business_name;
+        if (title) title.innerText = `${data.business_name} AI Receptionist`;
       }
 
       const targetAgentId = propAgentId || data.agent_id || "";
@@ -250,22 +219,28 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
         onStatusChange: (status) => {
           callStatus = status;
           if (status === "connected") {
-            statusText.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;"></span> Live Receptionist`;
+            statusText.innerText = "Live Voice Call (24kHz)";
             actionBtn.innerText = "End Call";
             actionBtn.style.background = "#ef4444";
-            actionBtn.style.width = "auto";
-            actionBtn.style.flex = "1";
+            actionBtn.style.boxShadow = "0 2px 8px rgba(239,68,68,0.3)";
             actionBtn.disabled = false;
-            muteBtn.style.display = "block";
+            if (triggerDot) {
+              triggerDot.style.background = "#ef4444";
+              triggerDot.style.boxShadow = "0 0 8px #ef4444";
+            }
             callStartTime = Date.now();
             onCallStart?.();
           } else if (status === "idle") {
-            statusText.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#71717a;display:inline-block;"></span> Call Ended`;
+            statusText.innerText = "Ready to connect";
             actionBtn.innerText = "Start Call";
             actionBtn.style.background = activeAccent;
-            actionBtn.style.width = "100%";
+            actionBtn.style.boxShadow = "0 2px 8px rgba(16,185,129,0.3)";
             actionBtn.disabled = false;
-            muteBtn.style.display = "none";
+            if (triggerDot) {
+              triggerDot.style.background = activeAccent;
+              triggerDot.style.boxShadow = `0 0 8px ${activeAccent}`;
+            }
+            updateBars(false, 0);
             if (callStartTime > 0) {
               const dur = Math.round((Date.now() - callStartTime) / 1000);
               callStartTime = 0;
@@ -277,42 +252,52 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
           const bubble = document.createElement("div");
           const isUser = msg.who === "user";
           bubble.style.cssText = `
-            display: flex; justify-content: ${isUser ? "flex-end" : "flex-start"};
+            align-self: ${isUser ? "flex-end" : "flex-start"};
+            background: ${isUser ? colors.bubbleUser : colors.bubbleAgent};
+            color: ${isUser ? colors.userText : colors.agentText};
+            padding: 8px 12px; border-radius: 12px; font-size: 12px; max-width: 85%; line-height: 1.4;
           `;
-          bubble.innerHTML = `
-            <div style="max-width:${isExpanded ? "70%" : "82%"};padding:9px 13px;border-radius:${isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px"};background:${isUser ? colors.bubbleUser : colors.bubbleAgent};color:${isUser ? colors.userText : colors.text};font-size:13px;line-height:1.45;">
-              ${msg.text}
-            </div>
-          `;
+          bubble.innerText = msg.text;
           transcriptArea.appendChild(bubble);
           transcriptArea.scrollTop = transcriptArea.scrollHeight;
           onTranscript?.(msg);
         },
+        onAudioLevel: (u, a) => {
+          userLevel = u;
+          agentLevel = a;
+          updateBars(callStatus === "connected", Math.max(u, a));
+        },
         onError: (err) => {
-          statusText.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;"></span> Error: ${err}`;
+          statusText.innerText = "Connection error";
           actionBtn.innerText = "Start Call";
           actionBtn.style.background = activeAccent;
-          actionBtn.style.width = "100%";
           actionBtn.disabled = false;
-          muteBtn.style.display = "none";
+          updateBars(false, 0);
         },
       });
 
       await client.start(data.token, targetAgentId);
     } catch (err: any) {
-      statusText.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;"></span> ${err.message || "Connection failed"}`;
+      statusText.innerText = "Connection failed";
       actionBtn.innerText = "Start Call";
       actionBtn.style.background = activeAccent;
-      actionBtn.style.width = "100%";
       actionBtn.disabled = false;
-      muteBtn.style.display = "none";
+      updateBars(false, 0);
     }
   }
 
-  actionBtn.onclick = () => {
-    if (callStatus === "connected" && client) {
+  function endCall() {
+    if (client) {
       client.stop();
       client = null;
+    }
+    callStatus = "idle";
+    updateBars(false, 0);
+  }
+
+  actionBtn.onclick = () => {
+    if (callStatus === "connected") {
+      endCall();
     } else if (callStatus === "idle") {
       startCall();
     }
@@ -324,6 +309,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       root.remove();
     },
     startCall,
+    endCall,
   };
 }
 
@@ -336,18 +322,18 @@ if (typeof document !== "undefined") {
     const businessId = currentScript.getAttribute("data-business-id") || undefined;
     const agentId = currentScript.getAttribute("data-agent") || undefined;
     const theme = (currentScript.getAttribute("data-theme") as any) || "dark";
-    const accent = (currentScript.getAttribute("data-accent") as any) || "slate";
+    const accent = (currentScript.getAttribute("data-accent") as any) || "emerald";
     const position = (currentScript.getAttribute("data-position") as any) || "bottom-right";
     const label = currentScript.getAttribute("data-label") || undefined;
     const host = currentScript.getAttribute("data-host") || undefined;
+    const greeting = currentScript.getAttribute("data-greeting") || undefined;
 
-    // Automatically mount when DOM is ready
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => {
-        initOmniDeskWidget({ businessId, agentId, theme, accent, position, label, host });
+        initOmniDeskWidget({ businessId, agentId, theme, accent, position, label, host, greeting });
       });
     } else {
-      initOmniDeskWidget({ businessId, agentId, theme, accent, position, label, host });
+      initOmniDeskWidget({ businessId, agentId, theme, accent, position, label, host, greeting });
     }
   }
 }

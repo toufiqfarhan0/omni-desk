@@ -55,6 +55,14 @@ export interface OmniDeskWidgetProps {
    */
   accentColor?: string;
   /**
+   * Optional custom business name title in the widget header.
+   */
+  businessName?: string;
+  /**
+   * Initial greeting bubble displayed before/during call.
+   */
+  greeting?: string;
+  /**
    * Custom suggestion prompt chips displayed when call is connected.
    */
   suggestions?: string[];

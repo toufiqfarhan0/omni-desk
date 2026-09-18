@@ -34,9 +34,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     },
   ]);
   const [timerText, setTimerText] = useState("0:00");
-  const [showEmailBar, setShowEmailBar] = useState(false);
-  const [emailValue, setEmailValue] = useState("");
-  const [emailFeedback, setEmailFeedback] = useState<string | null>(null);
 
   // Widget customizer & live preview state
   const [widgetTheme, setWidgetTheme] = useState<"dark" | "light">("dark");
@@ -49,21 +46,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const timerTickRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
   const feedBottomRef = useRef<HTMLDivElement | null>(null);
-
-  // Quick chips derived dynamically from business catalog
-  const chips = (business.services && business.services.length > 0)
-    ? [
-        ...business.services.slice(0, 2).map((s) => ({
-          label: `${s.label} ($${s.price})`,
-          query: `I'd like to ask about ${s.label}`,
-        })),
-        { label: "Check Availability", query: "What times do you have open this week?" },
-      ]
-    : [
-        { label: "Book Appointment", query: "I would like to book an appointment" },
-        { label: "Check Availability", query: "What times are open today?" },
-        { label: "Pricing Info", query: "Can you tell me about your pricing?" },
-      ];
 
   useEffect(() => {
     if (messages.length > 1) {
@@ -146,12 +128,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
               text: event.text,
             },
           ]);
-          if (event.who === "agent") {
-            const lower = event.text.toLowerCase();
-            if (lower.includes("email") || lower.includes("spell your email")) {
-              setShowEmailBar(true);
-            }
-          }
         },
         onError: (err) => {
           toast.error(err);
@@ -189,58 +165,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
           `Thanks for calling ${business.name}! Are you looking to book an appointment or check availability today?`,
       },
     ]);
-    setShowEmailBar(false);
-    setEmailFeedback(null);
-  };
-
-  const handleQuickChip = (query: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        who: "user",
-        text: query,
-      },
-    ]);
-    if (callStatus !== "live") {
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `agent-${Date.now()}`,
-            who: "agent",
-            text: `I'd be glad to help you with that! Click "Start Voice Call" below to begin speaking with me in real-time.`,
-          },
-        ]);
-      }, 400);
-    }
-  };
-
-  const handleVerifyEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailValue.trim()) return;
-
-    setEmailFeedback(`Email submitted: ${emailValue.trim()}`);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        who: "user",
-        text: `My email is ${emailValue.trim()}`,
-      },
-    ]);
-
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `agent-${Date.now()}`,
-          who: "agent",
-          text: `Thank you! I have confirmed ${emailValue.trim()} and validated your booking reservation.`,
-        },
-      ]);
-      setShowEmailBar(false);
-    }, 600);
   };
 
   const copySnippet = (text: string) => {
@@ -261,13 +185,13 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   defer>
 </script>`;
 
-  const npmInstallSnippet = `npm install @omnidesk/voice-widget`;
+  const npmInstallSnippet = `npm install omnidesk-voice`;
 
-  const reactSnippet = `import { VoiceWidget } from '@omnidesk/voice-widget';
+  const reactSnippet = `import { OmniDeskWidget } from 'omnidesk-voice';
 
 export default function App() {
   return (
-    <VoiceWidget
+    <OmniDeskWidget
       businessId="${business.id}"
       agentId="${agentId}"
       theme="${widgetTheme}"
@@ -313,9 +237,9 @@ export default function App() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          minHeight: "640px",
-          height: isExpanded ? "calc(100vh - 56px)" : "100%",
-          maxHeight: isExpanded ? "900px" : "none",
+          minHeight: isExpanded ? "auto" : "560px",
+          height: isExpanded ? "calc(100vh - 56px)" : "680px",
+          maxHeight: isExpanded ? "900px" : "680px",
           width: isExpanded ? "calc(100vw - 64px)" : "100%",
           maxWidth: isExpanded ? "1140px" : "none",
           position: isExpanded ? "fixed" : "relative",
@@ -486,6 +410,7 @@ export default function App() {
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
             padding: "18px 16px",
             display: "flex",
@@ -543,94 +468,10 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Quick suggestion chips below initial greeting message */}
-              {idx === 0 && chips.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", marginLeft: "32px" }}>
-                  {chips.map((chip, cIdx) => (
-                    <button
-                      key={cIdx}
-                      type="button"
-                      onClick={() => handleQuickChip(chip.query)}
-                      style={{
-                        background: "#ffffff",
-                        border: "1px solid #e4e4e7",
-                        borderRadius: "100px",
-                        padding: "6px 12px",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: "#27272a",
-                        cursor: "pointer",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-                        transition: "all 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = widgetAccent;
-                        e.currentTarget.style.color = widgetAccent;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = "#e4e4e7";
-                        e.currentTarget.style.color = "#27272a";
-                      }}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
           <div ref={feedBottomRef} />
         </div>
-
-        {/* Live email entry box */}
-        {showEmailBar && (
-          <div style={{ padding: "12px 16px", background: "#fbfbfa", borderTop: "1px solid #e4e4e7" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#16a34a" }} />
-                Agent Asking for Email
-              </span>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Direct confirmation entry</span>
-            </div>
-            <form onSubmit={handleVerifyEmailSubmit} style={{ display: "flex", gap: "8px" }}>
-              <input
-                type="email"
-                value={emailValue}
-                onChange={(e) => setEmailValue(e.target.value)}
-                placeholder="e.g. client@gmail.com"
-                required
-                style={{
-                  flex: 1,
-                  fontFamily: "var(--font)",
-                  fontSize: "13px",
-                  padding: "8px 12px",
-                  borderRadius: "var(--radius)",
-                  border: "1px solid var(--border)",
-                  outline: "none",
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: widgetAccent,
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "8px 16px",
-                  borderRadius: "var(--radius)",
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "opacity 0.15s ease",
-                }}
-              >
-                Verify &amp; Send
-              </button>
-            </form>
-            {emailFeedback && (
-              <div style={{ fontSize: "11px", color: "#16a34a", marginTop: "4px" }}>{emailFeedback}</div>
-            )}
-          </div>
-        )}
 
         {/* Bottom Call Bar */}
         <div

@@ -52,6 +52,14 @@ interface OmniDeskWidgetProps {
      */
     accentColor?: string;
     /**
+     * Optional custom business name title in the widget header.
+     */
+    businessName?: string;
+    /**
+     * Initial greeting bubble displayed before/during call.
+     */
+    greeting?: string;
+    /**
      * Custom suggestion prompt chips displayed when call is connected.
      */
     suggestions?: string[];
@@ -83,6 +91,7 @@ interface VanillaOmniDeskConfig extends OmniDeskWidgetProps {
 declare function initOmniDeskWidget(config?: VanillaOmniDeskConfig): {
     destroy: () => void;
     startCall: () => Promise<void>;
+    endCall: () => void;
 } | undefined;
 
 export { type CallStatus as C, type OmniDeskWidgetProps as O, type TranscriptMessage as T, type VanillaOmniDeskConfig as V, type VoiceSessionTokenResponse as a, type VoiceWidgetProps as b, initOmniDeskWidget as i };

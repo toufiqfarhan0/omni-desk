@@ -1,8 +1,8 @@
-var R=24e3,J="wss://agents.assemblyai.com/v1/ws",K=`
+var N=24e3,ee="wss://agents.assemblyai.com/v1/ws",te=`
   class CaptureProcessor extends AudioWorkletProcessor {
     constructor() {
       super();
-      this._ratio = sampleRate / ${R};
+      this._ratio = sampleRate / ${N};
       this._pos = 0;
       this._prev = 0;
       this._src = null;
@@ -51,7 +51,7 @@ var R=24e3,J="wss://agents.assemblyai.com/v1/ws",K=`
     }
   }
   registerProcessor('capture', CaptureProcessor);
-`,G=`
+`,se=`
   class PlaybackProcessor extends AudioWorkletProcessor {
     constructor() {
       super();
@@ -59,7 +59,7 @@ var R=24e3,J="wss://agents.assemblyai.com/v1/ws",K=`
       this._writePos = 0;
       this._readPos = 0;
       this._available = 0;
-      this._step = ${R} / sampleRate;
+      this._step = ${N} / sampleRate;
       this._rsPos = 0;
       this._rsPrev = 0;
       this._drained = false;
@@ -120,68 +120,59 @@ var R=24e3,J="wss://agents.assemblyai.com/v1/ws",K=`
     }
   }
   registerProcessor('playback', PlaybackProcessor);
-`;async function V(a,n,d){let o=URL.createObjectURL(new Blob([n],{type:"application/javascript"}));try{await a.audioWorklet.addModule(o)}finally{URL.revokeObjectURL(o)}return new AudioWorkletNode(a,d)}var I=class{constructor(n){this.ws=null;this.captureCtx=null;this.playbackCtx=null;this.playbackNode=null;this.captureNode=null;this.micStream=null;this.isConnected=!1;this.userLevel=0;this.agentLevel=0;this.animFrameId=null;this.isMuted=!1;this.callbacks=n}async start(n,d){try{this.callbacks.onStatusChange?.("connecting");let o=window.AudioContext||window.webkitAudioContext;this.captureCtx=new o({sampleRate:R}),this.playbackCtx=new o({sampleRate:R}),await Promise.all([this.captureCtx.resume(),this.playbackCtx.resume()]),this.playbackNode=await V(this.playbackCtx,G,"playback"),this.playbackNode.connect(this.playbackCtx.destination),this.micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:!0,noiseSuppression:!1,autoGainControl:!0}}),this.captureNode=await V(this.captureCtx,K,"capture"),this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);let f=new URL(J);f.searchParams.set("token",n),this.ws=new WebSocket(f.toString()),this.captureNode.port.onmessage=({data:u})=>{if(!this.isConnected||!this.ws||this.ws.readyState!==WebSocket.OPEN||this.isMuted)return;let t=new Uint8Array(u),r="";for(let p=0;p<t.length;p+=32768)r+=String.fromCharCode.apply(null,Array.from(t.subarray(p,p+32768)));this.ws.send(JSON.stringify({type:"input.audio",audio:btoa(r)}));let h=new Int16Array(u),g=0;for(let p=0;p<h.length;p+=16)g+=Math.abs(h[p]);this.userLevel=Math.min(1,g/(h.length/16)/8e3)},this.ws.onopen=()=>{d&&d.trim()&&this.ws?.send(JSON.stringify({type:"session.update",session:{agent_id:d.trim()}}))},this.ws.onmessage=({data:u})=>{try{let t=JSON.parse(u);switch(t.type){case"session.ready":this.isConnected=!0,this.callbacks.onStatusChange?.("connected");break;case"input.speech.started":this.playbackNode?.port.postMessage("stop"),this.agentLevel=0;break;case"transcript.user":t.text&&this.callbacks.onTranscript?.({who:"user",text:t.text});break;case"transcript.agent":t.text&&this.callbacks.onTranscript?.({who:"agent",text:t.text});break;case"reply.audio":if(t.data&&this.playbackNode){let r=atob(t.data),h=new Uint8Array(r.length);for(let g=0;g<r.length;g++)h[g]=r.charCodeAt(g);this.playbackNode.port.postMessage(h.buffer,[h.buffer]),this.agentLevel=.8}break;case"reply.done":t.status==="interrupted"&&(this.playbackNode?.port.postMessage("stop"),this.agentLevel=0);break;case"tool.call":this.callbacks.onToolEvent?.({type:"call",tool:t.name||t.tool,args:t.arguments||t.args});break;case"tool.result":this.callbacks.onToolEvent?.({type:"result",tool:t.name||t.tool,result:t.result});break;case"session.error":this.callbacks.onError?.(t.message||t.code||"Session error"),this.callbacks.onStatusChange?.("error");break;case"session.ended":this.stop();break}}catch(t){console.warn("Message parsing error:",t)}},this.ws.onerror=()=>{this.callbacks.onError?.("WebSocket connection error"),this.callbacks.onStatusChange?.("error")},this.ws.onclose=()=>{this.stop()},this.startVisualizerLoop()}catch(o){this.callbacks.onError?.(o.message||"Failed to start audio"),this.callbacks.onStatusChange?.("error"),this.stop()}}setMuted(n){this.isMuted=n,n&&(this.userLevel=0)}getMuted(){return this.isMuted}stop(){if(this.isConnected=!1,this.animFrameId&&(cancelAnimationFrame(this.animFrameId),this.animFrameId=null),this.playbackNode){try{this.playbackNode.port.postMessage("stop")}catch{}this.playbackNode.disconnect(),this.playbackNode=null}if(this.captureNode&&(this.captureNode.disconnect(),this.captureNode=null),this.micStream&&(this.micStream.getTracks().forEach(n=>n.stop()),this.micStream=null),this.captureCtx&&this.captureCtx.state!=="closed"&&(this.captureCtx.close().catch(()=>{}),this.captureCtx=null),this.playbackCtx&&this.playbackCtx.state!=="closed"&&(this.playbackCtx.close().catch(()=>{}),this.playbackCtx=null),this.ws){if(this.ws.readyState===WebSocket.OPEN)try{this.ws.send(JSON.stringify({type:"session.end"}))}catch{}this.ws.close(),this.ws=null}this.userLevel=0,this.agentLevel=0,this.callbacks.onAudioLevel?.(0,0),this.callbacks.onStatusChange?.("idle")}startVisualizerLoop(){let n=()=>{this.agentLevel=Math.max(0,this.agentLevel-.04),this.userLevel=Math.max(0,this.userLevel-.04),this.callbacks.onAudioLevel?.(this.userLevel,this.agentLevel),this.animFrameId=requestAnimationFrame(n)};this.animFrameId=requestAnimationFrame(n)}};var Y={slate:"#18181b",purple:"#7c3aed",blue:"#2563eb",emerald:"#059669"};function B(a={}){if(typeof window>"u")return;let{host:n,businessId:d="biz_demo_dental",agentId:o,theme:f="dark",position:u="bottom-right",label:t="Talk to Receptionist",accent:r="slate",accentColor:h,suggestions:g,onCallStart:p,onCallEnd:q,onTranscript:D}=a,k=h||Y[r]||r||"#18181b",H=document.getElementById("omnidesk-voice-widget-root");H&&H.remove();let m=document.createElement("div");m.id="omnidesk-voice-widget-root",m.style.fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";let v=f==="dark"||f==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches,i={bg:v?"#09090b":"#ffffff",cardBg:v?"#121215":"#f4f4f5",border:v?"#27272a":"#e4e4e7",text:v?"#fafafa":"#09090b",textMuted:v?"#a1a1aa":"#71717a",bubbleAgent:v?"#18181b":"#f4f4f5",bubbleUser:k,userText:"#ffffff"},b=null,T="idle",w=!1,L=0,z=!1,A=u==="bottom-left",_=document.createElement("div");_.style.cssText=`
-    position: fixed; bottom: 24px; ${A?"left: 24px;":"right: 24px;"}
+`;async function q(o,s,p){let r=URL.createObjectURL(new Blob([s],{type:"application/javascript"}));try{await o.audioWorklet.addModule(r)}finally{URL.revokeObjectURL(r)}return new AudioWorkletNode(o,p)}var $=class{constructor(s){this.ws=null;this.captureCtx=null;this.playbackCtx=null;this.playbackNode=null;this.captureNode=null;this.micStream=null;this.isConnected=!1;this.userLevel=0;this.agentLevel=0;this.animFrameId=null;this.isMuted=!1;this.callbacks=s}async start(s,p){try{this.callbacks.onStatusChange?.("connecting");let r=window.AudioContext||window.webkitAudioContext;this.captureCtx=new r({sampleRate:N}),this.playbackCtx=new r({sampleRate:N}),await Promise.all([this.captureCtx.resume(),this.playbackCtx.resume()]),this.playbackNode=await q(this.playbackCtx,se,"playback"),this.playbackNode.connect(this.playbackCtx.destination),this.micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:!0,noiseSuppression:!1,autoGainControl:!0}}),this.captureNode=await q(this.captureCtx,te,"capture"),this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);let f=new URL(ee);f.searchParams.set("token",s),this.ws=new WebSocket(f.toString()),this.captureNode.port.onmessage=({data:b})=>{if(!this.isConnected||!this.ws||this.ws.readyState!==WebSocket.OPEN||this.isMuted)return;let e=new Uint8Array(b),l="";for(let h=0;h<e.length;h+=32768)l+=String.fromCharCode.apply(null,Array.from(e.subarray(h,h+32768)));this.ws.send(JSON.stringify({type:"input.audio",audio:btoa(l)}));let c=new Int16Array(b),u=0;for(let h=0;h<c.length;h+=16)u+=Math.abs(c[h]);this.userLevel=Math.min(1,u/(c.length/16)/8e3)},this.ws.onopen=()=>{p&&p.trim()&&this.ws?.send(JSON.stringify({type:"session.update",session:{agent_id:p.trim()}}))},this.ws.onmessage=({data:b})=>{try{let e=JSON.parse(b);switch(e.type){case"session.ready":this.isConnected=!0,this.callbacks.onStatusChange?.("connected");break;case"input.speech.started":this.playbackNode?.port.postMessage("stop"),this.agentLevel=0;break;case"transcript.user":e.text&&this.callbacks.onTranscript?.({who:"user",text:e.text});break;case"transcript.agent":e.text&&this.callbacks.onTranscript?.({who:"agent",text:e.text});break;case"reply.audio":if(e.data&&this.playbackNode){let l=atob(e.data),c=new Uint8Array(l.length);for(let u=0;u<l.length;u++)c[u]=l.charCodeAt(u);this.playbackNode.port.postMessage(c.buffer,[c.buffer]),this.agentLevel=.8}break;case"reply.done":e.status==="interrupted"&&(this.playbackNode?.port.postMessage("stop"),this.agentLevel=0);break;case"tool.call":this.callbacks.onToolEvent?.({type:"call",tool:e.name||e.tool,args:e.arguments||e.args});break;case"tool.result":this.callbacks.onToolEvent?.({type:"result",tool:e.name||e.tool,result:e.result});break;case"session.error":this.callbacks.onError?.(e.message||e.code||"Session error"),this.callbacks.onStatusChange?.("error");break;case"session.ended":this.stop();break}}catch(e){console.warn("Message parsing error:",e)}},this.ws.onerror=()=>{this.callbacks.onError?.("WebSocket connection error"),this.callbacks.onStatusChange?.("error")},this.ws.onclose=()=>{this.stop()},this.startVisualizerLoop()}catch(r){this.callbacks.onError?.(r.message||"Failed to start audio"),this.callbacks.onStatusChange?.("error"),this.stop()}}setMuted(s){this.isMuted=s,s&&(this.userLevel=0)}getMuted(){return this.isMuted}stop(){if(this.isConnected=!1,this.animFrameId&&(cancelAnimationFrame(this.animFrameId),this.animFrameId=null),this.playbackNode){try{this.playbackNode.port.postMessage("stop")}catch{}this.playbackNode.disconnect(),this.playbackNode=null}if(this.captureNode&&(this.captureNode.disconnect(),this.captureNode=null),this.micStream&&(this.micStream.getTracks().forEach(s=>s.stop()),this.micStream=null),this.captureCtx&&this.captureCtx.state!=="closed"&&(this.captureCtx.close().catch(()=>{}),this.captureCtx=null),this.playbackCtx&&this.playbackCtx.state!=="closed"&&(this.playbackCtx.close().catch(()=>{}),this.playbackCtx=null),this.ws){if(this.ws.readyState===WebSocket.OPEN)try{this.ws.send(JSON.stringify({type:"session.end"}))}catch{}this.ws.close(),this.ws=null}this.userLevel=0,this.agentLevel=0,this.callbacks.onAudioLevel?.(0,0),this.callbacks.onStatusChange?.("idle")}startVisualizerLoop(){let s=()=>{this.agentLevel=Math.max(0,this.agentLevel-.04),this.userLevel=Math.max(0,this.userLevel-.04),this.callbacks.onAudioLevel?.(this.userLevel,this.agentLevel),this.animFrameId=requestAnimationFrame(s)};this.animFrameId=requestAnimationFrame(s)}};var ie={emerald:"#10b981",green:"#10b981",blue:"#2563eb",purple:"#8b5cf6",amber:"#f59e0b",rose:"#f43f5e",slate:"#10b981"},j=[8,14,18,11,16,20,12,6,15];function J(o={}){if(typeof window>"u")return;let{host:s,businessId:p="biz_demo_dental",agentId:r,theme:f="dark",position:b="bottom-right",label:e="Talk to Receptionist",accent:l="emerald",accentColor:c,businessName:u,greeting:h,onCallStart:G,onCallEnd:K,onTranscript:Q}=o,d=c||ie[l]||l||"#10b981",U=document.getElementById("omnidesk-voice-widget-root");U&&U.remove();let v=document.createElement("div");v.id="omnidesk-voice-widget-root",v.style.fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";let x=f==="dark"||f==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches,i={bg:x?"#18181b":"#ffffff",headerBg:x?"#09090b":"#f4f4f5",border:x?"#27272a":"#e4e4e7",text:x?"#fafafa":"#09090b",textMuted:x?"#a1a1aa":"#71717a",bubbleAgent:x?"#27272a":"#f4f4f5",bubbleUser:d,userText:"#ffffff",agentText:x?"#f4f4f5":"#09090b"},y=null,S="idle",L=0,z=!1,Y=0,X=0,B=b==="bottom-left",Z=h||"Hello! Welcome to OmniDesk. Would you like to check availability or book a consultation?",M=document.createElement("div");M.style.cssText=`
+    position: fixed; bottom: 20px; ${B?"left: 20px;":"right: 20px;"};
     z-index: 999999;
   `;let E=document.createElement("button");E.style.cssText=`
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 20px; border-radius: 9999px;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 9999px;
     background: ${i.bg}; color: ${i.text};
     border: 1px solid ${i.border};
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
-    cursor: pointer; font-weight: 600; font-size: 14px;
-    transition: all 0.2s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    cursor: pointer; font-weight: 600; font-size: 13px;
+    transition: transform 0.15s ease, background 0.15s ease;
   `,E.innerHTML=`
-    <span style="width:10px;height:10px;border-radius:50%;background:#71717a;display:inline-block;"></span>
-    <span>${t}</span>
-  `,_.appendChild(E);let C=document.createElement("div");C.style.cssText=`
-    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    z-index: 999998; display: none;
-  `;let e=document.createElement("div");e.style.cssText=`
-    position: fixed; bottom: 24px; ${A?"left: 24px;":"right: 24px;"}
-    width: 370px; height: 560px; max-height: 85vh;
+    <span id="omnidesk-trigger-dot" style="width:8px;height:8px;border-radius:50%;background:${d};box-shadow:0 0 8px ${d};display:inline-block;"></span>
+    <span>${e}</span>
+    <span id="omnidesk-trigger-arrow" style="font-size:11px;opacity:0.6;">\u25B2</span>
+  `,M.appendChild(E);let k=document.createElement("div");k.style.cssText=`
+    position: fixed; bottom: 70px; ${B?"left: 20px;":"right: 20px;"};
+    width: 320px; height: 280px;
     background: ${i.bg}; border: 1px solid ${i.border};
-    border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+    border-radius: 18px; box-shadow: 0 20px 30px -10px rgba(0,0,0,0.4);
     display: none; flex-direction: column; overflow: hidden; z-index: 999999;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  `;let x=document.createElement("div");x.style.cssText=`
-    padding: 14px 18px; border-bottom: 1px solid ${i.border};
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;let w=document.createElement("div");w.style.cssText=`
+    padding: 12px 16px; border-bottom: 1px solid ${i.border};
     display: flex; align-items: center; justify-content: space-between;
-    background: ${i.cardBg};
-  `,x.innerHTML=`
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <div style="width: 34px; height: 34px; border-radius: 50%; background: ${k}; color: #fff; display: grid; place-items: center; font-size: 14px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-      </div>
-      <div>
-        <div style="font-weight:700;font-size:14px;color:${i.text};" id="omnidesk-biz-title">AI Receptionist</div>
-        <div style="font-size:11px;color:${i.textMuted};margin-top:2px;display:flex;align-items:center;gap:6px;" id="omnidesk-status-text">
-          <span style="width:7px;height:7px;border-radius:50%;background:#71717a;display:inline-block;"></span> Ready
-        </div>
-      </div>
+    background: ${i.headerBg};
+  `,w.innerHTML=`
+    <div>
+      <div style="font-size:13px;font-weight:700;color:${i.text};" id="omnidesk-biz-title">${u||"OmniDesk AI Receptionist"}</div>
+      <div style="font-size:10.5px;color:${d};font-weight:600;" id="omnidesk-status-text">Ready to connect</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <button id="omnidesk-expand-btn" style="background:transparent;border:none;color:${i.textMuted};cursor:pointer;padding:6px;font-size:15px;" title="Expand">\u2922</button>
-      <button id="omnidesk-close-btn" style="background:transparent;border:none;color:${i.textMuted};cursor:pointer;padding:6px;font-size:15px;" title="Close">\u2715</button>
-    </div>
-  `;let S=document.createElement("div");S.style.cssText=`
-    flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;
-  `;let P=document.createElement("div");P.style.cssText=`
-    padding: 14px 16px; border-top: 1px solid ${i.border};
-    background: ${i.cardBg}; display: flex; gap: 10px;
-  `;let c=document.createElement("button");c.style.cssText=`
-    display: none; flex: 1; padding: 10px; border-radius: 10px; border: 1px solid ${i.border};
-    background: ${i.bg}; color: ${i.text}; font-size: 12.5px; font-weight: 600; cursor: pointer;
-  `,c.innerText="Mute Mic";let s=document.createElement("button");s.style.cssText=`
-    width: 100%; padding: 11px; border-radius: 10px; border: none;
-    background: ${k}; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: all 0.15s ease;
-  `,s.innerText="Start Call",P.appendChild(c),P.appendChild(s),e.appendChild(x),e.appendChild(S),e.appendChild(P),m.appendChild(C),m.appendChild(_),m.appendChild(e),document.body.appendChild(m);function W(y){z=y,y?(C.style.display="block",e.style.top="50%",e.style.left="50%",e.style.bottom="auto",e.style.right="auto",e.style.transform="translate(-50%, -50%)",e.style.width="min(640px, 92vw)",e.style.height="min(720px, 86vh)",e.style.maxHeight="800px",e.style.borderRadius="24px",x.querySelector("#omnidesk-expand-btn").innerHTML="\u2199"):(C.style.display="none",e.style.top="auto",e.style.left=A?"24px":"auto",e.style.bottom="24px",e.style.right=A?"auto":"24px",e.style.transform="none",e.style.width="370px",e.style.height="560px",e.style.maxHeight="85vh",e.style.borderRadius="20px",x.querySelector("#omnidesk-expand-btn").innerHTML="\u2922")}E.onclick=()=>{_.style.display="none",e.style.display="flex",T==="idle"&&U()},x.querySelector("#omnidesk-close-btn").addEventListener("click",()=>{e.style.display="none",C.style.display="none",_.style.display="block",W(!1)}),x.querySelector("#omnidesk-expand-btn").addEventListener("click",()=>{W(!z)}),C.addEventListener("click",()=>{W(!1)}),c.onclick=()=>{b&&(w=!w,b.setMuted(w),c.innerText=w?"Unmute Mic":"Mute Mic",c.style.background=w?"#ef4444":i.bg,c.style.color=w?"#fff":i.text)};async function U(){let y=x.querySelector("#omnidesk-status-text");y.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> Connecting...',s.innerText="Connecting...",s.disabled=!0;try{let F=n?n.replace(/\/$/,""):typeof window<"u"?window.location.origin:"",O=await fetch(`${F}/api/token?businessId=${encodeURIComponent(d)}`);if(!O.ok)throw new Error("Failed to get session token");let $=await O.json();if($.business_name){let l=x.querySelector("#omnidesk-biz-title");l&&(l.innerText=$.business_name)}let j=o||$.agent_id||"";b=new I({onStatusChange:l=>{if(T=l,l==="connected")y.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;"></span> Live Receptionist',s.innerText="End Call",s.style.background="#ef4444",s.style.width="auto",s.style.flex="1",s.disabled=!1,c.style.display="block",L=Date.now(),p?.();else if(l==="idle"&&(y.innerHTML='<span style="width:7px;height:7px;border-radius:50%;background:#71717a;display:inline-block;"></span> Call Ended',s.innerText="Start Call",s.style.background=k,s.style.width="100%",s.disabled=!1,c.style.display="none",L>0)){let M=Math.round((Date.now()-L)/1e3);L=0,q?.(M)}},onTranscript:l=>{let M=document.createElement("div"),N=l.who==="user";M.style.cssText=`
-            display: flex; justify-content: ${N?"flex-end":"flex-start"};
-          `,M.innerHTML=`
-            <div style="max-width:${z?"70%":"82%"};padding:9px 13px;border-radius:${N?"14px 14px 2px 14px":"14px 14px 14px 2px"};background:${N?i.bubbleUser:i.bubbleAgent};color:${N?i.userText:i.text};font-size:13px;line-height:1.45;">
-              ${l.text}
-            </div>
-          `,S.appendChild(M),S.scrollTop=S.scrollHeight,D?.(l)},onError:l=>{y.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;"></span> Error: ${l}`,s.innerText="Start Call",s.style.background=k,s.style.width="100%",s.disabled=!1,c.style.display="none"}}),await b.start($.token,j)}catch(F){y.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block;"></span> ${F.message||"Connection failed"}`,s.innerText="Start Call",s.style.background=k,s.style.width="100%",s.disabled=!1,c.style.display="none"}}return s.onclick=()=>{T==="connected"&&b?(b.stop(),b=null):T==="idle"&&U()},{destroy:()=>{b&&b.stop(),m.remove()},startCall:U}}if(typeof document<"u"){let a=document.currentScript||document.querySelector("script[data-agent], script[data-business-id]");if(a){let n=a.getAttribute("data-business-id")||void 0,d=a.getAttribute("data-agent")||void 0,o=a.getAttribute("data-theme")||"dark",f=a.getAttribute("data-accent")||"slate",u=a.getAttribute("data-position")||"bottom-right",t=a.getAttribute("data-label")||void 0,r=a.getAttribute("data-host")||void 0;document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{B({businessId:n,agentId:d,theme:o,accent:f,position:u,label:t,host:r})}):B({businessId:n,agentId:d,theme:o,accent:f,position:u,label:t,host:r})}}export{B as initOmniDeskWidget};
+    <button id="omnidesk-close-btn" style="background:transparent;border:none;color:${i.textMuted};cursor:pointer;padding:4px;font-size:14px;" title="Close">\u2715</button>
+  `;let C=document.createElement("div");C.style.cssText=`
+    flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  `;let R=document.createElement("div");R.style.cssText=`
+    align-self: flex-start; background: ${i.bubbleAgent}; color: ${i.agentText};
+    padding: 8px 12px; border-radius: 12px; font-size: 12px; max-width: 85%; line-height: 1.4;
+  `,R.innerText=Z,C.appendChild(R);let P=document.createElement("div");P.style.cssText=`
+    padding: 10px 14px; border-top: 1px solid ${i.border};
+    display: flex; align-items: center; justify-content: space-between;
+  `;let I=document.createElement("div");I.style.cssText=`
+    display: flex; align-items: center; gap: 3px; height: 18px;
+  `,j.forEach(()=>{let a=document.createElement("div");a.className="omnidesk-freq-bar",a.style.cssText=`
+      width: 3px; height: 4px; border-radius: 2px;
+      background: ${d}; opacity: 0.7; transition: height 0.15s ease;
+    `,I.appendChild(a)});let t=document.createElement("button");t.style.cssText=`
+    padding: 7px 16px; border-radius: 9999px; border: none;
+    background: ${d}; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.15s ease;
+  `,t.innerText="Start Call",P.appendChild(I),P.appendChild(t),k.appendChild(w),k.appendChild(C),k.appendChild(P),v.appendChild(M),v.appendChild(k),document.body.appendChild(v);function T(a,g){k.querySelectorAll(".omnidesk-freq-bar").forEach((A,_)=>{let F=j[_],n=a?Math.max(5,Math.min(18,Math.round(F*(.35+g*1.5)))):4;A.style.height=`${n}px`,A.style.opacity=a?"1":"0.7"})}function D(a){z=a,k.style.display=a?"flex":"none"}E.onclick=()=>{D(!z)},w.querySelector("#omnidesk-close-btn").addEventListener("click",()=>{D(!1)});async function H(){let a=w.querySelector("#omnidesk-status-text"),g=M.querySelector("#omnidesk-trigger-dot");a.innerText="Connecting...",t.innerText="Connecting...",t.disabled=!0;try{let W=s?s.replace(/\/$/,""):typeof window<"u"?window.location.origin:"",A=await fetch(`${W}/api/token?businessId=${encodeURIComponent(p)}`);if(!A.ok)throw new Error("Failed to get session token");let _=await A.json();if(_.business_name&&!u){let n=w.querySelector("#omnidesk-biz-title");n&&(n.innerText=`${_.business_name} AI Receptionist`)}let F=r||_.agent_id||"";y=new $({onStatusChange:n=>{if(S=n,n==="connected")a.innerText="Live Voice Call (24kHz)",t.innerText="End Call",t.style.background="#ef4444",t.style.boxShadow="0 2px 8px rgba(239,68,68,0.3)",t.disabled=!1,g&&(g.style.background="#ef4444",g.style.boxShadow="0 0 8px #ef4444"),L=Date.now(),G?.();else if(n==="idle"&&(a.innerText="Ready to connect",t.innerText="Start Call",t.style.background=d,t.style.boxShadow="0 2px 8px rgba(16,185,129,0.3)",t.disabled=!1,g&&(g.style.background=d,g.style.boxShadow=`0 0 8px ${d}`),T(!1,0),L>0)){let m=Math.round((Date.now()-L)/1e3);L=0,K?.(m)}},onTranscript:n=>{let m=document.createElement("div"),O=n.who==="user";m.style.cssText=`
+            align-self: ${O?"flex-end":"flex-start"};
+            background: ${O?i.bubbleUser:i.bubbleAgent};
+            color: ${O?i.userText:i.agentText};
+            padding: 8px 12px; border-radius: 12px; font-size: 12px; max-width: 85%; line-height: 1.4;
+          `,m.innerText=n.text,C.appendChild(m),C.scrollTop=C.scrollHeight,Q?.(n)},onAudioLevel:(n,m)=>{Y=n,X=m,T(S==="connected",Math.max(n,m))},onError:n=>{a.innerText="Connection error",t.innerText="Start Call",t.style.background=d,t.disabled=!1,T(!1,0)}}),await y.start(_.token,F)}catch{a.innerText="Connection failed",t.innerText="Start Call",t.style.background=d,t.disabled=!1,T(!1,0)}}function V(){y&&(y.stop(),y=null),S="idle",T(!1,0)}return t.onclick=()=>{S==="connected"?V():S==="idle"&&H()},{destroy:()=>{y&&y.stop(),v.remove()},startCall:H,endCall:V}}if(typeof document<"u"){let o=document.currentScript||document.querySelector("script[data-agent], script[data-business-id]");if(o){let s=o.getAttribute("data-business-id")||void 0,p=o.getAttribute("data-agent")||void 0,r=o.getAttribute("data-theme")||"dark",f=o.getAttribute("data-accent")||"emerald",b=o.getAttribute("data-position")||"bottom-right",e=o.getAttribute("data-label")||void 0,l=o.getAttribute("data-host")||void 0,c=o.getAttribute("data-greeting")||void 0;document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{J({businessId:s,agentId:p,theme:r,accent:f,position:b,label:e,host:l,greeting:c})}):J({businessId:s,agentId:p,theme:r,accent:f,position:b,label:e,host:l,greeting:c})}}export{J as initOmniDeskWidget};
 //# sourceMappingURL=vanilla.mjs.map

@@ -11,7 +11,6 @@ interface TemplateInfo {
   name: string;
   greeting: string;
   agentRole: string;
-  chips: { label: string; query: string }[];
 }
 
 const TEMPLATES: Record<string, TemplateInfo> = {
@@ -21,11 +20,6 @@ const TEMPLATES: Record<string, TemplateInfo> = {
     greeting:
       "Thanks for calling OmniDesk Hair Salon & Studio! Are you looking to book a haircut, styling, or coloring session?",
     agentRole: "Hair Salon Voice Receptionist",
-    chips: [
-      { label: "Signature Haircut ($45)", query: "I want to book a haircut" },
-      { label: "Artisan Balayage ($180)", query: "Do you have balayage appointments?" },
-      { label: "Check Availability", query: "What times are available this Thursday?" },
-    ],
   },
 };
 
@@ -41,9 +35,6 @@ export default function DemoPage() {
   const [callStatus, setCallStatus] = useState<"idle" | "busy" | "live" | "error">("idle");
   const [callDuration, setCallDuration] = useState("0:00");
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showEmailBox, setShowEmailBox] = useState(false);
-  const [emailInput, setEmailInput] = useState("");
-  const [emailFeedback, setEmailFeedback] = useState<string | null>(null);
 
   // Auth modal
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -90,48 +81,6 @@ export default function DemoPage() {
         text: activeTemplate.greeting,
       },
     ]);
-    setShowEmailBox(false);
-    setEmailInput("");
-    setEmailFeedback(null);
-  };
-
-  const handleQuickQuery = (text: string) => {
-    const userMsg: MessageBubble = {
-      id: `user-${Date.now()}`,
-      who: "user",
-      text,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-
-    setTimeout(() => {
-      let reply = "";
-      if (templateKey === "salon") {
-        if (text.toLowerCase().includes("haircut") || text.toLowerCase().includes("balayage")) {
-          reply =
-            "Great choice! We have slots open this Friday at 10:30 am with Jordan, or 2:00 pm with Taylor. Would either of those times work for you?";
-        } else {
-          reply =
-            "We have availability this Thursday at 9:00 am, 11:30 am, and 2:30 pm. Let me know your preferred time and I'll confirm your booking!";
-        }
-      } else {
-        if (text.toLowerCase().includes("tour") || text.toLowerCase().includes("viewing")) {
-          reply =
-            "I'd be glad to arrange that property tour! We have viewing slots open this Saturday at 11:00 am and 3:00 pm. Would you like to reserve one?";
-        } else {
-          reply =
-            "Our licensed property specialists are available for private consultations this Friday afternoon. What time suits your schedule best?";
-        }
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `agent-${Date.now()}`,
-          who: "agent",
-          text: reply,
-        },
-      ]);
-    }, 600);
   };
 
   // Timer helpers
@@ -197,12 +146,6 @@ export default function DemoPage() {
               text: event.text,
             },
           ]);
-          if (event.who === "agent") {
-            const lower = event.text.toLowerCase();
-            if (lower.includes("email") || lower.includes("spell your email")) {
-              setShowEmailBox(true);
-            }
-          }
         },
         onError: (err) => {
           console.warn("Voice error:", err);
@@ -227,33 +170,6 @@ export default function DemoPage() {
     }
     setCallStatus("idle");
     stopTimer();
-  };
-
-  const handleConfirmEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput.trim()) return;
-
-    setEmailFeedback(`Email verified: ${emailInput.trim()}`);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `user-${Date.now()}`,
-        who: "user",
-        text: `My email is ${emailInput.trim()}`,
-      },
-    ]);
-
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `agent-${Date.now()}`,
-          who: "agent",
-          text: `Thank you! I have confirmed your email as ${emailInput.trim()}. I've sent your calendar invite and booking confirmation!`,
-        },
-      ]);
-      setShowEmailBox(false);
-    }, 600);
   };
 
   // Instant demo account
@@ -714,6 +630,7 @@ export default function DemoPage() {
             <div
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: "auto",
                 padding: "18px 16px",
                 display: "flex",
@@ -768,86 +685,10 @@ export default function DemoPage() {
                       {m.text}
                     </div>
                   </div>
-
-                  {/* If first message, show quick chips */}
-                  {idx === 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", marginLeft: "32px" }}>
-                      {activeTemplate.chips.map((chip, cIdx) => (
-                        <button
-                          key={cIdx}
-                          type="button"
-                          onClick={() => handleQuickQuery(chip.query)}
-                          style={{
-                            background: "#ffffff",
-                            border: "1px solid #e4e4e7",
-                            borderRadius: "100px",
-                            padding: "6px 12px",
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            color: "#27272a",
-                            cursor: "pointer",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
               <div ref={transcriptBottomRef} />
             </div>
-
-            {/* Customer Email Confirmation Bar */}
-            {showEmailBox && (
-              <div style={{ padding: "12px 16px", background: "#fbfbfa", borderTop: "1px solid #e4e4e7" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#16a34a" }} />
-                    Agent Requested Email
-                  </span>
-                  <span style={{ fontSize: "11px", color: "#71717a" }}>Quick confirmation entry</span>
-                </div>
-                <form onSubmit={handleConfirmEmail} style={{ display: "flex", gap: "6px" }}>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="e.g. client@gmail.com"
-                    required
-                    style={{
-                      flex: 1,
-                      fontFamily: "var(--font)",
-                      fontSize: "13px",
-                      padding: "7px 10px",
-                      borderRadius: "6px",
-                      border: "1px solid #e4e4e7",
-                      outline: "none",
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      background: "#000000",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "7px 14px",
-                      borderRadius: "6px",
-                      fontSize: "12.5px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Confirm
-                  </button>
-                </form>
-                {emailFeedback && (
-                  <div style={{ fontSize: "11px", color: "#16a34a", marginTop: "4px" }}>{emailFeedback}</div>
-                )}
-              </div>
-            )}
 
             {/* Voice Call Bar */}
             <div

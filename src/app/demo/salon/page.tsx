@@ -218,6 +218,8 @@ export default function SalonDemoPage() {
         accent="emerald"
         position="bottom-right"
         label="Book Appointment"
+        businessName="Luxe & Mane Hair Studio"
+        greeting="Hello! Welcome to Luxe & Mane Hair Studio. Would you like to check availability or book an appointment?"
       />
     </div>
   );

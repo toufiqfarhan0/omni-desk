@@ -1,8 +1,8 @@
 import React from 'react';
-import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-D3YWtxw1.mjs';
-export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-D3YWtxw1.mjs';
+import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-8ECvWKoo.mjs';
+export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-8ECvWKoo.mjs';
 
-declare function OmniDeskWidget({ host, businessId, agentId: propAgentId, theme, position, label, accent, accentColor, suggestions, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
+declare function OmniDeskWidget({ host, businessId, agentId: propAgentId, theme, position, label, accent, accentColor, businessName: propBusinessName, greeting: propGreeting, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
 declare const VoiceWidget: typeof OmniDeskWidget;
 
 interface VoiceSessionCallbacks {
