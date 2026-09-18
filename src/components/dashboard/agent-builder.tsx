@@ -177,6 +177,36 @@ const INDUSTRY_PRESETS: Record<
   },
 };
 
+export interface VoiceOption {
+  id: string;
+  name: string;
+  gender: "Female" | "Male";
+  accent: string;
+  style: string;
+  description: string;
+}
+
+export const ASSEMBLYAI_VOICES: VoiceOption[] = [
+  { id: "alba", name: "Alba", gender: "Female", accent: "US", style: "Warm & Natural", description: "Default salon receptionist, balanced and friendly tone" },
+  { id: "anna", name: "Anna", gender: "Female", accent: "US", style: "Engaging & Bright", description: "Enthusiastic customer service & front desk scheduling" },
+  { id: "charles", name: "Charles", gender: "Male", accent: "US", style: "Deep & Professional", description: "Calm, executive advisory and clinical tone" },
+  { id: "estelle", name: "Estelle", gender: "Female", accent: "US", style: "Sophisticated & Calming", description: "Luxury medspas, wellness, and boutique studios" },
+  { id: "eve", name: "Eve", gender: "Female", accent: "US", style: "Crisp & Energetic", description: "Fast-paced reception and high-efficiency bookings" },
+  { id: "george", name: "George", gender: "Male", accent: "UK", style: "Conversational & Warm", description: "Polite, refined British accent demeanor" },
+  { id: "giovanni", name: "Giovanni", gender: "Male", accent: "Italian/US", style: "Expressive & Confident", description: "Charismatic, welcoming and memorable" },
+  { id: "iris", name: "Iris", gender: "Female", accent: "US", style: "Gentle & Melodic", description: "Patient, caring consultation and triage" },
+  { id: "jane", name: "Jane", gender: "Female", accent: "US", style: "Articulate & Direct", description: "Clear, authoritative corporate receptionist" },
+  { id: "jean", name: "Jean", gender: "Male", accent: "French/US", style: "Refined & Reassuring", description: "High-end salons, spas, and hospitality" },
+  { id: "juergen", name: "Juergen", gender: "Male", accent: "German/US", style: "Resonant & Precise", description: "Direct, confident, and reliable tone" },
+  { id: "lola", name: "Lola", gender: "Female", accent: "US", style: "Vibrant & Playful", description: "Trendsetting salons and modern creative studios" },
+  { id: "mary", name: "Mary", gender: "Female", accent: "US", style: "Warm & Caring", description: "Approachable, maternal, and reassuring" },
+  { id: "michael", name: "Michael", gender: "Male", accent: "US", style: "Friendly & Casual", description: "Modern, approachable barber or wellness tone" },
+  { id: "paul", name: "Paul", gender: "Male", accent: "US", style: "Authoritative & Smooth", description: "Trustworthy professional consultation" },
+  { id: "rafael", name: "Rafael", gender: "Male", accent: "Spanish/US", style: "Dynamic & Charming", description: "Energetic and warm client service" },
+  { id: "reid", name: "Reid", gender: "Male", accent: "US", style: "Grounded & Natural", description: "Smooth, articulate, and reliable delivery" },
+  { id: "vera", name: "Vera", gender: "Female", accent: "US", style: "Elegant & Polished", description: "Upscale aesthetic practices and VIP concierge" },
+];
+
 export function AgentBuilder({
   business,
   onUpdateBusiness,
@@ -185,11 +215,86 @@ export function AgentBuilder({
   const [services, setServices] = useState<Service[]>(business.services || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isPlayingVoice, setIsPlayingVoice] = useState(false);
 
   useEffect(() => {
     setFormData(business);
     setServices(business.services || []);
   }, [business]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handlePlayVoicePreview = (voiceId: string, customGreeting?: string) => {
+    if (typeof window === "undefined") return;
+
+    if (isPlayingVoice) {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setIsPlayingVoice(false);
+      return;
+    }
+
+    if (!window.speechSynthesis) {
+      toast.error("Speech synthesis is not supported in this browser");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const voiceMeta = ASSEMBLYAI_VOICES.find((v) => v.id === voiceId) || ASSEMBLYAI_VOICES[0];
+    const textToSpeak =
+      customGreeting && customGreeting.trim()
+        ? customGreeting
+        : `Hello! Thanks for calling ${formData.name || "our studio"}. I'm ${voiceMeta.name}, your voice receptionist. How can I help you today?`;
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const availableVoices = window.speechSynthesis.getVoices();
+    const isFemale = voiceMeta.gender === "Female";
+
+    const matched =
+      availableVoices.find((v) => {
+        const n = v.name.toLowerCase();
+        if (v.lang.startsWith("en")) {
+          if (isFemale && (n.includes("female") || n.includes("jenny") || n.includes("aria") || n.includes("zira") || n.includes("samantha") || n.includes("victoria") || n.includes("karen"))) return true;
+          if (!isFemale && (n.includes("male") || n.includes("guy") || n.includes("david") || n.includes("george") || n.includes("alex") || n.includes("daniel") || n.includes("mark"))) return true;
+        }
+        return false;
+      }) ||
+      availableVoices.find((v) => v.lang.startsWith("en")) ||
+      availableVoices[0];
+
+    if (matched) utterance.voice = matched;
+
+    if (voiceMeta.id === "charles" || voiceMeta.id === "juergen" || voiceMeta.id === "paul") {
+      utterance.pitch = 0.85;
+      utterance.rate = 0.95;
+    } else if (voiceMeta.id === "eve" || voiceMeta.id === "lola") {
+      utterance.pitch = 1.15;
+      utterance.rate = 1.05;
+    } else if (voiceMeta.id === "estelle" || voiceMeta.id === "vera") {
+      utterance.pitch = 1.0;
+      utterance.rate = 0.95;
+    } else if (voiceMeta.id === "iris" || voiceMeta.id === "anna") {
+      utterance.pitch = 1.08;
+      utterance.rate = 1.0;
+    } else if (!isFemale) {
+      utterance.pitch = 0.92;
+      utterance.rate = 1.0;
+    } else {
+      utterance.pitch = 1.02;
+      utterance.rate = 1.0;
+    }
+
+    utterance.onstart = () => setIsPlayingVoice(true);
+    utterance.onend = () => setIsPlayingVoice(false);
+    utterance.onerror = () => setIsPlayingVoice(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   // New service state
   const [newKey, setNewKey] = useState("");
@@ -363,20 +468,176 @@ export function AgentBuilder({
               <input style={cs.input} id="biz-name-input" type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </div>
             <div style={cs.formGroup}>
-              <label style={cs.label} htmlFor="voice-model-select">Voice Model</label>
+              <label style={cs.label} htmlFor="voice-model-select">Voice Model ({ASSEMBLYAI_VOICES.length} Available)</label>
               <Select value={formData.voice_id || "alba"} onValueChange={(val) => setFormData({ ...formData, voice_id: val })}>
                 <SelectTrigger id="voice-model-select" style={{ ...cs.select, height: "38px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent style={{ background: "#ffffff", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", zIndex: 9999 }}>
-                  <SelectItem value="alba" style={{ fontSize: "13px", padding: "8px 12px", cursor: "pointer" }}>Alba — Warm, Natural Female (US)</SelectItem>
-                  <SelectItem value="marian" style={{ fontSize: "13px", padding: "8px 12px", cursor: "pointer" }}>Marian — Friendly, Expressive (US)</SelectItem>
-                  <SelectItem value="callum" style={{ fontSize: "13px", padding: "8px 12px", cursor: "pointer" }}>Callum — Clear, Authoritative (US)</SelectItem>
-                  <SelectItem value="charlotte" style={{ fontSize: "13px", padding: "8px 12px", cursor: "pointer" }}>Charlotte — Refined, Professional</SelectItem>
+                <SelectContent style={{ background: "#ffffff", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", zIndex: 9999, maxHeight: "280px", overflowY: "auto" }}>
+                  {ASSEMBLYAI_VOICES.map((v) => (
+                    <SelectItem key={v.id} value={v.id} style={{ fontSize: "12.5px", padding: "8px 12px", cursor: "pointer" }}>
+                      {v.name} — {v.style} ({v.gender}, {v.accent})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {/* Live Voice Audio Preview Player Card */}
+          {(() => {
+            const currentVoice =
+              ASSEMBLYAI_VOICES.find((v) => v.id === (formData.voice_id || "alba")) ||
+              ASSEMBLYAI_VOICES[0];
+            return (
+              <div
+                style={{
+                  background: isPlayingVoice ? "#f0fdf4" : "#fafafa",
+                  border: isPlayingVoice ? "1px solid #86efac" : "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  padding: "12px 14px",
+                  marginBottom: "16px",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "50%",
+                        background: isPlayingVoice ? "#16a34a" : "#18181b",
+                        color: "#ffffff",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        transition: "background 0.2s ease",
+                      }}
+                    >
+                      {currentVoice.name[0]}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: "6px" }}>
+                        {currentVoice.name}
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 600,
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            background: currentVoice.gender === "Female" ? "#fce7f3" : "#e0e7ff",
+                            color: currentVoice.gender === "Female" ? "#be185d" : "#3730a3",
+                          }}
+                        >
+                          {currentVoice.gender} &bull; {currentVoice.accent}
+                        </span>
+                        {isPlayingVoice && (
+                          <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
+                            Playing Live Audio Preview
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
+                        {currentVoice.style} &mdash; {currentVoice.description}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Audio Bars Animation */}
+                  {isPlayingVoice && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "3px", height: "16px" }}>
+                      {[8, 14, 10, 16, 9, 15, 12, 14].map((h, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            width: "3px",
+                            height: `${h}px`,
+                            background: "#16a34a",
+                            borderRadius: "1px",
+                            display: "inline-block",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Spoken phrase quote */}
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontStyle: "italic",
+                    color: isPlayingVoice ? "#15803d" : "var(--text-muted)",
+                    background: isPlayingVoice ? "#dcfce7" : "#f4f4f5",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    marginBottom: "10px",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  &ldquo;Hello! Thanks for calling {formData.name || "our studio"}. I can check real-time availability and schedule your appointment.&rdquo;
+                </div>
+
+                {/* Control buttons */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => handlePlayVoicePreview(currentVoice.id)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: isPlayingVoice ? "#dc2626" : "#000000",
+                      color: "#ffffff",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "background 0.15s ease",
+                    }}
+                  >
+                    {isPlayingVoice ? (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                        Stop Audio
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Listen to Voice Sample
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePlayVoicePreview(currentVoice.id, formData.greeting)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border)",
+                      background: "#ffffff",
+                      color: "var(--text)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                    Test Greeting Audio
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* AssemblyAI Agent ID Config */}
           <div style={cs.formGroup}>
@@ -544,8 +805,27 @@ export function AgentBuilder({
                   {(formData.voice_id || "A")[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "-0.01em", marginBottom: "3px" }}>
-                    {formData.voice_id ? formData.voice_id.charAt(0).toUpperCase() + formData.voice_id.slice(1) : "Alba"} — Voice Receptionist
+                  <div style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "-0.01em", marginBottom: "3px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>{formData.voice_id ? formData.voice_id.charAt(0).toUpperCase() + formData.voice_id.slice(1) : "Alba"} — Voice Receptionist</span>
+                    <button
+                      type="button"
+                      onClick={() => handlePlayVoicePreview(formData.voice_id || "alba", formData.greeting)}
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        border: "1px solid var(--border)",
+                        background: isPlayingVoice ? "#dc2626" : "#f4f4f5",
+                        color: isPlayingVoice ? "#ffffff" : "var(--text)",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      {isPlayingVoice ? "⏹ Stop" : "▶ Listen"}
+                    </button>
                   </div>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "11px", padding: "2px 7px", borderRadius: "4px", background: "#000000", border: "1px solid #000000", color: "#ffffff", fontWeight: 600 }}>AssemblyAI Voice API</span>

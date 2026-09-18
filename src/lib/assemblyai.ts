@@ -32,6 +32,18 @@ export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
   return data.token;
 }
 
+export const VALID_ASSEMBLYAI_VOICES = new Set([
+  "alba", "anna", "charles", "estelle", "eve", "george", "giovanni",
+  "iris", "jane", "jean", "juergen", "lola", "mary", "michael",
+  "paul", "rafael", "reid", "vera"
+]);
+
+export function sanitizeVoiceId(voiceId?: string): string {
+  if (!voiceId) return "alba";
+  const normalized = voiceId.trim().toLowerCase();
+  return VALID_ASSEMBLYAI_VOICES.has(normalized) ? normalized : "alba";
+}
+
 export function buildAgentDefinition(
   biz: Business,
   publicBaseUrl?: string
@@ -206,7 +218,7 @@ Instructions:
     system_prompt: fullPrompt,
     greeting: biz.greeting || undefined,
     voice: {
-      voice_id: biz.voice_id || "alba",
+      voice_id: sanitizeVoiceId(biz.voice_id),
     },
     tools,
   };
