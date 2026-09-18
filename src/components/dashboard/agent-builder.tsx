@@ -390,7 +390,7 @@ export function AgentBuilder({
                 </span>
               ) : (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--text-muted)" }}>
-                  Using Environment Default
+                  {formData.id === "biz_demo_dental" ? "Using Environment Default" : "Undeployed (Click Save & Deploy above)"}
                 </span>
               )}
             </div>

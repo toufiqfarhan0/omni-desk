@@ -225,7 +225,10 @@ export async function deployOrUpdateAgent(
   }
 
   const payload = buildAgentDefinition(biz, publicBaseUrl);
-  const existingAgentId = biz.assemblyai_agent_id || process.env.AGENT_ID;
+  // Only fall back to process.env.AGENT_ID for the official pre-configured hair salon demo
+  const existingAgentId =
+    biz.assemblyai_agent_id ||
+    (biz.id === "biz_demo_dental" ? process.env.AGENT_ID : undefined);
 
   const url = existingAgentId
     ? `https://agents.assemblyai.com/v1/agents/${existingAgentId}`
