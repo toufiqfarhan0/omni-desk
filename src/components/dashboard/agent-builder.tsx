@@ -329,23 +329,6 @@ export function AgentBuilder({
 
   return (
     <div>
-      {/* Status Banner */}
-      <div style={{ padding: "12px 16px", borderRadius: "var(--radius)", background: "#ffffff", border: "1px solid var(--border)", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "11px", fontFamily: "var(--mono)", fontWeight: 600, padding: "2px 8px", borderRadius: "4px", background: "#000000", color: "#ffffff", textTransform: "uppercase" }}>AssemblyAI Provisioned</span>
-          <span style={{ color: "var(--text-muted)" }}>Voice Receptionist active with live calendar booking tools.</span>
-        </div>
-        <button
-          type="button"
-          onClick={handleDeployOnly}
-          disabled={isSaving || isDeploying}
-          style={{ ...cs.btnPrimary, opacity: (isSaving || isDeploying) ? 0.6 : 1, cursor: (isSaving || isDeploying) ? "not-allowed" : "pointer" }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          {isDeploying ? "Deploying..." : "Deploy to AssemblyAI"}
-        </button>
-      </div>
-
       <div style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: "24px", alignItems: "stretch" }}>
         {/* Left Column: Config */}
         <div style={cs.card}>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { BrandLogo } from "@/components/brand-logo";
+import { toast } from "sonner";
 
 
 export default function LandingPage() {
@@ -17,6 +18,7 @@ export default function LandingPage() {
   const [authError, setAuthError] = useState("");
   const [authNotFound, setAuthNotFound] = useState(false);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   // Auto-cycle demo cards every 4 seconds
   useEffect(() => {
@@ -67,6 +69,10 @@ export default function LandingPage() {
   };
 
   const handleDemoSignIn = async () => {
+    if (isDemoLoading) return;
+    setIsDemoLoading(true);
+    const toastId = toast.loading("Authenticating demo operator...");
+
     try {
       if (typeof document !== "undefined") {
         document.cookie = "omnidesk_session=owner_demo; path=/; max-age=604800; SameSite=Lax";
@@ -94,6 +100,7 @@ export default function LandingPage() {
           localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
         }
       }
+      toast.success("Welcome, Demo Operator! Opening dashboard...", { id: toastId });
     } catch {
       if (typeof window !== "undefined") {
         localStorage.setItem("omnidesk_owner_id", "owner_demo");
@@ -101,8 +108,12 @@ export default function LandingPage() {
         localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
         localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
       }
+      toast.success("Opening Demo Dashboard...", { id: toastId });
     }
-    window.location.href = "/dashboard?demo=true";
+
+    setTimeout(() => {
+      window.location.href = "/dashboard?demo=true";
+    }, 450);
   };
 
   return (
@@ -603,8 +614,24 @@ export default function LandingPage() {
             {/* Demo Account Card */}
             <div className="demo-bypass-card">
               <div className="demo-bypass-title" style={{ marginBottom: "10px" }}>Don&apos;t want to sign in? Use Demo Account</div>
-              <button type="button" className="btn-demo-signin" onClick={handleDemoSignIn}>
-                <span>Enter as Demo Account</span>
+              <button
+                type="button"
+                className="btn-demo-signin"
+                onClick={handleDemoSignIn}
+                disabled={isDemoLoading}
+                style={isDemoLoading ? { opacity: 0.75, cursor: "wait" } : undefined}
+              >
+                {isDemoLoading ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                    <svg style={{ animation: "spin 1s linear infinite", width: "15px", height: "15px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                    </svg>
+                    <span>Connecting to Demo...</span>
+                  </span>
+                ) : (
+                  <span>Enter as Demo Account</span>
+                )}
               </button>
             </div>
 
@@ -700,6 +727,7 @@ export default function LandingPage() {
         .eyebrow-badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-border); padding: 4px 12px; border-radius: 999px; margin-bottom: 24px; }
         .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #000000; box-shadow: 0 0 0 3px rgba(0,0,0,0.15); animation: pulseDot 2s infinite; flex-shrink: 0; }
         @keyframes pulseDot { 0%,100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.3); opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .lead { margin: 0 auto 32px; font-size: 18px; line-height: 1.55; color: var(--text-muted); max-width: 620px; }
         .hero-preview { max-width: 920px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; text-align: left; }
         .preview-bar { background: var(--surface-subtle); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
