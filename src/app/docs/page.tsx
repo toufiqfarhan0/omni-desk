@@ -255,11 +255,12 @@ pnpm install`}</div>
           <div className="doc-code">{`cp .env.example .env`}</div>
           <p className="doc-p">Minimum required for the voice agent to work:</p>
           <div className="doc-code">{`# Required — AssemblyAI
-ASSEMBLYAI_API_KEY=your_assemblyai_key
+NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_key
+AGENT_ID=your_assemblyai_agent_id
 
 # Optional — Supabase (for production persistence)
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
 
 # Optional — Gmail SMTP (for booking confirmation emails)
 GMAIL_USER=you@gmail.com
@@ -470,8 +471,8 @@ GMAIL_APP_PASSWORD=abcd efgh ijkl mnop   # 16-char app password`}</div>
 
       <h2 className="doc-h2">Supabase (Production Database)</h2>
       <p className="doc-p">For production, configure Supabase to store bookings, conversations, and owner accounts persistently in the cloud.</p>
-      <div className="doc-code">{`NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key`}</div>
+      <div className="doc-code">{`SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_ANON_KEY=your_anon_key`}</div>
       <p className="doc-p">See the <strong>Supabase Setup</strong> section for the full SQL schema to run in your Supabase project.</p>
     </div>
   );
@@ -590,8 +591,8 @@ ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE session_store DISABLE ROW LEVEL SECURITY;`}</div>
 
       <h2 className="doc-h2">Step 4 — Add Environment Variables</h2>
-      <div className="doc-code">{`NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}</div>
+      <div className="doc-code">{`SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`}</div>
       <p className="doc-p">Restart your dev server. OmniDesk will automatically detect Supabase keys and switch to <span className="doc-inline-code">dual</span> mode (SQLite primary + Supabase sync) locally, or <span className="doc-inline-code">supabase</span> mode on Vercel.</p>
     </div>
   );
@@ -620,10 +621,10 @@ function DeploymentSection() {
             </thead>
             <tbody>
               {[
-                ["ASSEMBLYAI_API_KEY", "Required", "Your AssemblyAI API key"],
-                ["ASSEMBLYAI_AGENT_ID", "Required", "Your Voice Agent ID"],
-                ["NEXT_PUBLIC_SUPABASE_URL", "Required", "Supabase project URL"],
-                ["SUPABASE_SERVICE_ROLE_KEY", "Required", "Supabase service role key"],
+                ["NEXT_ASSEMBLYAI_API_KEY", "Required", "Your AssemblyAI API key"],
+                ["AGENT_ID", "Required", "Your AssemblyAI Voice Agent ID"],
+                ["SUPABASE_URL", "Required", "Supabase project URL"],
+                ["SUPABASE_ANON_KEY", "Required", "Supabase Anon Key"],
                 ["GMAIL_USER", "Optional", "Gmail address for confirmations"],
                 ["GMAIL_APP_PASSWORD", "Optional", "Gmail 16-char app password"],
                 ["PUBLIC_API_BASE_URL", "Optional", "Your production domain URL"],

@@ -16,14 +16,20 @@ export interface VoiceSessionTokenResponse {
 export interface OmniDeskWidgetProps {
   /**
    * The base URL of your deployed OmniDesk platform.
-   * e.g. "https://omni-desk-rho.vercel.app" or "http://localhost:3000"
+   * e.g. "https://omni-desk-rho.vercel.app" or "http://localhost:3000".
+   * Defaults to window.location.origin when in browser.
    */
-  host: string;
+  host?: string;
   /**
    * The target business/tenant ID configured in OmniDesk.
    * Defaults to "biz_demo_dental".
    */
   businessId?: string;
+  /**
+   * Optional explicit AssemblyAI Agent ID.
+   * If omitted, resolved dynamically from OmniDesk /api/token.
+   */
+  agentId?: string;
   /**
    * Visual theme for the widget.
    * Defaults to "dark".
@@ -40,10 +46,18 @@ export interface OmniDeskWidgetProps {
    */
   label?: string;
   /**
-   * Custom primary accent color (hex or CSS color).
-   * Defaults to "#10b981" (emerald).
+   * Primary accent theme name ("slate" | "purple" | "blue" | "emerald") or custom CSS color.
+   * Defaults to "slate".
+   */
+  accent?: "slate" | "purple" | "blue" | "emerald" | string;
+  /**
+   * Custom primary accent color (hex or CSS color). Legacy alias for `accent`.
    */
   accentColor?: string;
+  /**
+   * Custom suggestion prompt chips displayed when call is connected.
+   */
+  suggestions?: string[];
   /**
    * Optional custom CSS class for the container.
    */
@@ -61,6 +75,8 @@ export interface OmniDeskWidgetProps {
    */
   onTranscript?: (msg: TranscriptMessage) => void;
 }
+
+export type VoiceWidgetProps = OmniDeskWidgetProps;
 
 export interface VanillaOmniDeskConfig extends OmniDeskWidgetProps {
   /**

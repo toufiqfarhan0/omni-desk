@@ -111,7 +111,14 @@ export async function POST(request: Request) {
       businesses = [starter];
     }
 
-    return NextResponse.json({ ok: true, owner, businesses });
+    const res = NextResponse.json({ ok: true, owner, businesses });
+    res.cookies.set("omnidesk_session", owner.id, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      sameSite: "lax",
+      httpOnly: false,
+    });
+    return res;
   } catch (err: any) {
     console.error("[auth/owner] error:", err);
     return NextResponse.json(

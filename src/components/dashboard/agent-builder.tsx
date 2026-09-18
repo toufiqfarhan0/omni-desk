@@ -239,10 +239,10 @@ export function AgentBuilder({
     }
   };
 
-  const handleSaveAndDeploy = async () => {
+  const handleDeployOnly = async () => {
     try {
       setIsDeploying(true);
-      // 1. Save config first
+      // 1. Save latest config first so AssemblyAI gets up-to-date prompts
       const saveRes = await fetch(`/api/owner/businesses/${formData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -337,12 +337,12 @@ export function AgentBuilder({
         </div>
         <button
           type="button"
-          onClick={handleSaveAndDeploy}
+          onClick={handleDeployOnly}
           disabled={isSaving || isDeploying}
           style={{ ...cs.btnPrimary, opacity: (isSaving || isDeploying) ? 0.6 : 1, cursor: (isSaving || isDeploying) ? "not-allowed" : "pointer" }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          {isDeploying ? "Deploying..." : "Save & Deploy Voice Agent"}
+          {isDeploying ? "Deploying..." : "Deploy to AssemblyAI"}
         </button>
       </div>
 
@@ -393,6 +393,35 @@ export function AgentBuilder({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* AssemblyAI Agent ID Config */}
+          <div style={cs.formGroup}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <label style={{ ...cs.label, marginBottom: 0 }} htmlFor="agent-id-input">
+                AssemblyAI Voice Agent ID
+              </label>
+              {formData.assemblyai_agent_id ? (
+                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#16a34a", fontWeight: 600 }}>
+                  Active Agent Configured
+                </span>
+              ) : (
+                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--text-muted)" }}>
+                  Using Environment Default
+                </span>
+              )}
+            </div>
+            <input
+              style={cs.input}
+              id="agent-id-input"
+              type="text"
+              placeholder="e.g. agent_6e8ae0f... (leave empty to use default from env)"
+              value={formData.assemblyai_agent_id || ""}
+              onChange={(e) => setFormData({ ...formData, assemblyai_agent_id: e.target.value })}
+            />
+            <p style={cs.hint}>
+              Specify your own AssemblyAI Agent ID, or click <strong>Deploy to AssemblyAI</strong> above to auto-create one.
+            </p>
           </div>
 
           <div style={cs.formGroup}>
@@ -470,11 +499,17 @@ export function AgentBuilder({
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: "12px", marginTop: "auto", paddingTop: "20px" }}>
-            <button type="button" onClick={handleSaveOnly} disabled={isSaving} style={{ ...cs.btnSecondary, flex: 1, justifyContent: "center", opacity: isSaving ? 0.6 : 1 }}>
-              {isSaving ? "Saving..." : "Save Settings"}
+            <button type="button" onClick={handleSaveOnly} disabled={isSaving || isDeploying} style={{ ...cs.btnSecondary, flex: 1, justifyContent: "center", opacity: isSaving ? 0.6 : 1 }}>
+              {isSaving ? "Saving Settings..." : "Save Settings"}
             </button>
-            <button type="button" onClick={handleSaveAndDeploy} disabled={isSaving || isDeploying} style={{ ...cs.btnPrimary, flex: 1, justifyContent: "center", opacity: (isSaving || isDeploying) ? 0.6 : 1 }}>
-              {isDeploying ? "Deploying..." : "Save & Deploy"}
+            <button type="button" onClick={handleDeployOnly} disabled={isSaving || isDeploying} style={{ ...cs.btnPrimary, flex: 1, justifyContent: "center", opacity: isDeploying ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+              </svg>
+              {isDeploying ? "Deploying Agent..." : "Deploy Agent"}
             </button>
           </div>
         </div>
@@ -511,6 +546,31 @@ export function AgentBuilder({
                 &quot;{formData.greeting || "No greeting set."}&quot;
               </div>
             </div>
+
+            {/* Active Agent ID Pill & Copy */}
+            <div style={{ background: "#fafafa", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "9px 12px", margin: "10px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: "0.04em" }}>
+                  Active AssemblyAI Agent ID
+                </div>
+                <div style={{ fontSize: "11.5px", fontFamily: "var(--mono)", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                  {formData.assemblyai_agent_id || "Active on AssemblyAI (Environment Default)"}
+                </div>
+              </div>
+              {formData.assemblyai_agent_id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(formData.assemblyai_agent_id || "");
+                    toast.success("Copied Agent ID");
+                  }}
+                  style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: "pointer", flexShrink: 0 }}
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+
             {/* Connected tools */}
             <div style={{ fontSize: "11.5px", fontWeight: 600, textTransform: "uppercase" as const, color: "var(--text-muted)", marginTop: "12px", marginBottom: "8px" }}>Connected Server-Side Tools</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>

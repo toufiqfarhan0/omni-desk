@@ -193,11 +193,9 @@ export default function DemoPage() {
       if (!res.ok) {
         throw new Error("Could not mint session token");
       }
-      const { token } = await res.json();
-
-      const cfgRes = await fetch("/api/config");
-      const cfg = await cfgRes.json();
-      const agentId = cfg.agent_id || "agent_demo";
+      const data = await res.json();
+      const token = data.token;
+      const agentId = data.agent_id || "";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -668,22 +666,43 @@ export default function DemoPage() {
 
         {/* SHOWCASE GRID */}
         <section style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "0 auto", maxWidth: "520px" }}>
+          {/* Backdrop when expanded to fullscreen */}
+          {isExpanded && (
+            <div
+              onClick={() => setIsExpanded(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.7)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                zIndex: 190,
+              }}
+            />
+          )}
+
           {/* INTERACTIVE VOICE WIDGET CARD */}
           <div
             style={{
               background: "#ffffff",
               border: "1px solid #e4e4e7",
               borderRadius: "22px",
-              boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.08)",
+              boxShadow: isExpanded
+                ? "0 32px 64px -16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+                : "0 24px 48px -12px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.08)",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              height: isExpanded ? "auto" : "640px",
-              width: "100%",
+              height: isExpanded ? "calc(100vh - 56px)" : "640px",
+              maxHeight: isExpanded ? "900px" : "640px",
+              width: isExpanded ? "calc(100vw - 64px)" : "100%",
+              maxWidth: isExpanded ? "1140px" : "520px",
               position: isExpanded ? "fixed" : "relative",
-              inset: isExpanded ? "20px" : "auto",
+              top: isExpanded ? "50%" : "auto",
+              left: isExpanded ? "50%" : "auto",
+              transform: isExpanded ? "translate(-50%, -50%)" : "none",
               zIndex: isExpanded ? 200 : "auto",
-              transition: "all 0.25s ease",
+              transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             {/* Widget Topbar */}
@@ -691,7 +710,7 @@ export default function DemoPage() {
               style={{
                 background: "#18181b",
                 color: "#ffffff",
-                padding: "14px 18px",
+                padding: isExpanded ? "16px 24px" : "14px 18px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -751,27 +770,64 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "rgba(255,255,255,0.7)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "rgba(255,255,255,0.85)" }}>
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  title={isExpanded ? "Minimize" : "Fullscreen"}
-                  style={{ background: "transparent", border: "none", color: "inherit", padding: "4px", cursor: "pointer", display: "grid", placeItems: "center" }}
+                  title={isExpanded ? "Exit Fullscreen" : "Open Full"}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "7px",
+                    color: "#ffffff",
+                    width: "30px",
+                    height: "30px",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                  </svg>
+                  {isExpanded ? (
+                    /* Minimize / collapse icon (arrows pointing inward) */
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 14 10 14 10 20" />
+                      <polyline points="20 10 14 10 14 4" />
+                      <line x1="14" y1="10" x2="21" y2="3" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  ) : (
+                    /* Maximize / expand icon (arrows pointing outward - matching design) */
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={handleReset}
                   title="Reset Conversation"
-                  style={{ background: "transparent", border: "none", color: "inherit", padding: "4px", cursor: "pointer", display: "grid", placeItems: "center" }}
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "7px",
+                    color: "#ffffff",
+                    width: "30px",
+                    height: "30px",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>

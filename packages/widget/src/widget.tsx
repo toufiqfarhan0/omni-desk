@@ -1,22 +1,33 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { OmniDeskWidgetProps, CallStatus, TranscriptMessage, VoiceSessionTokenResponse } from "./types";
 import { AssemblyAIVoiceClient } from "./audio-client";
+
+const ACCENT_MAP: Record<string, string> = {
+  slate: "#18181b",
+  purple: "#7c3aed",
+  blue: "#2563eb",
+  emerald: "#059669",
+};
 
 export function OmniDeskWidget({
   host,
   businessId = "biz_demo_dental",
+  agentId: propAgentId,
   theme = "dark",
   position = "bottom-right",
   label = "Talk to Receptionist",
-  accentColor = "#10b981",
+  accent = "slate",
+  accentColor,
+  suggestions,
   className,
   onCallStart,
   onCallEnd,
   onTranscript,
 }: OmniDeskWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [transcripts, setTranscripts] = useState<TranscriptMessage[]>([]);
   const [userLevel, setUserLevel] = useState(0);
@@ -29,10 +40,23 @@ export function OmniDeskWidget({
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const callStartTimeRef = useRef<number>(0);
 
+  const activeAccent = useMemo(() => {
+    if (accentColor) return accentColor;
+    return ACCENT_MAP[accent] || accent || "#18181b";
+  }, [accent, accentColor]);
+
   // Auto-scroll transcript container
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcripts]);
+
+  const resolvedHost = useMemo(() => {
+    if (host) return host.replace(/\/$/, "");
+    if (typeof window !== "undefined" && window.location.origin) {
+      return window.location.origin;
+    }
+    return "";
+  }, [host]);
 
   const handleStartCall = useCallback(async () => {
     try {
@@ -40,8 +64,11 @@ export function OmniDeskWidget({
       setErrorMessage("");
       setTranscripts([]);
 
-      const cleanHost = host.replace(/\/$/, "");
-      const res = await fetch(`${cleanHost}/api/token?businessId=${encodeURIComponent(businessId)}`);
+      const tokenUrl = resolvedHost
+        ? `${resolvedHost}/api/token?businessId=${encodeURIComponent(businessId)}`
+        : `/api/token?businessId=${encodeURIComponent(businessId)}`;
+
+      const res = await fetch(tokenUrl);
       if (!res.ok) {
         throw new Error(`Failed to fetch session token (${res.status})`);
       }
@@ -51,9 +78,11 @@ export function OmniDeskWidget({
         setBusinessName(data.business_name);
       }
 
-      if (!data.token || !data.agent_id) {
+      if (!data.token) {
         throw new Error("Invalid session token payload received from host");
       }
+
+      const targetAgentId = propAgentId || data.agent_id || "";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -82,12 +111,12 @@ export function OmniDeskWidget({
       });
 
       clientRef.current = client;
-      await client.start(data.token, data.agent_id);
+      await client.start(data.token, targetAgentId);
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to start call");
       setCallStatus("error");
     }
-  }, [host, businessId, onCallStart, onCallEnd, onTranscript]);
+  }, [resolvedHost, businessId, propAgentId, onCallStart, onCallEnd, onTranscript]);
 
   const handleEndCall = useCallback(() => {
     if (clientRef.current) {
@@ -115,92 +144,144 @@ export function OmniDeskWidget({
     };
   }, []);
 
-  const isDark = theme === "dark" || (theme === "auto" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDark =
+    theme === "dark" ||
+    (theme === "auto" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   const colors = {
     bg: isDark ? "#09090b" : "#ffffff",
-    cardBg: isDark ? "#18181b" : "#f4f4f5",
+    cardBg: isDark ? "#121215" : "#f4f4f5",
     border: isDark ? "#27272a" : "#e4e4e7",
     text: isDark ? "#fafafa" : "#09090b",
     textMuted: isDark ? "#a1a1aa" : "#71717a",
-    bubbleAgent: isDark ? "#27272a" : "#f4f4f5",
-    bubbleUser: accentColor,
+    bubbleAgent: isDark ? "#18181b" : "#f4f4f5",
+    bubbleUser: activeAccent,
     userText: "#ffffff",
   };
 
   const isLeft = position === "bottom-left";
 
+  const defaultSuggestions = suggestions || [
+    "Check availability",
+    "Book consultation",
+    "Pricing & services",
+  ];
+
   return (
-    <div
-      className={className}
-      style={{
-        position: "fixed",
-        bottom: "24px",
-        left: isLeft ? "24px" : "auto",
-        right: isLeft ? "auto" : "24px",
-        zIndex: 999999,
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      }}
-    >
-      {/* Floating Trigger Button */}
-      {!isOpen && (
-        <button
-          onClick={() => {
-            setIsOpen(true);
-            if (callStatus === "idle") {
-              handleStartCall();
-            }
-          }}
+    <div className={className}>
+      {/* Expanded Modal Backdrop when in expanded mode */}
+      {isOpen && isExpanded && (
+        <div
+          onClick={() => setIsExpanded(false)}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            padding: "12px 20px",
-            borderRadius: "9999px",
-            background: colors.bg,
-            color: colors.text,
-            border: `1px solid ${colors.border}`,
-            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "14px",
-            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            zIndex: 999998,
+            transition: "all 0.25s ease",
           }}
-        >
-          <span
-            style={{
-              width: "10px",
-              height: "10px",
-              borderRadius: "50%",
-              background: callStatus === "connected" ? accentColor : "#71717a",
-              boxShadow: callStatus === "connected" ? `0 0 10px ${accentColor}` : "none",
-            }}
-          />
-          {label}
-        </button>
+        />
       )}
 
-      {/* Expanded Modal */}
+      {/* Floating Trigger Button */}
+      {!isOpen && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: isLeft ? "24px" : "auto",
+            right: isLeft ? "auto" : "24px",
+            zIndex: 999999,
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          <button
+            onClick={() => {
+              setIsOpen(true);
+              if (callStatus === "idle") {
+                handleStartCall();
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "12px 20px",
+              borderRadius: "9999px",
+              background: colors.bg,
+              color: colors.text,
+              border: `1px solid ${colors.border}`,
+              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "14px",
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            <span
+              style={{
+                width: "10px",
+                height: "10px",
+                borderRadius: "50%",
+                background:
+                  callStatus === "connected"
+                    ? activeAccent
+                    : callStatus === "connecting"
+                    ? "#f59e0b"
+                    : "#71717a",
+                boxShadow:
+                  callStatus === "connected"
+                    ? `0 0 10px ${activeAccent}`
+                    : "none",
+              }}
+            />
+            {label}
+          </button>
+        </div>
+      )}
+
+      {/* Main Widget Container (Floating or Centered Expanded) */}
       {isOpen && (
         <div
           style={{
-            width: "360px",
-            maxHeight: "560px",
-            height: "520px",
+            position: "fixed",
+            ...(isExpanded
+              ? {
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "min(640px, 92vw)",
+                  height: "min(720px, 86vh)",
+                  maxHeight: "800px",
+                }
+              : {
+                  bottom: "24px",
+                  left: isLeft ? "24px" : "auto",
+                  right: isLeft ? "auto" : "24px",
+                  width: "370px",
+                  height: "560px",
+                  maxHeight: "85vh",
+                }),
+            zIndex: 999999,
             background: colors.bg,
             border: `1px solid ${colors.border}`,
-            borderRadius: "20px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+            borderRadius: isExpanded ? "24px" : "20px",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           {/* Header */}
           <div
             style={{
-              padding: "16px 20px",
+              padding: "14px 18px",
               borderBottom: `1px solid ${colors.border}`,
               display: "flex",
               alignItems: "center",
@@ -208,66 +289,134 @@ export function OmniDeskWidget({
               background: colors.cardBg,
             }}
           >
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "14px", color: colors.text }}>
-                {businessName}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "50%",
+                  background: activeAccent,
+                  color: "#ffffff",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: "14px",
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
               </div>
-              <div style={{ fontSize: "11px", color: colors.textMuted, display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
-                <span
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "14px", color: colors.text }}>
+                  {businessName}
+                </div>
+                <div
                   style={{
-                    width: "7px",
-                    height: "7px",
-                    borderRadius: "50%",
-                    background:
-                      callStatus === "connected"
-                        ? accentColor
-                        : callStatus === "connecting"
-                        ? "#f59e0b"
-                        : "#71717a",
+                    fontSize: "11px",
+                    color: colors.textMuted,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    marginTop: "2px",
                   }}
-                />
-                {callStatus === "connected"
-                  ? "Live Receptionist"
-                  : callStatus === "connecting"
-                  ? "Connecting..."
-                  : "Call Ended"}
+                >
+                  <span
+                    style={{
+                      width: "7px",
+                      height: "7px",
+                      borderRadius: "50%",
+                      background:
+                        callStatus === "connected"
+                          ? "#10b981"
+                          : callStatus === "connecting"
+                          ? "#f59e0b"
+                          : "#71717a",
+                    }}
+                  />
+                  {callStatus === "connected"
+                    ? "Live Receptionist"
+                    : callStatus === "connecting"
+                    ? "Connecting..."
+                    : "Call Ended"}
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: colors.textMuted,
-                cursor: "pointer",
-                padding: "6px",
-                borderRadius: "8px",
-                fontSize: "16px",
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              {/* Expand Toggle */}
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: colors.textMuted,
+                  cursor: "pointer",
+                  padding: "6px",
+                  borderRadius: "6px",
+                  fontSize: "15px",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+                title={isExpanded ? "Collapse modal" : "Expand fullscreen"}
+              >
+                {isExpanded ? "↙" : "⤢"}
+              </button>
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsExpanded(false);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: colors.textMuted,
+                  cursor: "pointer",
+                  padding: "6px",
+                  borderRadius: "6px",
+                  fontSize: "15px",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Waveform Visualizer */}
           <div
             style={{
-              padding: "16px 20px",
+              padding: "12px 18px",
               background: colors.bg,
               borderBottom: `1px solid ${colors.border}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "5px",
-              height: "64px",
+              height: "56px",
             }}
           >
-            {[40, 70, 90, 60, 100, 75, 45, 85, 60, 30].map((h, i) => {
+            {[35, 65, 85, 55, 95, 70, 45, 80, 55, 30, 60, 40].map((h, i) => {
               const active = callStatus === "connected";
               const level = active ? Math.max(userLevel, agentLevel) : 0;
-              const barHeight = Math.max(8, Math.min(48, (h * (0.3 + level * 1.5))));
+              const barHeight = Math.max(6, Math.min(42, h * (0.25 + level * 1.6)));
               return (
                 <div
                   key={i}
@@ -275,7 +424,8 @@ export function OmniDeskWidget({
                     width: "4px",
                     height: `${barHeight}px`,
                     borderRadius: "4px",
-                    background: active && agentLevel > 0.1 ? accentColor : colors.border,
+                    background:
+                      active && agentLevel > 0.08 ? activeAccent : colors.border,
                     transition: "height 0.1s ease, background 0.2s ease",
                   }}
                 />
@@ -305,11 +455,15 @@ export function OmniDeskWidget({
                   padding: "0 20px",
                 }}
               >
-                {callStatus === "connecting"
-                  ? "Connecting to AI Receptionist..."
-                  : callStatus === "connected"
-                  ? "Receptionist is listening. Say hello or ask to book an appointment!"
-                  : errorMessage || "Click Start Call to speak with the receptionist."}
+                {callStatus === "connecting" ? (
+                  "Connecting to AI Receptionist..."
+                ) : callStatus === "connected" ? (
+                  "Receptionist is listening. Say hello or ask to book an appointment!"
+                ) : errorMessage ? (
+                  <span style={{ color: "#ef4444" }}>{errorMessage}</span>
+                ) : (
+                  "Click Start Call to speak with the autonomous receptionist."
+                )}
               </div>
             )}
 
@@ -325,13 +479,15 @@ export function OmniDeskWidget({
                 >
                   <div
                     style={{
-                      maxWidth: "80%",
+                      maxWidth: isExpanded ? "70%" : "82%",
                       padding: "9px 13px",
-                      borderRadius: isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                      borderRadius: isUser
+                        ? "14px 14px 2px 14px"
+                        : "14px 14px 14px 2px",
                       background: isUser ? colors.bubbleUser : colors.bubbleAgent,
                       color: isUser ? colors.userText : colors.text,
                       fontSize: "13px",
-                      lineHeight: 1.4,
+                      lineHeight: 1.45,
                       wordBreak: "break-word",
                     }}
                   >
@@ -342,6 +498,38 @@ export function OmniDeskWidget({
             })}
             <div ref={transcriptEndRef} />
           </div>
+
+          {/* Suggestion Chips */}
+          {defaultSuggestions.length > 0 && callStatus === "connected" && (
+            <div
+              style={{
+                padding: "8px 16px",
+                display: "flex",
+                gap: "6px",
+                overflowX: "auto",
+                borderTop: `1px solid ${colors.border}`,
+                background: colors.cardBg,
+              }}
+            >
+              {defaultSuggestions.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    fontSize: "11.5px",
+                    padding: "4px 10px",
+                    borderRadius: "9999px",
+                    background: colors.bg,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.textMuted,
+                    whiteSpace: "nowrap",
+                    cursor: "default",
+                  }}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Bottom Call Controls */}
           <div
@@ -358,6 +546,7 @@ export function OmniDeskWidget({
             {callStatus === "connected" ? (
               <>
                 <button
+                  type="button"
                   onClick={handleToggleMute}
                   style={{
                     flex: 1,
@@ -376,6 +565,7 @@ export function OmniDeskWidget({
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleEndCall}
                   style={{
                     flex: 1,
@@ -395,6 +585,7 @@ export function OmniDeskWidget({
               </>
             ) : (
               <button
+                type="button"
                 onClick={handleStartCall}
                 disabled={callStatus === "connecting"}
                 style={{
@@ -402,7 +593,7 @@ export function OmniDeskWidget({
                   padding: "11px",
                   borderRadius: "10px",
                   border: "none",
-                  background: accentColor,
+                  background: activeAccent,
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: 600,
@@ -420,3 +611,5 @@ export function OmniDeskWidget({
     </div>
   );
 }
+
+export const VoiceWidget = OmniDeskWidget;

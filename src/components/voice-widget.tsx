@@ -14,6 +14,9 @@ import {
   ChevronUp,
   Volume2,
   Sparkles,
+  Maximize2,
+  Minimize2,
+  X,
 } from "lucide-react";
 
 export interface VoiceWidgetProps {
@@ -41,6 +44,7 @@ export function VoiceWidget({
   const [userLevel, setUserLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
   const [businessName, setBusinessName] = useState("Voice Receptionist");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -98,45 +102,71 @@ export function VoiceWidget({
     position === "bottom-left" ? "left-6 bottom-6" : "right-6 bottom-6";
 
   return (
-    <div className={`fixed ${posClasses} z-50 flex flex-col items-end`}>
-      {/* Expanded Call Window */}
-      {isOpen && (
-        <div className="mb-3 w-80 sm:w-96 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur-xl transition-all">
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
-            <div className="space-y-0.5">
-              <span className="text-xs font-semibold text-neutral-100 block">
-                {businessName}
-              </span>
-              <span className="text-[10px] text-neutral-500">
-                Powered by AssemblyAI Voice
-              </span>
-            </div>
+    <>
+      {/* Backdrop when in full screen */}
+      {isOpen && isFullscreen && (
+        <div
+          onClick={() => setIsFullscreen(false)}
+          className="fixed inset-0 bg-black/70 backdrop-blur-md z-[80] transition-opacity"
+        />
+      )}
 
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className={`text-[10px] px-1.5 py-0 ${
-                  callStatus === "connected"
-                    ? "border-emerald-800 bg-emerald-950/50 text-emerald-300"
+      <div className={`fixed ${isFullscreen ? "inset-4 sm:inset-8 md:inset-12 max-w-4xl mx-auto my-auto z-[90] flex flex-col" : `${posClasses} z-50 flex flex-col items-end`}`}>
+        {/* Call Window */}
+        {isOpen && (
+          <div className={isFullscreen ? "flex-1 w-full flex flex-col rounded-2xl border border-neutral-800 bg-neutral-950/98 p-6 shadow-2xl backdrop-blur-xl transition-all" : "mb-3 w-80 sm:w-96 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 shadow-2xl backdrop-blur-xl transition-all"}>
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+              <div className="space-y-0.5">
+                <span className="text-xs font-semibold text-neutral-100 block">
+                  {businessName}
+                </span>
+                <span className="text-[10px] text-neutral-500">
+                  Powered by AssemblyAI Voice
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 ${
+                    callStatus === "connected"
+                      ? "border-emerald-800 bg-emerald-950/50 text-emerald-300"
+                      : callStatus === "connecting"
+                      ? "border-amber-800 bg-amber-950/50 text-amber-300 animate-pulse"
+                      : "border-neutral-800 text-neutral-400"
+                  }`}
+                >
+                  {callStatus === "connected"
+                    ? "Live"
                     : callStatus === "connecting"
-                    ? "border-amber-800 bg-amber-950/50 text-amber-300 animate-pulse"
-                    : "border-neutral-800 text-neutral-400"
-                }`}
-              >
-                {callStatus === "connected"
-                  ? "Live"
-                  : callStatus === "connecting"
-                  ? "Connecting"
-                  : "Standby"}
-              </Badge>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-neutral-500 hover:text-neutral-300 p-1"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
+                    ? "Connecting"
+                    : "Standby"}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  title={isFullscreen ? "Minimize" : "Open Full"}
+                  className="text-neutral-400 hover:text-white hover:bg-neutral-800/80 p-1.5 rounded-md transition-colors"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFullscreen(false);
+                    setIsOpen(false);
+                  }}
+                  title="Close"
+                  className="text-neutral-400 hover:text-white hover:bg-neutral-800/80 p-1.5 rounded-md transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* Transcript Feed */}
           <div className="my-3 h-52 overflow-y-auto rounded-lg border border-neutral-800/60 bg-neutral-900/40 p-2.5 space-y-2">
@@ -235,5 +265,6 @@ export function VoiceWidget({
         <span>{label}</span>
       </Button>
     </div>
+    </>
   );
 }

@@ -8,11 +8,9 @@ export interface AgentProvisionResult {
 }
 
 export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
-  const apiKey =
-    process.env.NEXT_ASSEMBLYAI_API_KEY ||
-    process.env.ASSEMBLYAI_API_KEY;
+  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
   if (!apiKey) {
-    throw new Error("NEXT_ASSEMBLYAI_API_KEY or ASSEMBLYAI_API_KEY is not configured");
+    throw new Error("NEXT_ASSEMBLYAI_API_KEY is not configured in environment");
   }
 
   const res = await fetch(
@@ -188,10 +186,10 @@ Instructions:
 
   return {
     name: biz.name,
-    instructions: fullPrompt,
+    system_prompt: fullPrompt,
+    greeting: biz.greeting || undefined,
     voice: {
-      provider: "assemblyai",
-      id: biz.voice_id || "alba",
+      voice_id: biz.voice_id || "alba",
     },
     tools,
   };
@@ -201,13 +199,11 @@ export async function deployOrUpdateAgent(
   biz: Business,
   publicBaseUrl: string
 ): Promise<AgentProvisionResult> {
-  const apiKey =
-    process.env.NEXT_ASSEMBLYAI_API_KEY ||
-    process.env.ASSEMBLYAI_API_KEY;
+  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
-      error: "NEXT_ASSEMBLYAI_API_KEY or ASSEMBLYAI_API_KEY is not set in environment",
+      error: "NEXT_ASSEMBLYAI_API_KEY is not set in environment",
     };
   }
 
@@ -242,7 +238,12 @@ export async function deployOrUpdateAgent(
       }
 
       const errText = await res.text();
-      lastErr = `${res.status}: ${errText}`;
+      let cleanMsg = errText;
+      try {
+        const parsed = JSON.parse(errText);
+        cleanMsg = parsed.message || parsed.error || errText;
+      } catch {}
+      lastErr = `${res.status}: ${cleanMsg}`;
 
       // Check if it's a DNS resolution error that might fix after a short wait
       if (errText.includes("does not resolve") && attempt < 4) {

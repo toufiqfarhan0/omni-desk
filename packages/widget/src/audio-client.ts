@@ -213,12 +213,14 @@ export class AssemblyAIVoiceClient {
       };
 
       this.ws.onopen = () => {
-        this.ws?.send(
-          JSON.stringify({
-            type: "session.update",
-            session: { agent_id: agentId },
-          })
-        );
+        if (agentId && agentId.trim()) {
+          this.ws?.send(
+            JSON.stringify({
+              type: "session.update",
+              session: { agent_id: agentId.trim() },
+            })
+          );
+        }
       };
 
       this.ws.onmessage = ({ data }) => {

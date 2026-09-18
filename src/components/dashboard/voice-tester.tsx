@@ -15,6 +15,13 @@ interface SimMessage {
   text: string;
 }
 
+const ACCENT_COLORS = [
+  { hex: "#18181b", label: "Black" },
+  { hex: "#7c3aed", label: "Purple" },
+  { hex: "#2563eb", label: "Blue" },
+  { hex: "#059669", label: "Emerald" },
+];
+
 export function VoiceTester({ business }: VoiceTesterProps) {
   const [callStatus, setCallStatus] = useState<"idle" | "busy" | "live" | "error">("idle");
   const [messages, setMessages] = useState<SimMessage[]>([
@@ -23,7 +30,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       who: "agent",
       text:
         business.greeting ||
-        `Thanks for calling ${business.name}. Click "Start Call" below to test your customized voice agent in real-time over 24kHz bidirectional audio.`,
+        `Thanks for calling ${business.name}! Are you looking to book an appointment or check availability today?`,
     },
   ]);
   const [timerText, setTimerText] = useState("0:00");
@@ -31,16 +38,32 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const [emailValue, setEmailValue] = useState("");
   const [emailFeedback, setEmailFeedback] = useState<string | null>(null);
 
-  // Widget customizer state
+  // Widget customizer & live preview state
   const [widgetTheme, setWidgetTheme] = useState<"dark" | "light">("dark");
   const [widgetAccent, setWidgetAccent] = useState("#18181b");
   const [widgetPos, setWidgetPos] = useState<"bottom-right" | "bottom-left">("bottom-right");
   const [embedTab, setEmbedTab] = useState<"script" | "react">("script");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerTickRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
   const feedBottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Quick chips derived dynamically from business catalog
+  const chips = (business.services && business.services.length > 0)
+    ? [
+        ...business.services.slice(0, 2).map((s) => ({
+          label: `${s.label} ($${s.price})`,
+          query: `I'd like to ask about ${s.label}`,
+        })),
+        { label: "Check Availability", query: "What times do you have open this week?" },
+      ]
+    : [
+        { label: "Book Appointment", query: "I would like to book an appointment" },
+        { label: "Check Availability", query: "What times are open today?" },
+        { label: "Pricing Info", query: "Can you tell me about your pricing?" },
+      ];
 
   useEffect(() => {
     if (messages.length > 1) {
@@ -81,9 +104,12 @@ export function VoiceTester({ business }: VoiceTesterProps) {
 
       const res = await fetch(`/api/token?businessId=${business.id}`);
       if (!res.ok) throw new Error("Failed to mint session token");
-      const { token } = await res.json();
+      const data = await res.json();
 
-      const agentId = business.assemblyai_agent_id || "agent_demo";
+      const agentId =
+        data.agent_id ||
+        business.assemblyai_agent_id ||
+        "";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -121,7 +147,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       });
 
       voiceClientRef.current = client;
-      await client.start(token, agentId);
+      await client.start(data.token, agentId);
     } catch (err: any) {
       toast.error(err.message || "Failed to start call");
       setCallStatus("error");
@@ -136,6 +162,44 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     }
     setCallStatus("idle");
     stopTimer();
+  };
+
+  const handleReset = () => {
+    handleEndCall();
+    setMessages([
+      {
+        id: "init",
+        who: "agent",
+        text:
+          business.greeting ||
+          `Thanks for calling ${business.name}! Are you looking to book an appointment or check availability today?`,
+      },
+    ]);
+    setShowEmailBar(false);
+    setEmailFeedback(null);
+  };
+
+  const handleQuickChip = (query: string) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `user-${Date.now()}`,
+        who: "user",
+        text: query,
+      },
+    ]);
+    if (callStatus !== "live") {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `agent-${Date.now()}`,
+            who: "agent",
+            text: `I'd be glad to help you with that! Click "Start Voice Call" below to begin speaking with me in real-time.`,
+          },
+        ]);
+      }, 400);
+    }
   };
 
   const handleVerifyEmailSubmit = (e: React.FormEvent) => {
@@ -158,7 +222,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
         {
           id: `agent-${Date.now()}`,
           who: "agent",
-          text: `Thank you! I have confirmed ${emailValue.trim()} and validated your calendar booking slot.`,
+          text: `Thank you! I have confirmed ${emailValue.trim()} and validated your booking reservation.`,
         },
       ]);
       setShowEmailBar(false);
@@ -167,29 +231,34 @@ export function VoiceTester({ business }: VoiceTesterProps) {
 
   const copySnippet = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
+    toast.success("Copied snippet to clipboard!");
   };
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://omnidesk.ai";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://omni-desk-rho.vercel.app";
+  const agentId = business.assemblyai_agent_id || "";
+
   const scriptSnippet = `<!-- OmniDesk Autonomous Voice Receptionist -->
 <script
   src="${origin}/widget.js"
-  data-agent="${business.assemblyai_agent_id || business.id}"
+  data-agent="${agentId}"
   data-position="${widgetPos}"
   data-theme="${widgetTheme}"
+  data-accent="${widgetAccent}"
   defer>
 </script>`;
 
-  const npmSnippet = `npm install @omnidesk/voice-widget`;
+  const npmInstallSnippet = `npm install @omnidesk/voice-widget`;
 
   const reactSnippet = `import { VoiceWidget } from '@omnidesk/voice-widget';
 
-export default function Page() {
+export default function App() {
   return (
     <VoiceWidget
-      agentId="${business.assemblyai_agent_id || business.id}"
-      position="${widgetPos}"
+      businessId="${business.id}"
+      agentId="${agentId}"
       theme="${widgetTheme}"
+      accent="${widgetAccent}"
+      position="${widgetPos}"
     />
   );
 }`;
@@ -203,67 +272,177 @@ export default function Page() {
         alignItems: "stretch",
       }}
     >
-      {/* LEFT: Live Simulator Box Matching web/dashboard.html */}
+      {/* Backdrop when expanded to fullscreen */}
+      {isExpanded && (
+        <div
+          onClick={() => setIsExpanded(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.72)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            zIndex: 190,
+          }}
+        />
+      )}
+
+      {/* LEFT: Live Simulator Box Matching the state-of-the-art Demo Widget */}
       <div
         style={{
           background: "#ffffff",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-lg)",
+          border: "1px solid #e4e4e7",
+          borderRadius: "20px",
+          boxShadow: isExpanded
+            ? "0 32px 64px -16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+            : "0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)",
           overflow: "hidden",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
           display: "flex",
           flexDirection: "column",
           minHeight: "640px",
-          height: "100%",
+          height: isExpanded ? "calc(100vh - 56px)" : "100%",
+          maxHeight: isExpanded ? "900px" : "none",
+          width: isExpanded ? "calc(100vw - 64px)" : "100%",
+          maxWidth: isExpanded ? "1140px" : "none",
+          position: isExpanded ? "fixed" : "relative",
+          top: isExpanded ? "50%" : "auto",
+          left: isExpanded ? "50%" : "auto",
+          transform: isExpanded ? "translate(-50%, -50%)" : "none",
+          zIndex: isExpanded ? 200 : "auto",
+          transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
           boxSizing: "border-box",
         }}
       >
-        {/* Header */}
+        {/* Widget Topbar — Live Dynamic Theme & Accent */}
         <div
           style={{
-            padding: "14px 18px",
-            background: "#fafafa",
-            borderBottom: "1px solid var(--border)",
+            background: widgetTheme === "dark" ? widgetAccent : "#ffffff",
+            color: widgetTheme === "dark" ? "#ffffff" : "#09090b",
+            borderBottom: widgetTheme === "light" ? "1px solid #e4e4e7" : "none",
+            padding: isExpanded ? "16px 24px" : "14px 18px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "12px",
+            userSelect: "none",
+            flexShrink: 0,
+            transition: "background 0.2s ease",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
-            <span
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+            {/* 3 vertical dots icon */}
+            <div style={{ color: widgetTheme === "dark" ? "rgba(255,255,255,0.7)" : "#71717a", display: "grid", placeItems: "center" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
+            </div>
+            {/* Circle microphone avatar */}
+            <div
               style={{
-                width: "8px",
-                height: "8px",
+                width: "28px",
+                height: "28px",
                 borderRadius: "50%",
-                background: callStatus === "live" ? "#16a34a" : callStatus === "busy" ? "#eab308" : "#a1a1aa",
+                background: widgetTheme === "dark" ? "rgba(255,255,255,0.18)" : "#f4f4f5",
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
               }}
-            />
-            <span style={{ fontWeight: 500 }}>
-              {callStatus === "live"
-                ? "Live Call Active — Speaking over 24kHz audio"
-                : callStatus === "busy"
-                ? "Connecting to Voice Agent..."
-                : callStatus === "error"
-                ? "Connection Error"
-                : "Idle — Click Start Call to test voice agent"}
-            </span>
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+              </svg>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <h3 style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: widgetTheme === "dark" ? "#ffffff" : "#09090b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {business.name}
+              </h3>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: widgetTheme === "dark" ? "rgba(255,255,255,0.75)" : "#71717a" }}>
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : widgetTheme === "dark" ? "rgba(255,255,255,0.4)" : "#a1a1aa",
+                  }}
+                />
+                <span>
+                  {callStatus === "live"
+                    ? "Live · Speaking"
+                    : callStatus === "busy"
+                    ? "Connecting..."
+                    : callStatus === "error"
+                    ? "Error"
+                    : "Idle · Ready"}
+                </span>
+              </div>
+            </div>
           </div>
-          <span
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: "12px",
-              padding: "2px 8px",
-              borderRadius: "4px",
-              background: callStatus === "live" ? "#000000" : "#f4f4f5",
-              color: callStatus === "live" ? "#ffffff" : "var(--text)",
-              fontWeight: 600,
-            }}
-          >
-            {timerText}
-          </span>
+
+          {/* Right controls: Open Full & Reset */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: widgetTheme === "dark" ? "rgba(255,255,255,0.85)" : "#52525b" }}>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? "Exit Fullscreen" : "Open Full"}
+              style={{
+                background: widgetTheme === "dark" ? "rgba(255,255,255,0.12)" : "#f4f4f5",
+                border: widgetTheme === "dark" ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
+                borderRadius: "7px",
+                color: widgetTheme === "dark" ? "#ffffff" : "#27272a",
+                width: "30px",
+                height: "30px",
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {isExpanded ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 14 10 14 10 20" />
+                  <polyline points="20 10 14 10 14 4" />
+                  <line x1="14" y1="10" x2="21" y2="3" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9" />
+                  <polyline points="9 21 3 21 3 15" />
+                  <line x1="21" y1="3" x2="14" y2="10" />
+                  <line x1="3" y1="21" x2="10" y2="14" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              title="Reset Conversation"
+              style={{
+                background: widgetTheme === "dark" ? "rgba(255,255,255,0.12)" : "#f4f4f5",
+                border: widgetTheme === "dark" ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
+                borderRadius: "7px",
+                color: widgetTheme === "dark" ? "#ffffff" : "#27272a",
+                width: "30px",
+                height: "30px",
+                cursor: "pointer",
+                display: "grid",
+                placeItems: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Feed */}
+        {/* Conversation Feed */}
         <div
           style={{
             flex: 1,
@@ -271,65 +450,114 @@ export default function Page() {
             padding: "18px 16px",
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: "14px",
             background: "#ffffff",
           }}
         >
-          {messages.map((m) => (
+          {messages.map((m, idx) => (
             <div
               key={m.id}
               style={{
-                maxWidth: "85%",
-                alignSelf: m.who === "agent" ? "flex-start" : "flex-end",
                 display: "flex",
                 flexDirection: "column",
-                gap: "2px",
+                gap: "4px",
+                maxWidth: "88%",
+                alignSelf: m.who === "agent" ? "flex-start" : "flex-end",
               }}
             >
-              <span
-                style={{
-                  fontSize: "10.5px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  color: m.who === "agent" ? "#000000" : "#71717a",
-                }}
-              >
-                {m.who === "agent" ? `${business.name} Voice Assistant` : "You (Caller)"}
-              </span>
-              <div
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: m.who === "agent" ? "14px 14px 14px 2px" : "14px 14px 2px 14px",
-                  background: m.who === "agent" ? "#f4f4f5" : "#000000",
-                  color: m.who === "agent" ? "#09090b" : "#ffffff",
-                  fontSize: "13.5px",
-                  lineHeight: "1.45",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                }}
-              >
-                {m.text}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                {m.who === "agent" && (
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      background: widgetAccent,
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#ffffff",
+                      flexShrink: 0,
+                      marginTop: "2px",
+                      transition: "background 0.2s ease",
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    </svg>
+                  </div>
+                )}
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: m.who === "agent" ? "14px 14px 14px 2px" : "14px 14px 2px 14px",
+                    fontSize: "13.5px",
+                    lineHeight: "1.45",
+                    background: m.who === "agent" ? "#f4f4f5" : widgetAccent,
+                    color: m.who === "agent" ? "#09090b" : "#ffffff",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  {m.text}
+                </div>
               </div>
+
+              {/* Quick suggestion chips below initial greeting message */}
+              {idx === 0 && chips.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px", marginLeft: "32px" }}>
+                  {chips.map((chip, cIdx) => (
+                    <button
+                      key={cIdx}
+                      type="button"
+                      onClick={() => handleQuickChip(chip.query)}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e4e4e7",
+                        borderRadius: "100px",
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        color: "#27272a",
+                        cursor: "pointer",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                        transition: "all 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = widgetAccent;
+                        e.currentTarget.style.color = widgetAccent;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "#e4e4e7";
+                        e.currentTarget.style.color = "#27272a";
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           <div ref={feedBottomRef} />
         </div>
 
-        {/* Live email box */}
+        {/* Live email entry box */}
         {showEmailBar && (
-          <div style={{ padding: "12px 16px", background: "#fbfbfa", borderTop: "1px solid var(--border)" }}>
+          <div style={{ padding: "12px 16px", background: "#fbfbfa", borderTop: "1px solid #e4e4e7" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#16a34a" }} />
                 Agent Asking for Email
               </span>
-              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Type email to verify directly</span>
+              <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Direct confirmation entry</span>
             </div>
             <form onSubmit={handleVerifyEmailSubmit} style={{ display: "flex", gap: "8px" }}>
               <input
                 type="email"
                 value={emailValue}
                 onChange={(e) => setEmailValue(e.target.value)}
-                placeholder="e.g. name@gmail.com"
+                placeholder="e.g. client@gmail.com"
                 required
                 style={{
                   flex: 1,
@@ -344,7 +572,7 @@ export default function Page() {
               <button
                 type="submit"
                 style={{
-                  background: "#000000",
+                  background: widgetAccent,
                   color: "#ffffff",
                   border: "none",
                   padding: "8px 16px",
@@ -352,6 +580,7 @@ export default function Page() {
                   fontSize: "12.5px",
                   fontWeight: 600,
                   cursor: "pointer",
+                  transition: "opacity 0.15s ease",
                 }}
               >
                 Verify &amp; Send
@@ -363,15 +592,16 @@ export default function Page() {
           </div>
         )}
 
-        {/* Controls */}
+        {/* Bottom Call Bar */}
         <div
           style={{
-            padding: "16px 20px",
-            borderTop: "1px solid var(--border)",
+            padding: "14px 18px",
+            borderTop: "1px solid #e4e4e7",
             background: "#fafafa",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            flexShrink: 0,
           }}
         >
           <button
@@ -381,11 +611,11 @@ export default function Page() {
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              padding: "10px 20px",
-              background: callStatus === "live" ? "#dc2626" : "#000000",
+              padding: "9px 18px",
+              background: callStatus === "live" ? "#dc2626" : widgetAccent,
               color: "#ffffff",
+              borderRadius: "10px",
               border: "none",
-              borderRadius: "var(--radius)",
               fontSize: "13.5px",
               fontWeight: 600,
               cursor: "pointer",
@@ -393,18 +623,40 @@ export default function Page() {
             }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
             </svg>
-            <span>{callStatus === "live" ? "End Call" : callStatus === "busy" ? "Connecting..." : "Start Call"}</span>
+            <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
           </button>
 
-          <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            Microphone: 24kHz Mono &bull; Echo Cancellation
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {callStatus === "live" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "14px" }}>
+                <span style={{ width: "2.5px", height: "12px", background: "#000000", borderRadius: "1px" }} />
+                <span style={{ width: "2.5px", height: "8px", background: "#000000", borderRadius: "1px" }} />
+                <span style={{ width: "2.5px", height: "14px", background: "#000000", borderRadius: "1px" }} />
+                <span style={{ width: "2.5px", height: "6px", background: "#000000", borderRadius: "1px" }} />
+              </div>
+            )}
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "3px 8px",
+                borderRadius: "6px",
+                background: callStatus === "live" ? "#000000" : "#f4f4f5",
+                color: callStatus === "live" ? "#ffffff" : "#71717a",
+              }}
+            >
+              {timerText}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* RIGHT: Integrate Into Your Website Card Matching web/dashboard.html */}
+      {/* RIGHT: Integrate Into Your Website Card */}
       <div
         style={{
           background: "#ffffff",
@@ -486,24 +738,19 @@ export default function Page() {
               Accent Color:
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {[
-                { hex: "#18181b", label: "Monochrome" },
-                { hex: "#581c87", label: "Purple" },
-                { hex: "#1e3a8a", label: "Navy" },
-                { hex: "#065f46", label: "Emerald" },
-              ].map((c) => (
+              {ACCENT_COLORS.map((c) => (
                 <div
                   key={c.hex}
                   onClick={() => setWidgetAccent(c.hex)}
                   title={c.label}
                   style={{
-                    width: "20px",
-                    height: "20px",
+                    width: "22px",
+                    height: "22px",
                     borderRadius: "50%",
                     background: c.hex,
                     cursor: "pointer",
                     boxShadow: widgetAccent === c.hex ? "0 0 0 2px #000000" : "0 0 0 1px var(--border)",
-                    transform: widgetAccent === c.hex ? "scale(1.15)" : "scale(1)",
+                    transform: widgetAccent === c.hex ? "scale(1.18)" : "scale(1)",
                     transition: "all 0.15s ease",
                   }}
                 />
@@ -552,7 +799,7 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Integration Tabs */}
+        {/* Integration Code Tabs */}
         <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--border)", paddingBottom: "8px", marginBottom: "14px" }}>
           <button
             type="button"
@@ -561,11 +808,12 @@ export default function Page() {
               background: embedTab === "script" ? "#000000" : "#f4f4f5",
               color: embedTab === "script" ? "#ffffff" : "var(--text-muted)",
               border: "1px solid var(--border)",
-              padding: "5px 12px",
+              padding: "5px 14px",
               borderRadius: "6px",
               fontSize: "12px",
               fontWeight: 600,
               cursor: "pointer",
+              transition: "all 0.15s ease",
             }}
           >
             Script Embed
@@ -577,20 +825,22 @@ export default function Page() {
               background: embedTab === "react" ? "#000000" : "#f4f4f5",
               color: embedTab === "react" ? "#ffffff" : "var(--text-muted)",
               border: "1px solid var(--border)",
-              padding: "5px 12px",
+              padding: "5px 14px",
               borderRadius: "6px",
               fontSize: "12px",
               fontWeight: 600,
               cursor: "pointer",
+              transition: "all 0.15s ease",
             }}
           >
             React / NPM
           </button>
         </div>
 
+        {/* Tab 1: Script Embed Snippet */}
         {embedTab === "script" ? (
           <div>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 8px" }}>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 8px", lineHeight: "1.5" }}>
               Paste this snippet right before the closing <code>&lt;/body&gt;</code> tag on Webflow, WordPress, Shopify, Framer, Wix, or plain HTML:
             </p>
             <div
@@ -599,7 +849,7 @@ export default function Page() {
                 background: "#09090b",
                 color: "#f4f4f5",
                 borderRadius: "var(--radius)",
-                padding: "12px 14px",
+                padding: "14px",
                 border: "1px solid #27272a",
               }}
             >
@@ -613,27 +863,29 @@ export default function Page() {
                     color: "#ffffff",
                     border: "none",
                     cursor: "pointer",
-                    fontSize: "11px",
+                    fontSize: "11.5px",
+                    fontWeight: 500,
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "4px",
+                    gap: "5px",
                   }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                     <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                   </svg>
                   Copy Script
                 </button>
               </div>
-              <pre style={{ margin: 0, fontFamily: "var(--mono)", fontSize: "12px", lineHeight: "1.45", overflowX: "auto" }}>
+              <pre style={{ margin: 0, fontFamily: "var(--mono)", fontSize: "12px", lineHeight: "1.5", overflowX: "auto" }}>
                 {scriptSnippet}
               </pre>
             </div>
           </div>
         ) : (
+          /* Tab 2: React / NPM Snippet */
           <div>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 8px" }}>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 8px", lineHeight: "1.5" }}>
               Install the package via npm or pnpm for Next.js, Vite, or React applications:
             </p>
             <div
@@ -644,22 +896,29 @@ export default function Page() {
                 borderRadius: "var(--radius)",
                 padding: "10px 14px",
                 border: "1px solid #27272a",
-                marginBottom: "10px",
+                marginBottom: "12px",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <code style={{ fontFamily: "var(--mono)", fontSize: "12px" }}>{npmSnippet}</code>
+                <code style={{ fontFamily: "var(--mono)", fontSize: "12px" }}>{npmInstallSnippet}</code>
                 <button
                   type="button"
-                  onClick={() => copySnippet(npmSnippet)}
+                  onClick={() => copySnippet(npmInstallSnippet)}
                   style={{
                     background: "transparent",
                     color: "#ffffff",
                     border: "none",
                     cursor: "pointer",
-                    fontSize: "11px",
+                    fontSize: "11.5px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
                   }}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
                   Copy
                 </button>
               </div>
@@ -671,7 +930,7 @@ export default function Page() {
                 background: "#09090b",
                 color: "#f4f4f5",
                 borderRadius: "var(--radius)",
-                padding: "12px 14px",
+                padding: "14px",
                 border: "1px solid #27272a",
               }}
             >
@@ -685,13 +944,21 @@ export default function Page() {
                     color: "#ffffff",
                     border: "none",
                     cursor: "pointer",
-                    fontSize: "11px",
+                    fontSize: "11.5px",
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
                   }}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
                   Copy Component
                 </button>
               </div>
-              <pre style={{ margin: 0, fontFamily: "var(--mono)", fontSize: "12px", lineHeight: "1.45", overflowX: "auto" }}>
+              <pre style={{ margin: 0, fontFamily: "var(--mono)", fontSize: "12px", lineHeight: "1.5", overflowX: "auto" }}>
                 {reactSnippet}
               </pre>
             </div>

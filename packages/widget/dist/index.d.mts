@@ -1,8 +1,9 @@
 import React from 'react';
-import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-jta3krqA.mjs';
-export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, i as initOmniDeskWidget } from './vanilla-jta3krqA.mjs';
+import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-D3YWtxw1.mjs';
+export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-D3YWtxw1.mjs';
 
-declare function OmniDeskWidget({ host, businessId, theme, position, label, accentColor, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
+declare function OmniDeskWidget({ host, businessId, agentId: propAgentId, theme, position, label, accent, accentColor, suggestions, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
+declare const VoiceWidget: typeof OmniDeskWidget;
 
 interface VoiceSessionCallbacks {
     onStatusChange?: (status: CallStatus) => void;
@@ -37,4 +38,4 @@ declare class AssemblyAIVoiceClient {
     private startVisualizerLoop;
 }
 
-export { AssemblyAIVoiceClient, CallStatus, OmniDeskWidget, OmniDeskWidgetProps, TranscriptMessage, type VoiceSessionCallbacks };
+export { AssemblyAIVoiceClient, CallStatus, OmniDeskWidget, OmniDeskWidgetProps, TranscriptMessage, type VoiceSessionCallbacks, VoiceWidget };

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const agentId =
       biz?.assemblyai_agent_id ||
       process.env.AGENT_ID ||
-      "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      "";
 
     const token = await mintAgentToken(600);
 

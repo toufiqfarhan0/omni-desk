@@ -47,11 +47,34 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const savedOwnerId = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_id") : null;
+        let savedOwnerId = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_id") : null;
         const savedOwnerEmail = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_email") : null;
         const savedOwnerName = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_name") : null;
 
-        const effectiveOwnerId = savedOwnerId || "owner_demo";
+        // If not in localStorage, check if cookie exists
+        if (!savedOwnerId && typeof document !== "undefined") {
+          const match = document.cookie.match(/(?:^|;\s*)omnidesk_session=([^;]+)/);
+          if (match && match[1]) {
+            savedOwnerId = decodeURIComponent(match[1]);
+            localStorage.setItem("omnidesk_owner_id", savedOwnerId);
+          }
+        }
+
+        // Client-side guard: if no owner logged in and no demo session, redirect to home
+        if (!savedOwnerId) {
+          setIsLoading(false);
+          window.location.href = "/?auth=required&redirect=/dashboard";
+          return;
+        }
+
+        const effectiveOwnerId = savedOwnerId;
+
+        // Make sure cookie is also in sync with localStorage
+        if (typeof document !== "undefined" && !document.cookie.includes("omnidesk_session=")) {
+          const maxAge = effectiveOwnerId === "owner_demo" ? 86400 : 604800;
+          document.cookie = `omnidesk_session=${encodeURIComponent(effectiveOwnerId)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+
         setOwnerInfo({
           id: effectiveOwnerId,
           email: savedOwnerEmail || (effectiveOwnerId === "owner_demo" ? "demo@omnidesk.ai" : "operator@omnidesk.ai"),
@@ -103,6 +126,7 @@ export default function DashboardPage() {
       localStorage.removeItem("omnidesk_owner_email");
       localStorage.removeItem("omnidesk_owner_name");
       localStorage.removeItem("omnidesk_selected_biz_id");
+      document.cookie = "omnidesk_session=; path=/; max-age=0; SameSite=Lax";
     }
     window.location.href = "/";
   };
@@ -227,9 +251,6 @@ export default function DashboardPage() {
               <span className="pulse-dot" />
               <span>AssemblyAI Connected</span>
             </div>
-            <a href="/demo" className="demo-link" target="_blank" rel="noreferrer">
-              Try Demos
-            </a>
           </div>
         </header>
 
