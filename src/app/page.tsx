@@ -144,7 +144,7 @@ export default function LandingPage() {
             </div>
             <div className="strip-item">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              Resend Email (.ics Invites)
+              Email (.ics Invites)
             </div>
             <div className="strip-item">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
@@ -194,7 +194,7 @@ export default function LandingPage() {
               </div>
               <h3>1-Tap Calendar Invites (.ics)</h3>
               <p>When an appointment is reserved, customers receive a confirmation email with native .ics calendar events for Apple, Google, and Outlook.</p>
-              <div className="bento-metric">Resend Transactional Engine</div>
+              <div className="bento-metric">Calendar &amp; Email Engine</div>
             </div>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function LandingPage() {
                 </div>
                 <div className="feature-item">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  <span><strong>Resend Email &amp; .ics Invites:</strong> Sends instant booking confirmations with 1-tap calendar invites.</span>
+                  <span><strong>Email &amp; .ics Invites:</strong> Sends instant booking confirmations with 1-tap calendar invites.</span>
                 </div>
                 <div className="feature-item">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -321,7 +321,7 @@ export default function LandingPage() {
               &copy; 2026 OmniDesk. Powered by AssemblyAI Voice Agent API.
             </div>
             <div className="footer-badge">
-              HTTP Tools &middot; Resend Engine &middot; Light Mode UI
+              HTTP Tools &middot; Email Engine &middot; Light Mode UI
             </div>
           </div>
         </div>

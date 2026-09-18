@@ -153,7 +153,7 @@ export function buildAgentDefinition(
     {
       name: "send_confirmation",
       description:
-        "Triggers a formal confirmation email via Resend with an RFC 5545 calendar invite (.ics file) attached. Call this immediately after book_appointment succeeds.",
+        "Triggers a formal confirmation email with an RFC 5545 calendar invite (.ics file) attached. Call this immediately after book_appointment succeeds.",
       http: {
         url: `${baseUrl}/api/tools/${businessId}/send_confirmation`,
         http_method: "POST",

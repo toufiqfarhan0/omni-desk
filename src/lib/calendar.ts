@@ -80,16 +80,15 @@ export function generateIcs(booking: Booking, business?: Business | null): strin
   return lines.join("\r\n") + "\r\n";
 }
 
-export async function sendResendConfirmation(
+export async function sendCalendarConfirmation(
   booking: Booking,
   business?: Business | null
 ): Promise<{ sent: boolean; reason?: string; id?: string }> {
   const smtpUser = process.env.SMTP_USER || "omni.desk.com@gmail.com";
   const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
-  const resendApiKey = process.env.RESEND_API_KEY;
 
-  if (!smtpPass && !resendApiKey) {
-    return { sent: false, reason: "no_email_credentials" };
+  if (!smtpPass) {
+    return { sent: false, reason: "no_smtp_password" };
   }
 
   let toEmail = booking.customer_email;
@@ -110,7 +109,6 @@ export async function sendResendConfirmation(
   const price = booking.price;
 
   const icsString = generateIcs(booking, business);
-  const icsBase64 = Buffer.from(icsString, "utf-8").toString("base64");
 
   const htmlContent = `<!DOCTYPE html>
 <html>
@@ -166,81 +164,37 @@ export async function sendResendConfirmation(
 </body>
 </html>`;
 
-  // 1. FREE GMAIL SMTP ENGINE (Zero domain required, delivers to ANY recipient globally)
-  if (smtpPass) {
-    try {
-      const cleanPass = smtpPass.replace(/\s+/g, "");
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: smtpUser,
-          pass: cleanPass,
+  try {
+    const cleanPass = smtpPass.replace(/\s+/g, "");
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: smtpUser,
+        pass: cleanPass,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"${bizName}" <${smtpUser}>`,
+      to: toEmail,
+      subject: `Appointment Confirmed: ${serviceLabel} - ${bizName}`,
+      html: htmlContent,
+      attachments: [
+        {
+          filename: "appointment.ics",
+          content: icsString,
+          contentType: "text/calendar; charset=utf-8; method=REQUEST",
         },
-      });
+      ],
+    });
 
-      const info = await transporter.sendMail({
-        from: `"${bizName}" <${smtpUser}>`,
-        to: toEmail,
-        subject: `Appointment Confirmed: ${serviceLabel} - ${bizName}`,
-        html: htmlContent,
-        attachments: [
-          {
-            filename: "appointment.ics",
-            content: icsString,
-            contentType: "text/calendar; charset=utf-8; method=REQUEST",
-          },
-        ],
-      });
-
-      await markBookingConfirmationSent(code);
-      return { sent: true, id: info.messageId };
-    } catch (smtpErr: any) {
-      console.error("Gmail SMTP delivery error:", smtpErr);
-      if (!resendApiKey) {
-        return { sent: false, reason: smtpErr.message };
-      }
-      // If Resend API key is also available, proceed to fallback below
-    }
+    await markBookingConfirmationSent(code);
+    return { sent: true, id: info.messageId };
+  } catch (smtpErr: any) {
+    console.error("Gmail SMTP delivery error:", smtpErr);
+    return { sent: false, reason: smtpErr.message };
   }
-
-  // 2. RESEND API ENGINE (Fallback or primary when RESEND_API_KEY is configured)
-  if (resendApiKey) {
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: `${bizName} <${fromEmail}>`,
-          to: [toEmail],
-          subject: `Appointment Confirmed: ${serviceLabel} - ${bizName}`,
-          html: htmlContent,
-          attachments: [
-            {
-              filename: "appointment.ics",
-              content: icsBase64,
-            },
-          ],
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        await markBookingConfirmationSent(code);
-        return { sent: true, id: data.id };
-      }
-
-      const errText = await res.text();
-      return { sent: false, reason: errText };
-    } catch (err: any) {
-      return { sent: false, reason: err.message };
-    }
-  }
-
-  return { sent: false, reason: "delivery_failed" };
 }
 
-export const sendConfirmationEmail = sendResendConfirmation;
+export const sendResendConfirmation = sendCalendarConfirmation;
+export const sendConfirmationEmail = sendCalendarConfirmation;

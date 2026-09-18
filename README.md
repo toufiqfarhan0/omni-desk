@@ -51,7 +51,7 @@ Built with **Next.js 16 (App Router, React 19, Turbopack, TypeScript)**, **Tailw
 |   /api/tools/[id]/verify_email     --> Normalizes voice emails, DNS/MX check, spam validation    |
 |   /api/tools/[id]/check_avail      --> Computes open time slots for operating schedule           |
 |   /api/tools/[id]/book_appointment --> Commits reservation, generates 6-char confirmation code   |
-|   /api/tools/[id]/send_confirm     --> Triggers Resend transactional email with .ics calendar    |
+|   /api/tools/[id]/send_confirm     --> Dispatches calendar invite with .ics (Gmail SMTP)         |
 |   /api/owner/businesses/[id]/deploy--> Syncs agent instructions & webhook tools to AssemblyAI    |
 |   /api/events                      --> Server-Sent Events (SSE) real-time dashboard notifications|
 +===========================================|======================================================+
@@ -92,7 +92,7 @@ The voice agent executes deterministic server tools during natural conversation 
 - **`verify_customer_email`**: Converts spoken email representations (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`), autocorrects common domain typos, verifies DNS/MX records, and checks deliverability.
 - **`check_availability`**: Evaluates operating hours, business days, and existing calendar reservations to present open appointment slots.
 - **`book_appointment`**: Commits verified reservations, generates a unique 6-character confirmation code, and prevents double-booking.
-- **`send_confirmation`**: Dispatches a transactional email through Resend with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
+- **`send_confirmation`**: Dispatches a transactional email (via Free Gmail SMTP) with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
 
 ### 3. Practice Management Dashboard (`/dashboard`)
 - **Agent Builder**:
@@ -214,9 +214,10 @@ AGENT_ID=
 # Required if you want AssemblyAI to call your local tools (see Tunnel section below)
 PUBLIC_API_BASE_URL=
 
-# [OPTIONAL] Resend API Key (for real calendar .ics emails)
-RESEND_API_KEY=
-RESEND_FROM_EMAIL=onboarding@resend.dev
+# [OPTIONAL] Free Gmail SMTP (Deliver to ANY email in the world — 0 domain required!)
+# Set up in 1 min: Google Account > Security > 2-Step Verification > App Passwords
+SMTP_USER=omni.desk.com@gmail.com
+SMTP_PASS=your_16_char_app_password
 
 # [OPTIONAL] Supabase Cloud Database (Required for cloud deployment / Vercel)
 # Local Judges Mode: Leave blank to use zero-setup SQLite (data/omnidesk.db).
@@ -304,15 +305,30 @@ OmniDesk will instantly call AssemblyAI (`POST https://agents.assemblyai.com/v1/
 
 ## Transactional Email & Calendar Sync (.ics)
 
-OmniDesk features native calendar synchronization and transactional email delivery powered by Resend:
+OmniDesk features native calendar synchronization and transactional email delivery powered by **Free Google Gmail SMTP**:
 
 - **What the Email Contains**:
   - **Rich HTML Confirmation**: Displays client name, business title, service booked, date, time, estimated fee, and unique 6-character confirmation code.
   - **Attached Native iCalendar (`appointment.ics`)**: Automatically syncs the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook** with a pre-configured 1-hour advance reminder alarm.
-- **How Delivery Works**:
-  - **With `RESEND_API_KEY`**: Emails and calendar invites are dispatched automatically upon booking. Practice owners can also click the **"Send Invite"** button on any row in the **Bookings CRM** tab (`/dashboard`) to dispatch or re-send calendar invites on demand.
-  - **Resend Sandbox Tip**: Under Resend's free tier (`onboarding@resend.dev`), emails are delivered to the address registered with your Resend account. Verifying a custom domain on [resend.com/domains](https://resend.com/domains) allows delivery to any arbitrary customer address.
-  - **Without `RESEND_API_KEY`**: Evaluators can still test the entire booking workflow with zero setup. Appointment bookings complete 100% successfully, confirmation codes are spoken aloud by the voice receptionist, and reservations are saved directly to the database and displayed in the CRM.
+
+### 1. Free Gmail SMTP (Deliver to ANY recipient worldwide — 0 Domain Required!)
+- **Cost**: 100% Free forever (up to 500 real emails per day via Google).
+- **No Custom Domain Needed**: Sends from branded Google account (`omni.desk.com@gmail.com`).
+- **Global Deliverability**: Delivers confirmation emails to **ANY email address on Earth** (`@gmail.com`, `@yahoo.com`, `@outlook.com`, iCloud, corporate emails).
+- **Quick 1-Minute Setup**:
+  1. Go to your Google Account: [myaccount.google.com/security](https://myaccount.google.com/security).
+  2. Enable **2-Step Verification**.
+  3. Search for **"App passwords"** ([myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)).
+  4. Create an app named `OmniDesk` and copy the 16-character code.
+  5. Add to your `.env` (or Vercel Environment Variables):
+     ```env
+     SMTP_USER=omni.desk.com@gmail.com
+     SMTP_PASS=your_16_character_code
+     ```
+
+### 2. Zero-Setup Offline Mode
+- Evaluators can test the entire voice booking workflow without any email credentials configured.
+- Bookings complete 100% successfully, confirmation codes are spoken aloud by the voice receptionist, and reservations are saved directly to the database and displayed in the **Bookings CRM** (`/dashboard`). Practice owners can dispatch or re-send invites anytime via the **"Send Invite"** button.
 
 ---
 

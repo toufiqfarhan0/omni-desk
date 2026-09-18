@@ -60,7 +60,7 @@ export async function GET() {
         hours: "Monday to Friday, 9:00 am – 5:00 pm",
         slot_minutes: store.state.slotMinutes,
         voice_agent: "AssemblyAI Voice Agent API",
-        confirmation_engine: "Resend Email (.ics Calendar Invite)",
+        confirmation_engine: "Transactional Email (.ics Calendar Invite)",
       },
     });
   } catch (err: any) {
