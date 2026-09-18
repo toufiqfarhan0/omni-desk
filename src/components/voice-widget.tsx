@@ -46,7 +46,9 @@ export function VoiceWidget({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (transcripts.length > 0) {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [transcripts]);
 
   const handleStartCall = async () => {

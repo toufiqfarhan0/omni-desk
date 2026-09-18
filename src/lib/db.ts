@@ -1,5 +1,8 @@
+import bcrypt from "bcryptjs";
 import {
   supabaseGetOrCreateOwner,
+  supabaseSignUpOwner,
+  supabaseSignInOwner,
   supabaseListBusinesses,
   supabaseGetBusiness,
   supabaseCreateBusiness,
@@ -74,6 +77,7 @@ export interface Owner {
   email: string;
   name: string;
   created_at: string;
+  password_hash?: string | null;
 }
 
 export interface Service {
@@ -177,6 +181,7 @@ function initSqliteDb(db: any): void {
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       name TEXT,
+      password_hash TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -251,12 +256,19 @@ function initSqliteDb(db: any): void {
     );
   `);
 
+  // Migrate existing DBs: add password_hash column if missing
+  try {
+    db.exec(`ALTER TABLE owners ADD COLUMN password_hash TEXT`);
+  } catch {
+    // Column already exists — safe to ignore
+  }
+
   // PRE-LOCK DEMO OPERATOR ACCOUNT
   const existingOwner = db.prepare("SELECT id FROM owners WHERE id = ?").get("owner_demo");
   if (!existingOwner) {
     db.prepare(`
-      INSERT INTO owners (id, email, name, created_at)
-      VALUES ('owner_demo', 'demo@omnidesk.ai', 'OmniDesk Demo Operator', datetime('now'))
+      INSERT INTO owners (id, email, name, password_hash, created_at)
+      VALUES ('owner_demo', 'demo@omnidesk.ai', 'OmniDesk Demo Operator', NULL, datetime('now'))
     `).run();
   }
 
@@ -343,7 +355,7 @@ export async function getOrCreateOwner(email: string, name?: string): Promise<Ow
     const id = normalized === "demo@omnidesk.ai" ? "owner_demo" : `owner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
     const ownerName = name || email.split("@")[0] || "OmniDesk Operator";
-    db.prepare("INSERT INTO owners (id, email, name, created_at) VALUES (?, ?, ?, ?)").run(id, normalized, ownerName, now);
+    db.prepare("INSERT INTO owners (id, email, name, password_hash, created_at) VALUES (?, ?, ?, NULL, ?)").run(id, normalized, ownerName, now);
     owner = { id, email: normalized, name: ownerName, created_at: now };
   } else if (name && owner.name !== name) {
     db.prepare("UPDATE owners SET name = ? WHERE id = ?").run(name, owner.id);
@@ -351,11 +363,101 @@ export async function getOrCreateOwner(email: string, name?: string): Promise<Ow
   }
 
   if (mode === "dual") {
-    // Sync to Supabase in dual mode
     supabaseGetOrCreateOwner(email, name).catch(() => {});
   }
 
   return owner;
+}
+
+/**
+ * Sign up a new owner with a hashed password.
+ * Returns null if email is already taken.
+ */
+export async function signUpOwner(
+  email: string,
+  password: string,
+  name?: string
+): Promise<Owner | null> {
+  const mode = getDbMode();
+  const normalized = email.trim().toLowerCase();
+
+  if (mode === "supabase") {
+    return await supabaseSignUpOwner(normalized, password, name);
+  }
+
+  const db = getDb();
+  const existing = db.prepare("SELECT id FROM owners WHERE email = ?").get(normalized);
+  if (existing) return null; // already registered
+
+  const id = `owner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const now = new Date().toISOString();
+  const ownerName = name || normalized.split("@")[0] || "OmniDesk Operator";
+  const hash = await bcrypt.hash(password, 10);
+
+  db.prepare(
+    "INSERT INTO owners (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, normalized, ownerName, hash, now);
+
+  const owner: Owner = { id, email: normalized, name: ownerName, created_at: now };
+
+  if (mode === "dual") {
+    supabaseSignUpOwner(normalized, password, name).catch(() => {});
+  }
+
+  return owner;
+}
+
+/**
+ * Sign in an existing owner by verifying their password.
+ * Returns null if email not found or password wrong.
+ */
+export async function signInOwner(
+  email: string,
+  password: string
+): Promise<Owner | null> {
+  const mode = getDbMode();
+  const normalized = email.trim().toLowerCase();
+
+  if (mode === "supabase") {
+    return await supabaseSignInOwner(normalized, password);
+  }
+
+  const db = getDb();
+  const owner = db.prepare("SELECT * FROM owners WHERE email = ?").get(normalized) as (Owner & { password_hash?: string | null }) | undefined;
+  if (!owner) return null;
+
+  // If owner has no password set yet, allow them to sign in without one
+  // (legacy accounts / demo account)
+  if (!owner.password_hash) {
+    const { password_hash, ...safe } = owner as any;
+    return safe as Owner;
+  }
+
+  const valid = await bcrypt.compare(password, owner.password_hash);
+  if (!valid) return null;
+
+  const { password_hash, ...safe } = owner as any;
+  return safe as Owner;
+}
+
+/**
+ * Check if an email address is already registered (without verifying password).
+ */
+export async function emailExists(email: string): Promise<boolean> {
+  const mode = getDbMode();
+  const normalized = email.trim().toLowerCase();
+
+  if (mode === "supabase") {
+    const { getSupabase } = await import("./supabase-db");
+    const client = getSupabase();
+    if (!client) return false;
+    const { data } = await client.from("owners").select("id").eq("email", normalized).maybeSingle();
+    return Boolean(data);
+  }
+
+  const db = getDb();
+  const row = db.prepare("SELECT id FROM owners WHERE email = ?").get(normalized);
+  return Boolean(row);
 }
 
 export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]> {

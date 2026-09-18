@@ -214,7 +214,7 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
                     <span style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
                       {b.customer_email}{" "}
                       <span style={{ display: "inline-flex", alignItems: "center", color: "#16a34a", fontWeight: 600, fontSize: "10.5px" }}>
-                        ✓ Verified
+                        Verified
                       </span>
                     </span>
                   </td>
@@ -235,7 +235,7 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
                           display: "inline-block",
                         }}
                       >
-                        ✓ Dispatched
+                        Dispatched
                       </span>
                     ) : (
                       <button

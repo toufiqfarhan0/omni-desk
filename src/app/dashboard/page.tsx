@@ -38,11 +38,27 @@ export default function DashboardPage() {
   const [newBizIndustry, setNewBizIndustry] = useState("");
   const [newBizCustomType, setNewBizCustomType] = useState("");
   const [isCreatingBiz, setIsCreatingBiz] = useState(false);
+  const [ownerInfo, setOwnerInfo] = useState<{ id: string; email: string; name: string }>({
+    id: "owner_demo",
+    email: "demo@omnidesk.ai",
+    name: "Demo Operator",
+  });
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/owner/businesses");
+        const savedOwnerId = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_id") : null;
+        const savedOwnerEmail = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_email") : null;
+        const savedOwnerName = typeof window !== "undefined" ? localStorage.getItem("omnidesk_owner_name") : null;
+
+        const effectiveOwnerId = savedOwnerId || "owner_demo";
+        setOwnerInfo({
+          id: effectiveOwnerId,
+          email: savedOwnerEmail || (effectiveOwnerId === "owner_demo" ? "demo@omnidesk.ai" : "operator@omnidesk.ai"),
+          name: savedOwnerName || (effectiveOwnerId === "owner_demo" ? "OmniDesk Demo Operator" : "Practice Operator"),
+        });
+
+        const res = await fetch(`/api/owner/businesses?ownerId=${encodeURIComponent(effectiveOwnerId)}`);
         if (res.ok) {
           const data = await res.json();
           const list: Business[] = data.businesses || [];
@@ -62,7 +78,7 @@ export default function DashboardPage() {
             const savedBiz = savedId
               ? list.find((b) => b.id === savedId)
               : null;
-            setSelectedBusiness(salonBiz || savedBiz || list[0]);
+            setSelectedBusiness(savedBiz || salonBiz || list[0]);
           }
         }
       } catch {
@@ -81,6 +97,16 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSignOut = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("omnidesk_owner_id");
+      localStorage.removeItem("omnidesk_owner_email");
+      localStorage.removeItem("omnidesk_owner_name");
+      localStorage.removeItem("omnidesk_selected_biz_id");
+    }
+    window.location.href = "/";
+  };
+
   const handleUpdateBusiness = useCallback((updated: Business) => {
     setSelectedBusiness(updated);
     setBusinesses((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
@@ -92,12 +118,14 @@ export default function DashboardPage() {
 
     setIsCreatingBiz(true);
     const chosenIndustry = newBizIndustry || newBizCustomType.trim() || "general";
+    const effectiveOwnerId = ownerInfo.id || "owner_demo";
 
     try {
-      const res = await fetch("/api/owner/businesses", {
+      const res = await fetch(`/api/owner/businesses?ownerId=${encodeURIComponent(effectiveOwnerId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          owner_id: effectiveOwnerId,
           name: newBizName.trim(),
           industry: chosenIndustry,
           tone: "warm",
@@ -166,6 +194,8 @@ export default function DashboardPage() {
         }}
         isOpen={sidebarOpen}
         onNewBusiness={() => setNewBizOpen(true)}
+        ownerInfo={ownerInfo}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}

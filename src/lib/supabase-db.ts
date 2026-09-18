@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
 import { Owner, Business, Service, Booking, Conversation } from "./db";
 
 let supabaseClient: SupabaseClient | null = null;
@@ -85,6 +86,84 @@ export async function supabaseGetOrCreateOwner(
       name: name || "OmniDesk Operator",
       created_at: now,
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PASSWORD AUTH - Sign Up
+// ---------------------------------------------------------------------------
+export async function supabaseSignUpOwner(
+  email: string,
+  password: string,
+  name?: string
+): Promise<Owner | null> {
+  const client = getSupabase();
+  const normalized = email.trim().toLowerCase();
+  const now = new Date().toISOString();
+
+  if (!client) return null;
+
+  try {
+    // Check if already exists
+    const { data: existing } = await client
+      .from("owners")
+      .select("id")
+      .eq("email", normalized)
+      .maybeSingle();
+    if (existing) return null; // email taken
+
+    const id = `owner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const ownerName = name || normalized.split("@")[0] || "OmniDesk Operator";
+    const hash = await bcrypt.hash(password, 10);
+
+    const newOwner = { id, email: normalized, name: ownerName, password_hash: hash, created_at: now };
+    const { error } = await client.from("owners").insert(newOwner);
+    if (error) {
+      console.warn("[Supabase] signUpOwner insert error:", error.message);
+      return null;
+    }
+    return { id, email: normalized, name: ownerName, created_at: now };
+  } catch (err: any) {
+    console.error("[Supabase] signUpOwner failed:", err);
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PASSWORD AUTH - Sign In
+// ---------------------------------------------------------------------------
+export async function supabaseSignInOwner(
+  email: string,
+  password: string
+): Promise<Owner | null> {
+  const client = getSupabase();
+  const normalized = email.trim().toLowerCase();
+
+  if (!client) return null;
+
+  try {
+    const { data: owner, error } = await client
+      .from("owners")
+      .select("*")
+      .eq("email", normalized)
+      .maybeSingle();
+
+    if (error || !owner) return null;
+
+    // Legacy / demo accounts with no password_hash — allow sign-in
+    if (!owner.password_hash) {
+      const { password_hash, ...safe } = owner;
+      return safe as Owner;
+    }
+
+    const valid = await bcrypt.compare(password, owner.password_hash);
+    if (!valid) return null;
+
+    const { password_hash, ...safe } = owner;
+    return safe as Owner;
+  } catch (err: any) {
+    console.error("[Supabase] signInOwner failed:", err);
+    return null;
   }
 }
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { BrandLogo } from "@/components/brand-logo";
+
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -10,8 +12,67 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [activeDemoIdx, setActiveDemoIdx] = useState(0);
+
+  const [authError, setAuthError] = useState("");
+  const [authNotFound, setAuthNotFound] = useState(false);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+
+  // Auto-cycle demo cards every 4 seconds
+  useEffect(() => {
+    const t = setInterval(() => setActiveDemoIdx((p) => (p + 1) % 2), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setAuthError("");
+    setAuthNotFound(false);
+    setIsSubmittingAuth(true);
+
+    try {
+      const res = await fetch("/api/auth/owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          name: fullName.trim(),
+          password,
+          mode,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok && data.owner) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("omnidesk_owner_id", data.owner.id);
+          localStorage.setItem("omnidesk_owner_email", data.owner.email);
+          localStorage.setItem("omnidesk_owner_name", data.owner.name);
+          if (data.businesses && data.businesses.length > 0) {
+            localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
+          }
+        }
+        window.location.href = "/dashboard";
+      } else if (data.code === "NOT_FOUND") {
+        setAuthNotFound(true);
+      } else {
+        setAuthError(data.error || "Authentication failed. Please try again.");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Network error. Please try again.");
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  };
 
   const handleDemoSignIn = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("omnidesk_owner_id", "owner_demo");
+      localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
+      localStorage.setItem("omnidesk_owner_name", "OmniDesk Demo Operator");
+      localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+    }
     window.location.href = "/dashboard";
   };
 
@@ -31,6 +92,7 @@ export default function LandingPage() {
             <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: "28px" }}>
               <a href="#features" className="nav-link">Capabilities</a>
               <a href="#architecture" className="nav-link">Architecture</a>
+              <Link href="/docs" className="nav-link">Docs</Link>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -313,15 +375,180 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* LIVE DEMO SITES SHOWCASE */}
+      <section className="section" style={{ background: "var(--surface-subtle)", paddingTop: "80px", paddingBottom: "80px" }}>
+        <div className="container">
+          <div className="section-head">
+            <div className="section-tag">Live Client Deployments</div>
+            <h2>See OmniDesk In The Wild</h2>
+            <p>These are real production demo websites with the OmniDesk voice widget embedded. Click to visit and experience it live.</p>
+          </div>
+
+          {/* Demo selector tabs */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "32px" }}>
+            {[
+              { label: "Hair Salon", color: "#10b981" },
+              { label: "Real Estate", color: "#3b82f6" },
+            ].map((tab, i) => (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => setActiveDemoIdx(i)}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: "999px",
+                  border: activeDemoIdx === i ? `2px solid ${tab.color}` : "1px solid var(--border)",
+                  background: activeDemoIdx === i ? tab.color : "var(--surface)",
+                  color: activeDemoIdx === i ? "#fff" : "var(--text-muted)",
+                  fontFamily: "var(--font)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Animated card */}
+          <AnimatePresence mode="wait">
+            {activeDemoIdx === 0 ? (
+              <motion.div
+                key="salon"
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                style={{ maxWidth: "800px", margin: "0 auto", background: "#fff", border: "2px solid #10b981", borderRadius: "20px", overflow: "hidden", boxShadow: "0 20px 40px -10px rgba(16,185,129,0.15)" }}
+              >
+                <div style={{ background: "linear-gradient(135deg,#064e3b,#065f46)", padding: "32px 40px", color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(16,185,129,0.3)", color: "#6ee7b7", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon & MedSpa</div>
+                      <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Luxe & Mane Hair Studio</h3>
+                    </div>
+
+                  </div>
+                  <p style={{ fontSize: "14px", color: "#6ee7b7", lineHeight: 1.6, margin: 0 }}>
+                    High-end salon with live calendar booking for precision haircuts, coloring, and artisan balayage. Experience how visitors schedule directly from the homepage.
+                  </p>
+                </div>
+                <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {[["Haircuts", "45min"], ["Balayage", "120min"], ["Coloring", "90min"]].map(([s, d]) => (
+                      <div key={s} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
+                        <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <a
+                    href="https://omni-desk-rho.vercel.app/demo/salon"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "8px",
+                      background: "#10b981", color: "#fff",
+                      fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
+                      padding: "12px 24px", borderRadius: "12px",
+                      textDecoration: "none", whiteSpace: "nowrap",
+                      boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Open Salon Website ↗
+                  </a>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="realestate"
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                style={{ maxWidth: "800px", margin: "0 auto", background: "#fff", border: "2px solid #3b82f6", borderRadius: "20px", overflow: "hidden", boxShadow: "0 20px 40px -10px rgba(59,130,246,0.15)" }}
+              >
+                <div style={{ background: "linear-gradient(135deg,#1e3a5f,#1e40af)", padding: "32px 40px", color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(59,130,246,0.3)", color: "#93c5fd", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Luxury Real Estate</div>
+                      <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Apex Luxury Property Advisory</h3>
+                    </div>
+
+                  </div>
+                  <p style={{ fontSize: "14px", color: "#93c5fd", lineHeight: 1.6, margin: 0 }}>
+                    Boutique brokerage showcasing multimillion-dollar estates. Autonomous voice scheduling for private tours, buyer consultations, and home valuations.
+                  </p>
+                </div>
+                <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
+                  <div style={{ display: "flex", gap: "24px" }}>
+                    {[["Tours", "45min"], ["Consultations", "60min"], ["Valuations", "45min"]].map(([s, d]) => (
+                      <div key={s} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
+                        <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <a
+                    href="https://omni-desk-rho.vercel.app/demo/real-estate"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "8px",
+                      background: "#3b82f6", color: "#fff",
+                      fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
+                      padding: "12px 24px", borderRadius: "12px",
+                      textDecoration: "none", whiteSpace: "nowrap",
+                      boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    Open Real Estate Website ↗
+                  </a>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Dot indicators */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "24px" }}>
+            {[0, 1].map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveDemoIdx(i)}
+                style={{
+                  width: activeDemoIdx === i ? "24px" : "8px",
+                  height: "8px",
+                  borderRadius: "999px",
+                  background: activeDemoIdx === i ? "#09090b" : "#d4d4d8",
+                  border: "none",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  padding: 0,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer>
         <div className="container">
           <div className="footer-row">
-            <div className="footer-copy">
-              &copy; 2026 OmniDesk. Powered by AssemblyAI Voice Agent API.
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <BrandLogo size={20} />
+              <div className="footer-copy">&copy; 2026 OmniDesk. Powered by AssemblyAI Voice Agent API.</div>
             </div>
-            <div className="footer-badge">
-              HTTP Tools &middot; Email Engine &middot; Light Mode UI
+            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              <Link href="/docs" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Docs</Link>
+              <Link href="/demo" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Demo</Link>
+              <Link href="/dashboard" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Dashboard</Link>
+              <div className="footer-badge">HTTP Tools &middot; Email Engine</div>
             </div>
           </div>
         </div>
@@ -360,39 +587,72 @@ export default function LandingPage() {
               <button
                 type="button"
                 className={`auth-tab-btn${mode === "signin" ? " active" : ""}`}
-                onClick={() => setMode("signin")}
+                onClick={() => { setMode("signin"); setAuthNotFound(false); setAuthError(""); }}
               >
                 Sign In
               </button>
               <button
                 type="button"
                 className={`auth-tab-btn${mode === "signup" ? " active" : ""}`}
-                onClick={() => setMode("signup")}
+                onClick={() => { setMode("signup"); setAuthNotFound(false); setAuthError(""); }}
               >
                 Create Account
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={(e) => { e.preventDefault(); handleDemoSignIn(); }}>
-              {mode === "signup" && (
-                <div className="auth-form-group">
-                  <label className="auth-label" htmlFor="auth-fullname">Full Name</label>
-                  <input type="text" id="auth-fullname" className="auth-input" placeholder="e.g. Eleanor Vance" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+            {/* NOT FOUND — contextual prompt */}
+            {authNotFound && mode === "signin" ? (
+              <div style={{ margin: "4px 0 2px", background: "#f9fafb", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#f4f4f5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                 </div>
-              )}
-              <div className="auth-form-group">
-                <label className="auth-label" htmlFor="auth-email">Email Address</label>
-                <input type="email" id="auth-email" className="auth-input" placeholder="you@business.com" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "4px" }}>No account found</div>
+                <div style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, marginBottom: "16px" }}>
+                  <strong style={{ color: "#3f3f46" }}>{email}</strong> isn&apos;t registered yet.
+                  <br />Create a free account to get started.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setAuthNotFound(false); }}
+                  style={{ width: "100%", padding: "11px", background: "#09090b", color: "#fff", border: "none", borderRadius: "8px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Create Account with this Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthNotFound(false); setEmail(""); setPassword(""); }}
+                  style={{ marginTop: "8px", background: "none", border: "none", fontSize: "12.5px", color: "#a1a1aa", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  Use a different email
+                </button>
               </div>
-              <div className="auth-form-group">
-                <label className="auth-label" htmlFor="auth-password">Password</label>
-                <input type="password" id="auth-password" className="auth-input" placeholder="At least 6 characters" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
-              </div>
-              <button type="submit" className="btn-submit-auth">
-                <span>{mode === "signin" ? "Sign In" : "Create Account"}</span>
-              </button>
-            </form>
+            ) : (
+              /* Form */
+              <form onSubmit={handleAuthSubmit}>
+                {authError && (
+                  <div style={{ color: "#ef4444", fontSize: "12.5px", marginBottom: "14px", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 12px", borderRadius: "6px" }}>
+                    {authError}
+                  </div>
+                )}
+                {mode === "signup" && (
+                  <div className="auth-form-group">
+                    <label className="auth-label" htmlFor="auth-fullname">Full Name</label>
+                    <input type="text" id="auth-fullname" className="auth-input" placeholder="e.g. Eleanor Vance" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+                  </div>
+                )}
+                <div className="auth-form-group">
+                  <label className="auth-label" htmlFor="auth-email">Email Address</label>
+                  <input type="email" id="auth-email" className="auth-input" placeholder="you@business.com" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                </div>
+                <div className="auth-form-group">
+                  <label className="auth-label" htmlFor="auth-password">Password</label>
+                  <input type="password" id="auth-password" className="auth-input" placeholder="At least 6 characters" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                </div>
+                <button type="submit" className="btn-submit-auth" disabled={isSubmittingAuth}>
+                  <span>{isSubmittingAuth ? "Connecting..." : mode === "signin" ? "Sign In" : "Create Account"}</span>
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

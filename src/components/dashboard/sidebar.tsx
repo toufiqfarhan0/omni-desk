@@ -19,6 +19,8 @@ interface DashboardSidebarProps {
   onTabChange: (tab: string) => void;
   isOpen: boolean;
   onNewBusiness?: () => void;
+  ownerInfo?: { id: string; email: string; name: string };
+  onSignOut?: () => void;
 }
 
 export function DashboardSidebar({
@@ -29,6 +31,8 @@ export function DashboardSidebar({
   onTabChange,
   isOpen,
   onNewBusiness,
+  ownerInfo,
+  onSignOut,
 }: DashboardSidebarProps) {
   return (
     <aside className={`sidebar${isOpen ? " is-open" : ""}`} id="dashboard-sidebar">
@@ -215,20 +219,60 @@ export function DashboardSidebar({
               </svg>
               <span>Try Demos</span>
             </a>
+            <Link href="/docs" className="sidebar-sublink">
+              <svg className="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                <path d="M6 6h10"/>
+                <path d="M6 10h10"/>
+              </svg>
+              <span>Documentation</span>
+            </Link>
           </nav>
         </div>
 
         {/* 4. Sidebar Footer / Owner Profile */}
         <div className="sidebar-footer">
           <div className="owner-profile-card">
-            <div className="owner-avatar">D</div>
-            <div className="owner-profile-info">
+            <div className="owner-avatar">
+              {(ownerInfo?.name || ownerInfo?.email || "D").charAt(0).toUpperCase()}
+            </div>
+            <div className="owner-profile-info" style={{ minWidth: 0, flex: 1 }}>
               <div className="owner-profile-badge-row">
                 <span className="dot" style={{ background: "#16a34a" }} />
-                <span style={{ fontSize: "10px", fontWeight: 700, background: "#000000", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", letterSpacing: "0.04em" }}>DEMO</span>
+                <span style={{ fontSize: "10px", fontWeight: 700, background: "#000000", color: "#ffffff", padding: "1px 5px", borderRadius: "3px", letterSpacing: "0.04em" }}>
+                  {ownerInfo?.id === "owner_demo" ? "DEMO" : "OPERATOR"}
+                </span>
               </div>
-              <span className="owner-email-text">demo@omnidesk.ai</span>
+              <span className="owner-email-text" style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={ownerInfo?.email}>
+                {ownerInfo?.email || "demo@omnidesk.ai"}
+              </span>
             </div>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                title="Sign Out"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  padding: "6px",
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: "6px",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>

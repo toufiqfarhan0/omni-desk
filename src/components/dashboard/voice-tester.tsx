@@ -43,7 +43,9 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const feedBottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    feedBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 1) {
+      feedBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const startTimer = () => {
@@ -140,7 +142,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     e.preventDefault();
     if (!emailValue.trim()) return;
 
-    setEmailFeedback(`✓ Email submitted: ${emailValue.trim()}`);
+    setEmailFeedback(`Email submitted: ${emailValue.trim()}`);
     setMessages((prev) => [
       ...prev,
       {

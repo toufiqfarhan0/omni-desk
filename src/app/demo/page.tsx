@@ -73,6 +73,7 @@ export default function DemoPage() {
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
   const [authAlert, setAuthAlert] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+  const [authNotFound, setAuthNotFound] = useState(false);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
@@ -94,7 +95,9 @@ export default function DemoPage() {
   }, [templateKey, activeTemplate.greeting]);
 
   useEffect(() => {
-    transcriptBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 1) {
+      transcriptBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleReset = () => {
@@ -253,7 +256,7 @@ export default function DemoPage() {
     e.preventDefault();
     if (!emailInput.trim()) return;
 
-    setEmailFeedback(`✓ Email verified: ${emailInput.trim()}`);
+    setEmailFeedback(`Email verified: ${emailInput.trim()}`);
     setMessages((prev) => [
       ...prev,
       {
@@ -278,21 +281,25 @@ export default function DemoPage() {
 
   // Instant demo account
   const handleInstantDemo = () => {
-    const demoOwner = {
-      id: "owner_demo",
-      email: "demo@omnidesk.ai",
-      name: "OmniDesk Demo Operator",
-    };
-    localStorage.setItem("omnidesk_owner", JSON.stringify(demoOwner));
+    localStorage.setItem("omnidesk_owner_id", "owner_demo");
+    localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
+    localStorage.setItem("omnidesk_owner_name", "OmniDesk Demo Operator");
+    localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
     window.location.href = "/dashboard";
   };
+
 
   // Auth form submit
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthAlert(null);
+    setAuthNotFound(false);
     if (!authEmail || !authPassword) {
       setAuthAlert({ msg: "Please provide both email and password.", type: "error" });
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthAlert({ msg: "Password must be at least 6 characters.", type: "error" });
       return;
     }
 
@@ -302,16 +309,25 @@ export default function DemoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: authEmail,
+          email: authEmail.trim().toLowerCase(),
+          password: authPassword,
           name: authName || authEmail.split("@")[0],
+          mode: authMode,
         }),
       });
       const data = await res.json();
       if (data.ok && data.owner) {
-        localStorage.setItem("omnidesk_owner", JSON.stringify(data.owner));
+        localStorage.setItem("omnidesk_owner_id", data.owner.id);
+        localStorage.setItem("omnidesk_owner_email", data.owner.email);
+        localStorage.setItem("omnidesk_owner_name", data.owner.name);
+        if (data.businesses && data.businesses.length > 0) {
+          localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
+        }
         window.location.href = "/dashboard";
+      } else if (data.code === "NOT_FOUND") {
+        setAuthNotFound(true);
       } else {
-        throw new Error(data.detail || "Authentication failed");
+        setAuthAlert({ msg: data.error || "Authentication failed", type: "error" });
       }
     } catch (err: any) {
       setAuthAlert({ msg: err.message || "Authentication error", type: "error" });
@@ -319,6 +335,7 @@ export default function DemoPage() {
       setIsSubmittingAuth(false);
     }
   };
+
 
   return (
     <div style={{ background: "#ffffff", color: "#09090b", minHeight: "100vh", fontFamily: "var(--font)" }}>
@@ -1058,7 +1075,7 @@ export default function DemoPage() {
             <div style={{ display: "flex", borderBottom: "1px solid #e4e4e7", marginBottom: "20px" }}>
               <button
                 type="button"
-                onClick={() => setAuthMode("signin")}
+                onClick={() => { setAuthMode("signin"); setAuthNotFound(false); setAuthAlert(null); }}
                 style={{
                   flex: 1,
                   padding: "10px",
@@ -1076,7 +1093,7 @@ export default function DemoPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setAuthMode("signup")}
+                onClick={() => { setAuthMode("signup"); setAuthNotFound(false); setAuthAlert(null); }}
                 style={{
                   flex: 1,
                   padding: "10px",
@@ -1094,6 +1111,34 @@ export default function DemoPage() {
               </button>
             </div>
 
+            {/* NOT FOUND — contextual prompt */}
+            {authNotFound && authMode === "signin" ? (
+              <div style={{ background: "#f9fafb", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "20px", textAlign: "center", marginBottom: "4px" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#f4f4f5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "4px" }}>No account found</div>
+                <div style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, marginBottom: "16px" }}>
+                  <strong style={{ color: "#3f3f46" }}>{authEmail}</strong> isn&apos;t registered yet.
+                  <br />Create a free account to get started.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("signup"); setAuthNotFound(false); }}
+                  style={{ width: "100%", padding: "11px", background: "#09090b", color: "#fff", border: "none", borderRadius: "8px", fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}
+                >
+                  Create Account with this Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAuthNotFound(false); setAuthEmail(""); setAuthPassword(""); }}
+                  style={{ marginTop: "8px", background: "none", border: "none", fontSize: "12.5px", color: "#a1a1aa", cursor: "pointer", fontFamily: "var(--font)" }}
+                >
+                  Use a different email
+                </button>
+              </div>
+            ) : (
+            <>
             {authAlert && (
               <div
                 style={{
@@ -1206,6 +1251,8 @@ export default function DemoPage() {
                   : "Create Account"}
               </button>
             </form>
+            </>
+            )}
           </div>
         </div>
       )}
