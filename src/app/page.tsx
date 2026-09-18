@@ -66,14 +66,43 @@ export default function LandingPage() {
     }
   };
 
-  const handleDemoSignIn = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("omnidesk_owner_id", "owner_demo");
-      localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
-      localStorage.setItem("omnidesk_owner_name", "OmniDesk Demo Operator");
-      localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+  const handleDemoSignIn = async () => {
+    try {
+      if (typeof document !== "undefined") {
+        document.cookie = "omnidesk_session=owner_demo; path=/; max-age=604800; SameSite=Lax";
+      }
+
+      const res = await fetch("/api/auth/session?email=demo@omnidesk.ai");
+      const data = await res.json();
+
+      if (data.ok && data.owner) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("omnidesk_owner_id", data.owner.id);
+          localStorage.setItem("omnidesk_owner_email", data.owner.email);
+          localStorage.setItem("omnidesk_owner_name", data.owner.name);
+          if (data.businesses && data.businesses.length > 0) {
+            localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
+          } else {
+            localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+          }
+        }
+      } else {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("omnidesk_owner_id", "owner_demo");
+          localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
+          localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
+          localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+        }
+      }
+    } catch {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("omnidesk_owner_id", "owner_demo");
+        localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
+        localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
+        localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+      }
     }
-    window.location.href = "/dashboard";
+    window.location.href = "/dashboard?demo=true";
   };
 
   return (

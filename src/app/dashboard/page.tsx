@@ -78,7 +78,7 @@ export default function DashboardPage() {
         setOwnerInfo({
           id: effectiveOwnerId,
           email: savedOwnerEmail || (effectiveOwnerId === "owner_demo" ? "demo@omnidesk.ai" : "operator@omnidesk.ai"),
-          name: savedOwnerName || (effectiveOwnerId === "owner_demo" ? "OmniDesk Demo Operator" : "Practice Operator"),
+          name: savedOwnerName || (effectiveOwnerId === "owner_demo" ? "OmniDesk Operator" : "Practice Operator"),
         });
 
         const res = await fetch(`/api/owner/businesses?ownerId=${encodeURIComponent(effectiveOwnerId)}`);
