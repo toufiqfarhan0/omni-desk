@@ -390,20 +390,62 @@ export function AgentBuilder({
                 </span>
               ) : (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--text-muted)" }}>
-                  {formData.id === "biz_demo_dental" ? "Using Environment Default" : "Undeployed (Click Save & Deploy above)"}
+                  {formData.id === "biz_demo_dental" ? "Environment Default Active" : "Undeployed"}
                 </span>
               )}
             </div>
-            <input
-              style={cs.input}
-              id="agent-id-input"
-              type="text"
-              placeholder="e.g. agent_6e8ae0f... (leave empty to use default from env)"
-              value={formData.assemblyai_agent_id || ""}
-              onChange={(e) => setFormData({ ...formData, assemblyai_agent_id: e.target.value })}
-            />
-            <p style={cs.hint}>
-              Specify your own AssemblyAI Agent ID, or click <strong>Deploy to AssemblyAI</strong> above to auto-create one.
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                style={{
+                  ...cs.input,
+                  backgroundColor: "#f9fafb",
+                  color: formData.assemblyai_agent_id || formData.id === "biz_demo_dental" ? "#18181b" : "var(--text-muted)",
+                  fontFamily: "var(--mono)",
+                  fontSize: "12.5px",
+                  cursor: "default",
+                  userSelect: "all",
+                  flex: 1,
+                }}
+                id="agent-id-input"
+                type="text"
+                readOnly
+                placeholder="Auto-generated on deployment — Click 'Save & Deploy' above"
+                value={
+                  formData.assemblyai_agent_id ||
+                  (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "")
+                }
+              />
+              {(formData.assemblyai_agent_id || formData.id === "biz_demo_dental") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idToCopy =
+                      formData.assemblyai_agent_id ||
+                      (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "");
+                    if (idToCopy) {
+                      navigator.clipboard.writeText(idToCopy);
+                      toast.success("Copied Agent ID to clipboard");
+                    }
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "var(--radius)",
+                    border: "1px solid var(--border)",
+                    background: "#ffffff",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    color: "var(--text)",
+                    flexShrink: 0,
+                  }}
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+            <p style={{ ...cs.hint, marginTop: "6px" }}>
+              🔒 <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying your environment agent.
             </p>
           </div>
 
@@ -537,15 +579,23 @@ export function AgentBuilder({
                   Active AssemblyAI Agent ID
                 </div>
                 <div style={{ fontSize: "11.5px", fontFamily: "var(--mono)", color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
-                  {formData.assemblyai_agent_id || "Active on AssemblyAI (Environment Default)"}
+                  {formData.assemblyai_agent_id ||
+                    (formData.id === "biz_demo_dental"
+                      ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
+                      : "Not Deployed Yet (Click Save & Deploy)")}
                 </div>
               </div>
-              {formData.assemblyai_agent_id && (
+              {(formData.assemblyai_agent_id || formData.id === "biz_demo_dental") && (
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(formData.assemblyai_agent_id || "");
-                    toast.success("Copied Agent ID");
+                    const idToCopy =
+                      formData.assemblyai_agent_id ||
+                      (formData.id === "biz_demo_dental" ? "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" : "");
+                    if (idToCopy) {
+                      navigator.clipboard.writeText(idToCopy);
+                      toast.success("Copied Agent ID");
+                    }
                   }}
                   style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: "pointer", flexShrink: 0 }}
                 >

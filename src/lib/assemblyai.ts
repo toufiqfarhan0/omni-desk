@@ -225,10 +225,13 @@ export async function deployOrUpdateAgent(
   }
 
   const payload = buildAgentDefinition(biz, publicBaseUrl);
-  // Only fall back to process.env.AGENT_ID for the official pre-configured hair salon demo
+  // Protect the environment agent (process.env.AGENT_ID) from EVER being overwritten!
+  // Only update an agent if the business has its OWN unique agent_id that is NOT the protected env agent.
+  const protectedEnvAgentId = process.env.AGENT_ID;
   const existingAgentId =
-    biz.assemblyai_agent_id ||
-    (biz.id === "biz_demo_dental" ? process.env.AGENT_ID : undefined);
+    biz.assemblyai_agent_id && biz.assemblyai_agent_id !== protectedEnvAgentId
+      ? biz.assemblyai_agent_id
+      : undefined;
 
   const url = existingAgentId
     ? `https://agents.assemblyai.com/v1/agents/${existingAgentId}`

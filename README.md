@@ -102,7 +102,8 @@ The voice agent executes deterministic server tools during natural conversation:
 - **`send_confirmation`**: Dispatches a transactional email (via Free Gmail SMTP) with an RFC 5545 `.ics` calendar file attached for Google Calendar, Apple Calendar, and Outlook sync.
 
 ### 3. Practice Management Dashboard (`/dashboard`)
-- **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, and one-click **"Save & Deploy"** to sync tools with AssemblyAI.
+- **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, and one-click **"Save & Deploy"** to sync tools with AssemblyAI. Includes a **read-only AssemblyAI Agent ID display** with one-click copy, automated agent provisioning, and environment agent protection.
+- **Multi-Tenant Agent Isolation**: Each business maintains its own distinct `assemblyai_agent_id` in the database. Deploying a new business automatically provisions a brand-new agent ID via `POST`, strictly protecting the default salon agent (`process.env.AGENT_ID`) from being overwritten.
 - **Live Voice Tester**: Interactive in-browser tester with frequency visualizer, real-time transcript stream, and an **agent deployment guard** (verifies agent is deployed before starting calls).
 - **Bookings CRM**: Search, filter by status, and one-click manual Resend `.ics` confirmation trigger.
 - **Call History**: Recorded conversation logs with duration, token counts, and full transcript dialogs.
@@ -173,6 +174,7 @@ NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
 # [REQUIRED FOR DEMO OUT-OF-THE-BOX]
 # Pre-configured AssemblyAI Voice Agent ID (e.g. agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794)
+# Strictly protected & immutable: new businesses auto-provision their own new IDs without overwriting this.
 AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
 
 # [OPTIONAL] Public HTTPS Base URL for AssemblyAI Webhook Tools
@@ -201,7 +203,11 @@ pnpm dev
 
 ---
 
-## Understanding Webhook Tools & `PUBLIC_API_BASE_URL`
+## Understanding Webhook Tools & Agent Provisioning
+
+### Multi-Agent Isolation & Environment Protection
+- **Protected Environment Agent**: The default `AGENT_ID` in `.env` is strictly immutable.
+- **No Manual Typing or Accidental Overwrite**: The Agent ID input in the dashboard is strictly **read-only** with a one-click copy button. When clicking **"Save & Deploy"** on any new business, OmniDesk automatically calls AssemblyAI's `POST /v1/agents` API to provision a fresh, independent Agent ID and saves it directly to that business's record in the database. The Hair Salon demo agent is never overwritten.
 
 ### Why Webhooks Need a Public HTTPS URL
 During a call, the caller's audio streams to AssemblyAI's cloud. When the AI decides to call a tool (like `check_availability` or `book_appointment`), AssemblyAI sends an HTTP POST request to your server's tool URL.
