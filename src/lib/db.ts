@@ -44,10 +44,7 @@ export function getDbMode(): DbMode {
     process.env.DYNO ||
     process.env.AWS_EXECUTION_ENV ||
     process.env.AWS_REGION ||
-    process.env.NODE_ENV === "production" ||
-    (process.env.PUBLIC_API_BASE_URL &&
-      !process.env.PUBLIC_API_BASE_URL.includes("localhost") &&
-      !process.env.PUBLIC_API_BASE_URL.includes("127.0.0.1"))
+    process.env.NODE_ENV === "production"
   );
 
   const hasSupabase = Boolean(

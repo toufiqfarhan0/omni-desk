@@ -18,7 +18,12 @@ export async function POST(
 
     const publicBaseUrl =
       process.env.PUBLIC_API_BASE_URL ||
-      new URL(request.url).origin;
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : null) ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      new URL(request.url).origin ||
+      "https://omni-desk-rho.vercel.app";
 
     const result = await deployOrUpdateAgent(biz, publicBaseUrl);
 

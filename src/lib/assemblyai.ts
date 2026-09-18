@@ -34,9 +34,26 @@ export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
 
 export function buildAgentDefinition(
   biz: Business,
-  publicBaseUrl: string
+  publicBaseUrl?: string
 ): Record<string, any> {
-  const baseUrl = publicBaseUrl.replace(/\/$/, "");
+  let baseUrl = (
+    publicBaseUrl ||
+    process.env.PUBLIC_API_BASE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "") ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    "https://omni-desk-rho.vercel.app"
+  ).replace(/\/$/, "");
+
+  if (
+    baseUrl.includes("localhost") ||
+    baseUrl.includes("127.0.0.1") ||
+    !baseUrl.startsWith("http")
+  ) {
+    baseUrl = "https://omni-desk-rho.vercel.app";
+  }
+
   const businessId = biz.id;
 
   const tools = [
