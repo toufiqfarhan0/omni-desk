@@ -322,11 +322,11 @@ export default function DemoPage() {
             {/* CARD: HAIR SALON */}
             <div
               style={{
-                background: "#fafafa",
-                border: "2px solid #10b981",
+                background: "#ffffff",
+                border: "1px solid #e4e4e7",
                 borderRadius: "18px",
                 padding: "24px",
-                boxShadow: "0 10px 25px -5px rgba(16, 185, 129, 0.15)",
+                boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
@@ -336,13 +336,14 @@ export default function DemoPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                   <span
                     style={{
-                      background: "rgba(16, 185, 129, 0.1)",
-                      color: "#059669",
+                      background: "#f4f4f5",
+                      color: "#09090b",
                       fontSize: "11px",
                       fontWeight: 700,
                       padding: "4px 10px",
                       borderRadius: "9999px",
-                      border: "1px solid rgba(16, 185, 129, 0.2)",
+                      border: "1px solid #e4e4e7",
+                      letterSpacing: "0.04em",
                     }}
                   >
                     HAIR SALON &amp; MEDSPA
@@ -370,14 +371,15 @@ export default function DemoPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "6px",
-                    background: "#10b981",
+                    background: "#000000",
                     color: "#ffffff",
                     textDecoration: "none",
                     fontSize: "13px",
                     fontWeight: 600,
                     padding: "10px 16px",
                     borderRadius: "10px",
-                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
                   }}
                 >
                   <span>Open Salon Website</span>

@@ -311,20 +311,20 @@ export default function LandingPage() {
               maxWidth: "800px",
               margin: "0 auto",
               background: "#fff",
-              border: "2px solid #10b981",
+              border: "1px solid #e4e4e7",
               borderRadius: "20px",
               overflow: "hidden",
-              boxShadow: "0 20px 40px -10px rgba(16,185,129,0.15)",
+              boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
             }}
           >
-            <div style={{ background: "linear-gradient(135deg,#064e3b,#065f46)", padding: "32px 40px", color: "#fff" }}>
+            <div style={{ background: "#09090b", padding: "32px 40px", color: "#fff" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                 <div>
-                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(16,185,129,0.3)", color: "#6ee7b7", padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon &amp; MedSpa</div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(255,255,255,0.12)", color: "#ffffff", padding: "4px 12px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon &amp; MedSpa</div>
                   <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Luxe &amp; Mane Hair Studio</h3>
                 </div>
               </div>
-              <p style={{ fontSize: "14px", color: "#6ee7b7", lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: "14px", color: "#a1a1aa", lineHeight: 1.6, margin: 0 }}>
                 High-end salon with live calendar booking for precision haircuts, coloring, and artisan balayage. Experience how visitors schedule directly from the homepage.
               </p>
             </div>
@@ -343,11 +343,11 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: "8px",
-                  background: "#10b981", color: "#fff",
+                  background: "#000000", color: "#fff",
                   fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
                   padding: "12px 24px", borderRadius: "12px",
                   textDecoration: "none", whiteSpace: "nowrap",
-                  boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
+                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.18)",
                   transition: "all 0.2s",
                 }}
               >

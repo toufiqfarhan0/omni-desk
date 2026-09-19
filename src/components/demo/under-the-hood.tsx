@@ -171,7 +171,7 @@ export function UnderTheHoodPlayground() {
                 letterSpacing: "0.04em",
               }}
             >
-              <Cpu size={14} style={{ color: "#10b981" }} />
+              <Cpu size={14} style={{ color: "#09090b" }} />
               <span>NPM PACKAGE ARCHITECTURE &amp; DEEP DIVE</span>
             </div>
             <h2
@@ -266,8 +266,9 @@ export function UnderTheHoodPlayground() {
                   fontSize: "10.5px",
                   padding: "2px 8px",
                   borderRadius: "9999px",
-                  background: activeTab === "react" ? "rgba(255,255,255,0.2)" : "rgba(16,185,129,0.1)",
-                  color: activeTab === "react" ? "#ffffff" : "#059669",
+                  background: activeTab === "react" ? "rgba(255,255,255,0.2)" : "#f4f4f5",
+                  color: activeTab === "react" ? "#ffffff" : "#09090b",
+                  border: activeTab === "react" ? "none" : "1px solid #e4e4e7",
                   fontWeight: 600,
                 }}
               >
@@ -301,8 +302,9 @@ export function UnderTheHoodPlayground() {
                   fontSize: "10.5px",
                   padding: "2px 8px",
                   borderRadius: "9999px",
-                  background: activeTab === "vanilla" ? "rgba(255,255,255,0.2)" : "rgba(59,130,246,0.1)",
-                  color: activeTab === "vanilla" ? "#ffffff" : "#2563eb",
+                  background: activeTab === "vanilla" ? "rgba(255,255,255,0.2)" : "#f4f4f5",
+                  color: activeTab === "vanilla" ? "#ffffff" : "#09090b",
+                  border: activeTab === "vanilla" ? "none" : "1px solid #e4e4e7",
                   fontWeight: 600,
                 }}
               >
@@ -336,8 +338,9 @@ export function UnderTheHoodPlayground() {
                   fontSize: "10.5px",
                   padding: "2px 8px",
                   borderRadius: "9999px",
-                  background: activeTab === "headless" ? "rgba(255,255,255,0.2)" : "rgba(139,92,246,0.1)",
-                  color: activeTab === "headless" ? "#ffffff" : "#7c3aed",
+                  background: activeTab === "headless" ? "rgba(255,255,255,0.2)" : "#f4f4f5",
+                  color: activeTab === "headless" ? "#ffffff" : "#09090b",
+                  border: activeTab === "headless" ? "none" : "1px solid #e4e4e7",
                   fontWeight: 600,
                 }}
               >
@@ -406,12 +409,13 @@ export function UnderTheHoodPlayground() {
                     gap: "6px",
                     padding: "8px 14px",
                     borderRadius: "10px",
-                    background: "#10b981",
+                    background: "#000000",
                     color: "#ffffff",
                     fontSize: "12.5px",
                     fontWeight: 600,
                     textDecoration: "none",
-                    boxShadow: "0 2px 8px rgba(16,185,129,0.25)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
                   }}
                 >
                   <span>Open Salon Demo</span>
@@ -479,7 +483,7 @@ export function UnderTheHoodPlayground() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Sliders size={16} style={{ color: "#10b981" }} />
+                  <Sliders size={16} style={{ color: "#09090b" }} />
                   <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#09090b" }}>
                     Interactive React Widget Sandbox (Test Inline Customization)
                   </span>
@@ -1034,8 +1038,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span
                 style={{
                   fontSize: "12px",
-                  background: "rgba(59, 130, 246, 0.1)",
-                  color: "#2563eb",
+                  background: "#f4f4f5",
+                  color: "#09090b",
+                  border: "1px solid #e4e4e7",
                   padding: "6px 12px",
                   borderRadius: "8px",
                   fontWeight: 700,
@@ -1096,7 +1101,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Terminal size={16} style={{ color: "#2563eb" }} />
+                  <Terminal size={16} style={{ color: "#09090b" }} />
                   <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#09090b" }}>
                     Pure DOM Execution Sandbox (Simulated Shopify / WordPress Store)
                   </span>
@@ -1114,10 +1119,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       fontSize: "12px",
                       fontWeight: 600,
                       borderRadius: "8px",
-                      border: "none",
-                      background: vanillaMounted ? "#e4e4e7" : "#2563eb",
+                      border: vanillaMounted ? "1px solid #e4e4e7" : "none",
+                      background: vanillaMounted ? "#f4f4f5" : "#000000",
                       color: vanillaMounted ? "#a1a1aa" : "#ffffff",
                       cursor: vanillaMounted ? "not-allowed" : "pointer",
+                      boxShadow: vanillaMounted ? "none" : "0 2px 6px rgba(0, 0, 0, 0.12)",
                     }}
                   >
                     <Play size={12} /> Run initOmniDeskWidget()
@@ -1166,7 +1172,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     background: "#fcfcfd",
                   }}
                 >
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", marginBottom: "6px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#71717a", textTransform: "uppercase", marginBottom: "6px" }}>
                     Plain HTML / Shopify Theme
                   </div>
                   <h4 style={{ fontSize: "16px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
@@ -1420,8 +1426,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span
                 style={{
                   fontSize: "12px",
-                  background: "rgba(139, 92, 246, 0.1)",
-                  color: "#7c3aed",
+                  background: "#f4f4f5",
+                  color: "#09090b",
+                  border: "1px solid #e4e4e7",
                   padding: "6px 12px",
                   borderRadius: "8px",
                   fontWeight: 700,
@@ -1482,7 +1489,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Radio size={16} style={{ color: "#7c3aed" }} />
+                  <Radio size={16} style={{ color: "#09090b" }} />
                   <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#09090b" }}>
                     AudioWorklet Pipeline &amp; Sub-Second Interruption Simulator
                   </span>
@@ -1500,9 +1507,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       fontWeight: 600,
                       borderRadius: "8px",
                       border: "none",
-                      background: headlessStreaming ? "#09090b" : "#7c3aed",
+                      background: headlessStreaming ? "#27272a" : "#000000",
                       color: "#ffffff",
                       cursor: "pointer",
+                      boxShadow: "0 2px 6px rgba(0, 0, 0, 0.12)",
                     }}
                   >
                     {headlessStreaming ? <Square size={12} /> : <Play size={12} />}
