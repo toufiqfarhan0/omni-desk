@@ -167,3 +167,56 @@ body {
   border-color: var(--border-hover);
   color: var(--text);
 }
+
+/* Clean White Toast System (Sonner) */
+[data-sonner-toaster] [data-sonner-toast] {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border: 1px solid #e4e4e7 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px !important;
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  color: #09090b !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: #71717a !important;
+  font-size: 12px !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+  border-color: #86efac !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="success"] [data-icon] {
+  color: #16a34a !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  border-color: #fca5a5 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] [data-icon] {
+  color: #dc2626 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] {
+  border-color: #93c5fd !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="info"] [data-icon] {
+  color: #2563eb !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] {
+  border-color: #fde047 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"] [data-icon] {
+  color: #d97706 !important;
+}

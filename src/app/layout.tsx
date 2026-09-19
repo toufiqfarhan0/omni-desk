@@ -36,7 +36,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <TooltipProvider>{children}</TooltipProvider>
-        <Toaster position="bottom-right" richColors />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );
