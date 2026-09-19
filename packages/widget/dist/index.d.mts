@@ -34,6 +34,8 @@ declare class AssemblyAIVoiceClient {
     start(token: string, agentId: string): Promise<void>;
     setMuted(muted: boolean): void;
     getMuted(): boolean;
+    sendUserMessage(text: string, instructions?: string): boolean;
+    sendEmailInput(email: string): boolean;
     stop(): void;
     private startVisualizerLoop;
 }

@@ -34,8 +34,8 @@ export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
 
 export const VALID_ASSEMBLYAI_VOICES = new Set([
   "alba", "anna", "charles", "estelle", "eve", "george", "giovanni",
-  "iris", "jane", "jean", "juergen", "lola", "mary", "michael",
-  "paul", "rafael", "reid", "vera"
+  "jane", "jean", "juergen", "lola", "mary", "michael",
+  "paul", "rafael", "vera"
 ]);
 
 export function sanitizeVoiceId(voiceId?: string): string {
@@ -54,16 +54,19 @@ export function buildAgentDefinition(
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : "") ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
-    "https://omni-desk-rho.vercel.app"
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
   ).replace(/\/$/, "");
 
   if (
+    !baseUrl ||
     baseUrl.includes("localhost") ||
     baseUrl.includes("127.0.0.1") ||
     !baseUrl.startsWith("http")
   ) {
-    baseUrl = "https://omni-desk-rho.vercel.app";
+    throw new Error(
+      "No public HTTPS base URL could be determined. Set PUBLIC_API_BASE_URL in your .env " +
+      "(e.g. PUBLIC_API_BASE_URL=https://your-domain.com) so AssemblyAI can reach your tool endpoints."
+    );
   }
 
   const businessId = biz.id;
@@ -144,7 +147,7 @@ export function buildAgentDefinition(
     {
       name: "book_appointment",
       description:
-        "Books an appointment slot. Requires service name, date (YYYY-MM-DD), time (HH:MM in 24h), customer full name, and verified email address.",
+        "CRITICAL: Only call this tool AFTER the caller has agreed to a slot AND you have explicitly asked for and received BOTH the caller's actual full name AND their verified email address. NEVER assume, invent, or use 'John Doe' or '@example.com'. If you lack either, you MUST ask the caller first.",
       http: {
         url: `${baseUrl}/api/tools/${businessId}/book_appointment`,
         http_method: "POST",
@@ -154,7 +157,7 @@ export function buildAgentDefinition(
         properties: {
           service: {
             type: "string",
-            description: "Service name or key.",
+            description: "Service name or key (e.g. haircut).",
           },
           date: {
             type: "string",
@@ -166,12 +169,13 @@ export function buildAgentDefinition(
           },
           customer_name: {
             type: "string",
-            description: "Customer's full name.",
+            description:
+              "The caller's actual spoken full name (e.g. 'Alex Rivera'). Strictly forbidden to use 'John Doe' or placeholder names.",
           },
           email: {
             type: "string",
             description:
-              "Customer's email address. Call verify_customer_email first to ensure correctness.",
+              "The caller's actual verified email address. Strictly forbidden to use 'john.doe@example.com' or '@example.com'.",
           },
         },
         required: ["service", "date", "time", "customer_name", "email"],
@@ -205,20 +209,48 @@ Tone: ${biz.tone}
 Operating Schedule: Open from ${biz.open_hour}:00 to ${biz.close_hour}:00, ${biz.operating_days}.
 Slot Duration: ${biz.slot_minutes} minutes.
 
+TIMING & DATE NUMBER FORMATTING:
+- ALWAYS format all times as numbers/digits with AM/PM (e.g., "9:00 AM", "9:30 AM", "12:00 PM", "1:00 PM"). NEVER write or speak times as spelled-out words (e.g. NEVER say "nine AM", "nine thirty AM", "twelve PM", or "one PM").
+- ALWAYS format dates with digits for the day (e.g., "September 23", "October 5"). NEVER spell out ordinal numbers in words (e.g. do NOT say "September twenty third").
+- When offering available slots from check_availability, ALWAYS state them as numbers: "9:00 AM, 9:30 AM, 12:00 PM, or 1:00 PM".
+
+MANDATORY STEP-BY-STEP PRE-BOOKING WORKFLOW (NEVER SKIP):
+When the caller chooses or agrees to a date and time slot:
+1. STOP! YOU ARE STRICTLY FORBIDDEN FROM CALLING 'book_appointment' AT THIS MOMENT.
+2. ASK FOR NAME: "Great! May I have your full name for the reservation?"
+   -> STOP SPEAKING AND WAIT FOR THE CALLER'S ANSWER. DO NOT CALL ANY TOOL.
+3. ASK FOR EMAIL: "And what is your email address so I can send your calendar invite and confirmation?"
+   -> STOP SPEAKING AND WAIT FOR THE CALLER'S ANSWER.
+   -> When the caller speaks or enters their email, call 'verify_customer_email' to validate it.
+4. ONLY AFTER BOTH the caller's actual spoken name AND verified email are received:
+   -> Call 'book_appointment' using their real name and verified email.
+5. IMMEDIATELY after 'book_appointment' returns success:
+   -> Call 'send_confirmation' with their confirmation code.
+6. Read their 6-character confirmation code and confirm the email was sent.
+
+ANTI-HALLUCINATION & IDENTITY RULES:
+- NEVER invent, assume, fabricate, or hallucinate a name like "John Doe" or an email like "john.doe@example.com".
+- Calling 'book_appointment' without the caller explicitly giving their real name and real email will be rejected immediately by the booking system.
+- If the caller enters their email via the on-screen input box, acknowledge their email and proceed with booking.
+
 Instructions:
 1. Always start with: "${biz.greeting}"
 2. When the caller asks about pricing or services, call 'get_services_and_pricing'.
-3. When the caller specifies a day, call 'get_today' first to anchor relative dates, then call 'check_availability'.
-4. Collect the caller's full name and email address. Always verify their email using 'verify_customer_email'.
+3. When the caller specifies a day, call 'get_today' first to anchor relative dates, then call 'check_availability'. Always state open times using numbers (e.g. 9:00 AM, 9:30 AM, 12:00 PM, 1:00 PM).
+4. Follow the MANDATORY PRE-BOOKING WORKFLOW above to collect the caller's name and email before booking.
 5. Once confirmed, call 'book_appointment', then immediately call 'send_confirmation' so their calendar invite (.ics) is sent.
 6. Provide their 6-character confirmation code clearly and wrap up politely.`;
 
+  const voiceId = sanitizeVoiceId(biz.voice_id);
   return {
     name: biz.name,
     system_prompt: fullPrompt,
     greeting: biz.greeting || undefined,
     voice: {
-      voice_id: sanitizeVoiceId(biz.voice_id),
+      voice_id: voiceId,
+    },
+    output: {
+      voice: voiceId,
     },
     tools,
   };
@@ -237,18 +269,17 @@ export async function deployOrUpdateAgent(
   }
 
   const payload = buildAgentDefinition(biz, publicBaseUrl);
-  // Protect the environment agent (process.env.AGENT_ID) from EVER being overwritten!
-  // Only update an agent if the business has its OWN unique agent_id that is NOT the protected env agent.
-  const protectedEnvAgentId = process.env.AGENT_ID;
+  // If the business already has an agent ID, update the existing agent!
+  // Only generate a new agent ID if the business does NOT have an agent ID yet.
   const existingAgentId =
-    biz.assemblyai_agent_id && biz.assemblyai_agent_id !== protectedEnvAgentId
-      ? biz.assemblyai_agent_id
+    biz.assemblyai_agent_id && biz.assemblyai_agent_id.trim()
+      ? biz.assemblyai_agent_id.trim()
       : undefined;
 
-  const url = existingAgentId
+  let url = existingAgentId
     ? `https://agents.assemblyai.com/v1/agents/${existingAgentId}`
     : "https://agents.assemblyai.com/v1/agents";
-  const method = existingAgentId ? "PUT" : "POST";
+  let method = existingAgentId ? "PUT" : "POST";
 
   // Retries for DNS propagation
   let lastErr = "";
@@ -256,7 +287,7 @@ export async function deployOrUpdateAgent(
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         method,
         headers: {
           Authorization: apiKey,
@@ -264,6 +295,20 @@ export async function deployOrUpdateAgent(
         },
         body: JSON.stringify(payload),
       });
+
+      // If existing agent ID was deleted or not found on AssemblyAI, fallback to creating a new one
+      if (res.status === 404 && method === "PUT") {
+        url = "https://agents.assemblyai.com/v1/agents";
+        method = "POST";
+        res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       lastStatus = res.status;
       if (res.ok) {

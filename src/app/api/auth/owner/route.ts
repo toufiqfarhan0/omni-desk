@@ -28,11 +28,18 @@ export async function POST(request: Request) {
     let owner = null;
 
     if (mode === "signup") {
-      owner = await signUpOwner(email, password, name || undefined);
-      if (!owner) {
+      const exists = await emailExists(email);
+      if (exists) {
         return NextResponse.json(
           { ok: false, error: "An account with this email already exists. Please sign in instead." },
           { status: 409 }
+        );
+      }
+      owner = await signUpOwner(email, password, name || undefined);
+      if (!owner) {
+        return NextResponse.json(
+          { ok: false, error: "Failed to create account. Please try again." },
+          { status: 500 }
         );
       }
     } else {

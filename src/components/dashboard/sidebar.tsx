@@ -234,7 +234,7 @@ export function DashboardSidebar({
         <div className="sidebar-footer">
           <div className="owner-profile-card">
             <div className="owner-avatar">
-              {(ownerInfo?.name || ownerInfo?.email || "D").charAt(0).toUpperCase()}
+              DE
             </div>
             <div className="owner-profile-info" style={{ minWidth: 0, flex: 1 }}>
               <div className="owner-profile-badge-row">
@@ -408,8 +408,9 @@ export function DashboardSidebar({
           width: 34px;
           height: 34px;
           border-radius: 50%;
-          background: #09090b;
-          color: #ffffff;
+          background: #ffffff;
+          color: #000000;
+          border: 1.5px solid #000000;
           display: grid;
           place-items: center;
           font-weight: 700;

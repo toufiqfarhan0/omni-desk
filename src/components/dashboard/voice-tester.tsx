@@ -24,23 +24,25 @@ const ACCENT_COLORS = [
 
 export function VoiceTester({ business }: VoiceTesterProps) {
   const [callStatus, setCallStatus] = useState<"idle" | "busy" | "live" | "error">("idle");
-  const [messages, setMessages] = useState<SimMessage[]>([
-    {
-      id: "init",
-      who: "agent",
-      text:
-        business.greeting ||
-        `Thanks for calling ${business.name}! Are you looking to book an appointment or check availability today?`,
-    },
-  ]);
+  const [messages, setMessages] = useState<SimMessage[]>([]);
   const [timerText, setTimerText] = useState("0:00");
+  const [userLevel, setUserLevel] = useState(0);
+  const [agentLevel, setAgentLevel] = useState(0);
 
   // Widget customizer & live preview state
   const [widgetTheme, setWidgetTheme] = useState<"dark" | "light">("dark");
   const [widgetAccent, setWidgetAccent] = useState("#18181b");
   const [widgetPos, setWidgetPos] = useState<"bottom-right" | "bottom-left">("bottom-right");
+  const [widgetLabel, setWidgetLabel] = useState("Talk to Receptionist");
   const [embedTab, setEmbedTab] = useState<"script" | "react">("script");
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Email input bar states
+  const [showEmailBar, setShowEmailBar] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailSuccess, setEmailSuccess] = useState("");
 
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerTickRef = useRef<NodeJS.Timeout | null>(null);
@@ -128,6 +130,32 @@ export function VoiceTester({ business }: VoiceTesterProps) {
               text: event.text,
             },
           ]);
+          if (event.who === "agent") {
+            const lower = event.text.toLowerCase();
+            const normalized = lower.replace(/[\s\-_]/g, "");
+            if (
+              normalized.includes("email") ||
+              lower.includes("e-mail") ||
+              lower.includes("email") ||
+              lower.includes("mail address") ||
+              lower.includes("your mail") ||
+              lower.includes("send your confirmation") ||
+              lower.includes("send the confirmation") ||
+              lower.includes("calendar invite") ||
+              lower.includes("where should i send") ||
+              lower.includes("where can i send") ||
+              lower.includes("what is your address") ||
+              lower.includes("spell your") ||
+              lower.includes("provide your") ||
+              lower.includes("type your")
+            ) {
+              setShowEmailBar(true);
+            }
+          }
+        },
+        onAudioLevel: (u, a) => {
+          setUserLevel(u);
+          setAgentLevel(a);
         },
         onError: (err) => {
           toast.error(err);
@@ -152,19 +180,68 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     }
     setCallStatus("idle");
     stopTimer();
+    setShowEmailBar(false);
+    setEmailError("");
+    setEmailSuccess("");
   };
 
   const handleReset = () => {
     handleEndCall();
-    setMessages([
-      {
-        id: "init",
-        who: "agent",
-        text:
-          business.greeting ||
-          `Thanks for calling ${business.name}! Are you looking to book an appointment or check availability today?`,
-      },
-    ]);
+    setShowEmailBar(false);
+    setEmailError("");
+    setEmailSuccess("");
+    setMessages([]);
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = emailInput.trim();
+    if (!trimmed) return;
+
+    setIsVerifyingEmail(true);
+    setEmailError("");
+    setEmailSuccess("");
+
+    try {
+      const res = await fetch(`/api/tools/${business.id}/verify_customer_email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.valid || !data.email) {
+        setEmailError(data.message || "Invalid email or domain has no active mail server.");
+        setIsVerifyingEmail(false);
+        return;
+      }
+
+      const verifiedEmail = data.email;
+      setEmailSuccess(`Verified: ${verifiedEmail}. Sent to agent.`);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${Date.now()}`,
+          who: "user",
+          text: `My email is ${verifiedEmail}`,
+        },
+      ]);
+
+      if (voiceClientRef.current) {
+        voiceClientRef.current.sendEmailInput(verifiedEmail);
+      }
+
+      setEmailInput("");
+      setTimeout(() => {
+        setShowEmailBar(false);
+        setEmailSuccess("");
+      }, 2500);
+    } catch (err: any) {
+      setEmailError(err.message || "Failed to verify email with mail server.");
+    } finally {
+      setIsVerifyingEmail(false);
+    }
   };
 
   const copySnippet = (text: string) => {
@@ -172,7 +249,13 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     toast.success("Copied snippet to clipboard!");
   };
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://omni-desk-rho.vercel.app";
+  const deployedUrl =
+    typeof window !== "undefined" &&
+    !window.location.origin.includes("localhost") &&
+    !window.location.origin.includes("127.0.0.1")
+      ? window.location.origin
+      : "";
+  const origin = deployedUrl || "";
   const agentId = business.assemblyai_agent_id || "";
 
   const scriptSnippet = `<!-- OmniDesk Autonomous Voice Receptionist -->
@@ -182,6 +265,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   data-position="${widgetPos}"
   data-theme="${widgetTheme}"
   data-accent="${widgetAccent}"
+  data-label="${widgetLabel}"
   defer>
 </script>`;
 
@@ -197,6 +281,7 @@ export default function App() {
       theme="${widgetTheme}"
       accent="${widgetAccent}"
       position="${widgetPos}"
+      label="${widgetLabel}"
     />
   );
 }`;
@@ -251,60 +336,63 @@ export default function App() {
           boxSizing: "border-box",
         }}
       >
-        {/* Widget Topbar — Live Dynamic Theme & Accent */}
+        {/* Widget Topbar — Matching user reference */}
         <div
           style={{
-            background: widgetTheme === "dark" ? widgetAccent : "#ffffff",
-            color: widgetTheme === "dark" ? "#ffffff" : "#09090b",
-            borderBottom: widgetTheme === "light" ? "1px solid #e4e4e7" : "none",
-            padding: isExpanded ? "16px 24px" : "14px 18px",
+            background: "#18181b",
+            color: "#ffffff",
+            borderBottom: "1px solid #27272a",
+            padding: "13px 18px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: "12px",
             userSelect: "none",
             flexShrink: 0,
-            transition: "background 0.2s ease",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
             {/* 3 vertical dots icon */}
-            <div style={{ color: widgetTheme === "dark" ? "rgba(255,255,255,0.7)" : "#71717a", display: "grid", placeItems: "center" }}>
+            <div style={{ color: "rgba(255,255,255,0.6)", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="1" />
                 <circle cx="12" cy="5" r="1" />
                 <circle cx="12" cy="19" r="1" />
               </svg>
             </div>
-            {/* Circle microphone avatar */}
+
+            {/* Circular mic icon badge */}
             <div
               style={{
                 width: "28px",
                 height: "28px",
                 borderRadius: "50%",
-                background: widgetTheme === "dark" ? "rgba(255,255,255,0.18)" : "#f4f4f5",
+                background: "rgba(255,255,255,0.15)",
                 display: "grid",
                 placeItems: "center",
                 flexShrink: 0,
+                color: "#ffffff",
               }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                 <line x1="12" y1="19" x2="12" y2="22" />
               </svg>
             </div>
+
+            {/* Title & Status */}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <h3 style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: widgetTheme === "dark" ? "#ffffff" : "#09090b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {business.name}
-              </h3>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: widgetTheme === "dark" ? "rgba(255,255,255,0.75)" : "#71717a" }}>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "rgba(255,255,255,0.75)" }}>
                 <span
                   style={{
                     width: "6px",
                     height: "6px",
                     borderRadius: "50%",
-                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : widgetTheme === "dark" ? "rgba(255,255,255,0.4)" : "#a1a1aa",
+                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : "rgba(255,255,255,0.4)",
                   }}
                 />
                 <span>
@@ -320,17 +408,17 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right controls: Open Full & Reset */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: widgetTheme === "dark" ? "rgba(255,255,255,0.85)" : "#52525b" }}>
+          {/* Right controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               title={isExpanded ? "Exit Fullscreen" : "Open Full"}
               style={{
-                background: widgetTheme === "dark" ? "rgba(255,255,255,0.12)" : "#f4f4f5",
-                border: widgetTheme === "dark" ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.15)",
                 borderRadius: "7px",
-                color: widgetTheme === "dark" ? "#ffffff" : "#27272a",
+                color: "#ffffff",
                 width: "30px",
                 height: "30px",
                 cursor: "pointer",
@@ -338,6 +426,8 @@ export default function App() {
                 placeItems: "center",
                 transition: "all 0.15s ease",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
             >
               {isExpanded ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -360,10 +450,10 @@ export default function App() {
               onClick={handleReset}
               title="Reset Conversation"
               style={{
-                background: widgetTheme === "dark" ? "rgba(255,255,255,0.12)" : "#f4f4f5",
-                border: widgetTheme === "dark" ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.15)",
                 borderRadius: "7px",
-                color: widgetTheme === "dark" ? "#ffffff" : "#27272a",
+                color: "#ffffff",
                 width: "30px",
                 height: "30px",
                 cursor: "pointer",
@@ -371,6 +461,8 @@ export default function App() {
                 placeItems: "center",
                 transition: "all 0.15s ease",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -406,20 +498,58 @@ export default function App() {
           </div>
         )}
 
-        {/* Conversation Feed */}
+        {/* Conversation Feed — Crisp White Background */}
         <div
           style={{
             flex: 1,
             minHeight: 0,
             overflowY: "auto",
-            padding: "18px 16px",
+            padding: "16px",
             display: "flex",
             flexDirection: "column",
-            gap: "14px",
+            gap: "12px",
             background: "#ffffff",
           }}
         >
-          {messages.map((m, idx) => (
+          {/* Placeholder in Gray Background */}
+          {messages.length === 0 && (
+            <div
+              style={{
+                margin: "auto",
+                textAlign: "center",
+                padding: "10px 18px",
+                background: "#f4f4f5",
+                border: "1px solid #e4e4e7",
+                color: "#52525b",
+                borderRadius: "12px",
+                fontSize: "12.5px",
+                fontWeight: 500,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                alignSelf: "center",
+              }}
+            >
+              <span
+                style={{
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: callStatus === "live" ? "#22c55e" : "#a1a1aa",
+                  display: "inline-block",
+                }}
+              />
+              <span>
+                {callStatus === "live"
+                  ? "Connected · Speak to our receptionist"
+                  : callStatus === "busy"
+                  ? "Connecting to receptionist..."
+                  : "Start a call to talk to our receptionist"}
+              </span>
+            </div>
+          )}
+
+          {messages.map((m) => (
             <div
               key={m.id}
               style={{
@@ -437,13 +567,12 @@ export default function App() {
                       width: "24px",
                       height: "24px",
                       borderRadius: "50%",
-                      background: widgetAccent,
+                      background: "#18181b",
                       display: "grid",
                       placeItems: "center",
                       color: "#ffffff",
                       flexShrink: 0,
                       marginTop: "2px",
-                      transition: "background 0.2s ease",
                     }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -456,27 +585,119 @@ export default function App() {
                   style={{
                     padding: "10px 14px",
                     borderRadius: m.who === "agent" ? "14px 14px 14px 2px" : "14px 14px 2px 14px",
-                    fontSize: "13.5px",
+                    fontSize: "13px",
                     lineHeight: "1.45",
-                    background: m.who === "agent" ? "#f4f4f5" : widgetAccent,
+                    background: m.who === "agent" ? "#f4f4f5" : "#18181b",
                     color: m.who === "agent" ? "#09090b" : "#ffffff",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                    transition: "background 0.2s ease",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
                   }}
                 >
                   {m.text}
                 </div>
               </div>
-
             </div>
           ))}
           <div ref={feedBottomRef} />
         </div>
 
-        {/* Bottom Call Bar */}
+        {/* Live email entry bar */}
+        {showEmailBar && callStatus === "live" && (
+          <div
+            style={{
+              padding: "11px 16px",
+              background: "#f0fdf4",
+              borderTop: "1px solid #bbf7d0",
+              display: "flex",
+              flexDirection: "column",
+              gap: "7px",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                Email Requested by Agent • Auto Verification
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowEmailBar(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#15803d",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  padding: "1px 4px",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEmailSubmit} style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="email"
+                autoFocus
+                value={emailInput}
+                onChange={(e) => {
+                  setEmailInput(e.target.value);
+                  setEmailError("");
+                }}
+                placeholder="Enter your real email (e.g. name@gmail.com)"
+                disabled={isVerifyingEmail}
+                required
+                style={{
+                  flex: 1,
+                  fontFamily: "var(--font)",
+                  fontSize: "12.5px",
+                  padding: "7px 11px",
+                  borderRadius: "7px",
+                  border: emailError ? "1.5px solid #ef4444" : "1px solid #86efac",
+                  background: "#ffffff",
+                  color: "#09090b",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isVerifyingEmail || !emailInput.trim()}
+                style={{
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "7px 14px",
+                  borderRadius: "7px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: isVerifyingEmail ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  opacity: isVerifyingEmail ? 0.7 : 1,
+                }}
+              >
+                {isVerifyingEmail ? "Verifying..." : "Verify & Send"}
+              </button>
+            </form>
+
+            {emailError && (
+              <div style={{ fontSize: "11px", color: "#ef4444", fontWeight: 500 }}>
+                ⚠️ {emailError}
+              </div>
+            )}
+            {emailSuccess && (
+              <div style={{ fontSize: "11px", color: "#15803d", fontWeight: 600 }}>
+                ✓ {emailSuccess}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bottom Call Bar (Matching Reference Image) */}
         <div
           style={{
-            padding: "14px 18px",
+            padding: "12px 16px",
             borderTop: "1px solid #e4e4e7",
             background: "#fafafa",
             display: "flex",
@@ -485,6 +706,7 @@ export default function App() {
             flexShrink: 0,
           }}
         >
+          {/* Start Voice Call Button on Left */}
           <button
             type="button"
             onClick={handleToggleCall}
@@ -493,47 +715,46 @@ export default function App() {
               display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              padding: "9px 18px",
-              background: !isDeployed ? "#71717a" : callStatus === "live" ? "#dc2626" : widgetAccent,
-              color: "#ffffff",
+              padding: "8px 16px",
               borderRadius: "10px",
               border: "none",
-              fontSize: "13.5px",
+              background: callStatus === "live" ? "#dc2626" : "#000000",
+              color: "#ffffff",
+              fontSize: "13px",
               fontWeight: 600,
-              cursor: !isDeployed ? "not-allowed" : "pointer",
-              opacity: !isDeployed ? 0.65 : 1,
+              cursor: !isDeployed || callStatus === "busy" ? "not-allowed" : "pointer",
               transition: "all 0.15s ease",
             }}
-            title={!isDeployed ? "Deploy to AssemblyAI in Agent Builder before testing" : undefined}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
               <line x1="12" y1="19" x2="12" y2="22" />
             </svg>
-            <span>
-              {!isDeployed
-                ? "Deploy Agent to Test Live Voice"
-                : callStatus === "live"
-                ? "End Voice Call"
-                : callStatus === "busy"
-                ? "Connecting..."
-                : "Start Voice Call"}
-            </span>
+            <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
           </button>
 
+          {/* Right: Waveform visualizer bars when live + Duration badge */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {callStatus === "live" && (
-              <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "14px" }}>
-                <span style={{ width: "2.5px", height: "12px", background: "#000000", borderRadius: "1px" }} />
-                <span style={{ width: "2.5px", height: "8px", background: "#000000", borderRadius: "1px" }} />
-                <span style={{ width: "2.5px", height: "14px", background: "#000000", borderRadius: "1px" }} />
-                <span style={{ width: "2.5px", height: "6px", background: "#000000", borderRadius: "1px" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: "2.5px", height: "14px" }}>
+                {[12, 8, 14, 6, 10].map((h, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: "2.5px",
+                      height: `${Math.max(4, Math.min(14, Math.round(h * (0.35 + Math.max(userLevel, agentLevel) * 1.5))))}px`,
+                      background: "#000000",
+                      borderRadius: "1px",
+                      transition: "height 0.12s ease",
+                    }}
+                  />
+                ))}
               </div>
             )}
             <span
               style={{
-                fontFamily: "var(--mono)",
+                fontFamily: "var(--mono, monospace)",
                 fontSize: "12px",
                 fontWeight: 600,
                 padding: "3px 8px",
@@ -544,6 +765,47 @@ export default function App() {
             >
               {timerText}
             </span>
+          </div>
+        </div>
+
+        {/* Live Floating Launcher Pill Preview */}
+        <div
+          style={{
+            padding: "10px 16px",
+            background: widgetTheme === "dark" ? "#09090b" : "#f4f4f5",
+            borderTop: `1px solid ${widgetTheme === "dark" ? "#27272a" : "#e4e4e7"}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: widgetPos === "bottom-right" ? "flex-end" : "flex-start",
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px",
+              background: widgetTheme === "dark" ? "#18181b" : "#ffffff",
+              color: widgetTheme === "dark" ? "#fafafa" : "#09090b",
+              border: `1px solid ${widgetTheme === "dark" ? "#27272a" : "#e4e4e7"}`,
+              padding: "7px 16px",
+              borderRadius: "9999px",
+              fontSize: "12.5px",
+              fontWeight: 600,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              userSelect: "none",
+            }}
+          >
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: callStatus === "live" ? "#ef4444" : (widgetAccent === "#18181b" ? "#10b981" : widgetAccent),
+                boxShadow: `0 0 8px ${callStatus === "live" ? "#ef4444" : (widgetAccent === "#18181b" ? "#10b981" : widgetAccent)}`,
+              }}
+            />
+            <span>{widgetLabel || "Talk to Receptionist"}</span>
+            <span style={{ fontSize: "11px", opacity: 0.6 }}>▲</span>
           </div>
         </div>
       </div>
@@ -688,6 +950,31 @@ export default function App() {
                 Bottom-Left
               </button>
             </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
+              Label:
+            </div>
+            <input
+              type="text"
+              value={widgetLabel}
+              onChange={(e) => setWidgetLabel(e.target.value)}
+              placeholder="Talk to Receptionist"
+              style={{
+                fontSize: "12px",
+                padding: "4px 10px",
+                borderRadius: "6px",
+                border: "1px solid var(--border)",
+                background: "#ffffff",
+                color: "var(--text)",
+                outline: "none",
+                width: "160px",
+                fontFamily: "var(--font)",
+                boxSizing: "border-box",
+                height: "27px",
+              }}
+            />
           </div>
         </div>
 

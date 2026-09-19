@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect /dashboard and all nested paths
@@ -22,11 +22,9 @@ export function middleware(request: NextRequest) {
       return response;
     }
 
-    // If no active session cookie found, redirect to home with auth modal trigger
+    // Unauthenticated user attempting to access dashboard -> redirect to home and prompt auth modal
     if (!sessionToken) {
-      const redirectUrl = new URL("/", request.url);
-      redirectUrl.searchParams.set("auth", "required");
-      redirectUrl.searchParams.set("redirect", pathname);
+      const redirectUrl = new URL("/?auth=required&redirect=/dashboard", request.url);
       return NextResponse.redirect(redirectUrl);
     }
   }

@@ -324,6 +324,38 @@ export class AssemblyAIVoiceClient {
     return this.isMuted;
   }
 
+  sendUserMessage(text: string, instructions?: string): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    try {
+      this.ws.send(
+        JSON.stringify({
+          type: "conversation.message",
+          role: "user",
+          content: text,
+        })
+      );
+      if (instructions) {
+        this.ws.send(
+          JSON.stringify({
+            type: "reply.create",
+            instructions,
+          })
+        );
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to send message to agent:", e);
+      return false;
+    }
+  }
+
+  sendEmailInput(email: string): boolean {
+    return this.sendUserMessage(
+      `My email address is ${email}`,
+      `The caller entered their verified email address: ${email}. Acknowledge this email, verify it using verify_customer_email if needed, and complete the booking.`
+    );
+  }
+
   stop() {
     this.isConnected = false;
     if (this.animFrameId) {

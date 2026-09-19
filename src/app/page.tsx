@@ -1,154 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { Navbar } from "@/components/navbar";
+import { AuthModal } from "@/components/auth-modal";
 import { toast } from "sonner";
-
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
 
-  const [authError, setAuthError] = useState("");
-  const [authNotFound, setAuthNotFound] = useState(false);
-  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setAuthError("");
-    setAuthNotFound(false);
-    setIsSubmittingAuth(true);
-
-    try {
-      const res = await fetch("/api/auth/owner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          name: fullName.trim(),
-          password,
-          mode,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.ok && data.owner) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("omnidesk_owner_id", data.owner.id);
-          localStorage.setItem("omnidesk_owner_email", data.owner.email);
-          localStorage.setItem("omnidesk_owner_name", data.owner.name);
-          if (data.businesses && data.businesses.length > 0) {
-            localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
-          }
-        }
-        window.location.href = "/dashboard";
-      } else if (data.code === "NOT_FOUND") {
-        setAuthNotFound(true);
-      } else {
-        setAuthError(data.error || "Authentication failed. Please try again.");
+  // If redirected with ?auth=required from dashboard guard, open auth modal with toast
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("auth") === "required") {
+        toast.info("You need to login to access the owner portal.");
+        setAuthModalOpen(true);
       }
-    } catch (err: any) {
-      setAuthError(err.message || "Network error. Please try again.");
-    } finally {
-      setIsSubmittingAuth(false);
     }
-  };
+  }, []);
 
-  const handleDemoSignIn = async () => {
-    if (isDemoLoading) return;
-    setIsDemoLoading(true);
-    const toastId = toast.loading("Authenticating demo operator...");
-
-    try {
-      if (typeof document !== "undefined") {
-        document.cookie = "omnidesk_session=owner_demo; path=/; max-age=604800; SameSite=Lax";
-      }
-
-      const res = await fetch("/api/auth/session?email=demo@omnidesk.ai");
-      const data = await res.json();
-
-      if (data.ok && data.owner) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("omnidesk_owner_id", data.owner.id);
-          localStorage.setItem("omnidesk_owner_email", data.owner.email);
-          localStorage.setItem("omnidesk_owner_name", data.owner.name);
-          if (data.businesses && data.businesses.length > 0) {
-            localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
-          } else {
-            localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
-          }
-        }
-      } else {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("omnidesk_owner_id", "owner_demo");
-          localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
-          localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
-          localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
-        }
-      }
-      toast.success("Welcome, Demo Operator! Opening dashboard...", { id: toastId });
-    } catch {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("omnidesk_owner_id", "owner_demo");
-        localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
-        localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
-        localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
-      }
-      toast.success("Opening Demo Dashboard...", { id: toastId });
-    }
-
-    setTimeout(() => {
-      window.location.href = "/dashboard?demo=true";
-    }, 450);
+  const handleOpenOwnerPortal = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    toast.info("You need to login to access the owner portal.");
+    setAuthModalOpen(true);
   };
 
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font)", minHeight: "100vh", fontSize: "15px", lineHeight: "1.6", letterSpacing: "-0.011em", WebkitFontSmoothing: "antialiased" }}>
-      {/* NAV */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,255,255,0.88)", backdropFilter: "blur(12px)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div className="container">
-          <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "68px" }}>
-            <a href="/" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none", color: "var(--text)" }}>
-              <div style={{ width: "32px", height: "32px", display: "grid", placeItems: "center", color: "var(--text)", flexShrink: 0 }}>
-                <BrandLogo size={32} />
-              </div>
-              <span style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.025em" }}>OmniDesk</span>
-            </a>
-
-            <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: "28px" }}>
-              <a href="#features" className="nav-link">Capabilities</a>
-              <a href="#architecture" className="nav-link">Architecture</a>
-              <Link href="/docs" className="nav-link">Docs</Link>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <a href="/demo" className="btn btn-outline" style={{ fontSize: "13px", padding: "7px 14px" }}>
-                Try Demos
-              </a>
-              <button
-                type="button"
-                onClick={() => { setAuthModalOpen(true); setMode("signin"); }}
-                className="btn btn-primary"
-                style={{ fontSize: "13px", padding: "7px 16px", cursor: "pointer" }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <line x1="19" x2="19" y1="8" y2="14"/>
-                  <line x1="22" x2="16" y1="11" y2="11"/>
-                </svg>
-                Sign In / Sign Up
-              </button>
-            </div>
-          </nav>
-        </div>
-      </header>
+      {/* SHARED REUSABLE NAVBAR */}
+      <Navbar onOpenAuthModal={handleOpenOwnerPortal} />
 
       {/* HERO */}
       <section style={{ padding: "80px 0 64px", textAlign: "center" }}>
@@ -165,13 +47,18 @@ export default function LandingPage() {
               Speaks with callers naturally, queries live practice calendars in real time, and books confirmed slots directly into your database.
             </p>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "48px", flexWrap: "wrap" }}>
-              <a href="/dashboard" className="btn btn-primary btn-lg">
+              <button
+                type="button"
+                onClick={handleOpenOwnerPortal}
+                className="btn btn-primary btn-lg"
+                style={{ cursor: "pointer", border: "none" }}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect width="18" height="18" x="3" y="3" rx="2"/>
                   <path d="M9 3v18"/>
                 </svg>
-                Open Owner Portal &rarr;
-              </a>
+                <span>Open Owner Portal &rarr;</span>
+              </button>
               <a href="/demo" className="btn btn-outline btn-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
@@ -356,7 +243,9 @@ export default function LandingPage() {
               </div>
               <div className="featurette-cta-row">
                 <a href="/demo" className="btn btn-primary featurette-btn">Try Demos &rarr;</a>
-                <a href="/dashboard" className="btn btn-outline featurette-btn">Build Custom Workflow &rarr;</a>
+                <button type="button" onClick={handleOpenOwnerPortal} className="btn btn-outline featurette-btn" style={{ cursor: "pointer" }}>
+                  Build Custom Workflow &rarr;
+                </button>
               </div>
             </div>
 
@@ -480,131 +369,27 @@ export default function LandingPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
               <Link href="/docs" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Docs</Link>
               <Link href="/demo" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Demo</Link>
-              <Link href="/dashboard" style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", fontWeight: 500 }}>Dashboard</Link>
+              <button
+                type="button"
+                onClick={handleOpenOwnerPortal}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  fontSize: "13px",
+                  color: "var(--text-muted)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "var(--font)",
+                }}
+              >
+                Dashboard
+              </button>
               <div className="footer-badge">HTTP Tools &middot; Email Engine</div>
             </div>
           </div>
         </div>
       </footer>
-
-      {/* AUTH MODAL */}
-      {authModalOpen && (
-        <div
-          className="auth-modal is-open"
-          onClick={(e) => { if (e.target === e.currentTarget) setAuthModalOpen(false); }}
-        >
-          <div className="auth-modal-box">
-            <div className="auth-head">
-              <div>
-                <h3 className="auth-title">OmniDesk Portal Access</h3>
-                <p className="auth-sub">Manage your AI voice receptionist, customize prompts, and inspect live customer call logs.</p>
-              </div>
-              <button type="button" className="btn-close-modal" onClick={() => setAuthModalOpen(false)}>
-                &times;
-              </button>
-            </div>
-
-            {/* Demo Account Card */}
-            <div className="demo-bypass-card">
-              <div className="demo-bypass-title" style={{ marginBottom: "10px" }}>Don&apos;t want to sign in? Use Demo Account</div>
-              <button
-                type="button"
-                className="btn-demo-signin"
-                onClick={handleDemoSignIn}
-                disabled={isDemoLoading}
-                style={isDemoLoading ? { opacity: 0.75, cursor: "wait" } : undefined}
-              >
-                {isDemoLoading ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                    <svg style={{ animation: "spin 1s linear infinite", width: "15px", height: "15px" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-                    </svg>
-                    <span>Connecting to Demo...</span>
-                  </span>
-                ) : (
-                  <span>Enter as Demo Account</span>
-                )}
-              </button>
-            </div>
-
-            {/* Divider */}
-            <div className="auth-divider"><span>Or Continue with Email</span></div>
-
-            {/* Tabs */}
-            <div className="auth-tabs">
-              <button
-                type="button"
-                className={`auth-tab-btn${mode === "signin" ? " active" : ""}`}
-                onClick={() => { setMode("signin"); setAuthNotFound(false); setAuthError(""); }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                className={`auth-tab-btn${mode === "signup" ? " active" : ""}`}
-                onClick={() => { setMode("signup"); setAuthNotFound(false); setAuthError(""); }}
-              >
-                Create Account
-              </button>
-            </div>
-
-            {/* NOT FOUND — contextual prompt */}
-            {authNotFound && mode === "signin" ? (
-              <div style={{ margin: "4px 0 2px", background: "#f9fafb", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#f4f4f5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "4px" }}>No account found</div>
-                <div style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, marginBottom: "16px" }}>
-                  <strong style={{ color: "#3f3f46" }}>{email}</strong> isn&apos;t registered yet.
-                  <br />Create a free account to get started.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setMode("signup"); setAuthNotFound(false); }}
-                  style={{ width: "100%", padding: "11px", background: "#09090b", color: "#fff", border: "none", borderRadius: "8px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}
-                >
-                  Create Account with this Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthNotFound(false); setEmail(""); setPassword(""); }}
-                  style={{ marginTop: "8px", background: "none", border: "none", fontSize: "12.5px", color: "#a1a1aa", cursor: "pointer", fontFamily: "inherit" }}
-                >
-                  Use a different email
-                </button>
-              </div>
-            ) : (
-              /* Form */
-              <form onSubmit={handleAuthSubmit}>
-                {authError && (
-                  <div style={{ color: "#ef4444", fontSize: "12.5px", marginBottom: "14px", background: "#fef2f2", border: "1px solid #fecaca", padding: "8px 12px", borderRadius: "6px" }}>
-                    {authError}
-                  </div>
-                )}
-                {mode === "signup" && (
-                  <div className="auth-form-group">
-                    <label className="auth-label" htmlFor="auth-fullname">Full Name</label>
-                    <input type="text" id="auth-fullname" className="auth-input" placeholder="e.g. Eleanor Vance" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
-                  </div>
-                )}
-                <div className="auth-form-group">
-                  <label className="auth-label" htmlFor="auth-email">Email Address</label>
-                  <input type="email" id="auth-email" className="auth-input" placeholder="you@business.com" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-                </div>
-                <div className="auth-form-group">
-                  <label className="auth-label" htmlFor="auth-password">Password</label>
-                  <input type="password" id="auth-password" className="auth-input" placeholder="At least 6 characters" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
-                </div>
-                <button type="submit" className="btn-submit-auth" disabled={isSubmittingAuth}>
-                  <span>{isSubmittingAuth ? "Connecting..." : mode === "signin" ? "Sign In" : "Create Account"}</span>
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
       <style>{`
         .container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
@@ -712,6 +497,16 @@ export default function LandingPage() {
         /* Surface card var fallback */
         :root { --surface-card: #f5f5f5; --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --mono: "JetBrains Mono", monospace; }
       `}</style>
+
+      {/* Auth Modal with Demo Bypass */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          window.location.href = "/dashboard";
+        }}
+      />
     </div>
   );
 }

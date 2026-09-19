@@ -10,6 +10,7 @@ import {
 import { store } from "./store";
 import { validateAndVerifyEmail, normalizeEmail } from "./email-verify";
 import {
+  sendCalendarConfirmation,
   sendResendConfirmation,
   formatDaySpoken,
   formatTimeSpoken,
@@ -163,9 +164,24 @@ export async function executeTool(
     }
 
     case "verify_customer_email": {
-      const email = args.email || "";
+      const email = (args.email || "").trim();
+      const lower = email.toLowerCase();
+      if (
+        !lower ||
+        lower.includes("example.com") ||
+        lower.includes("test.com") ||
+        lower.includes("sample.com")
+      ) {
+        return {
+          ok: false,
+          valid: false,
+          reason: "example_domain",
+          message:
+            "Placeholder or example emails (@example.com) are strictly prohibited. Please ask the caller for their real, deliverable email address.",
+        };
+      }
       const res = await validateAndVerifyEmail(email, biz.id);
-      if (res.ok) {
+      if (res.ok && res.valid) {
         return {
           ok: true,
           valid: true,
@@ -287,6 +303,53 @@ export async function executeTool(
       const timeStr = (args.time || "").trim();
       const customerName = (args.customer_name || "").trim();
       const rawEmail = (args.email || "").trim();
+      const lowerEmail = rawEmail.toLowerCase();
+      const lowerName = customerName.toLowerCase();
+
+      // STRICT CHECK: Reject placeholder / dummy / missing caller names
+      const isDummyName =
+        !customerName ||
+        lowerName === "john doe" ||
+        lowerName === "jane doe" ||
+        lowerName === "john" ||
+        lowerName === "jane" ||
+        lowerName === "unknown" ||
+        lowerName === "caller" ||
+        lowerName === "valued client" ||
+        lowerName === "test" ||
+        lowerName === "user" ||
+        lowerName === "client" ||
+        lowerName === "none" ||
+        lowerName === "null";
+
+      if (isDummyName) {
+        return {
+          ok: false,
+          reason: "missing_caller_name",
+          message:
+            "CRITICAL: Caller's name has NOT been provided yet! You are strictly forbidden from booking with dummy names like 'John Doe'. Please ask the caller: 'May I please have your full name for the booking reservation?' and wait for their answer.",
+        };
+      }
+
+      // STRICT CHECK: Reject placeholder / dummy / missing caller emails
+      if (
+        !rawEmail ||
+        lowerEmail.includes("example.com") ||
+        lowerEmail.includes("test.com") ||
+        lowerEmail.includes("sample.com") ||
+        lowerEmail.includes("placeholder.com") ||
+        lowerEmail.includes("fake.com") ||
+        lowerEmail.includes("domain.com") ||
+        lowerEmail.includes("invalid.com") ||
+        ["unknown", "unknown@unknown.com", "none", "null", ""].includes(lowerEmail)
+      ) {
+        return {
+          ok: false,
+          reason: "missing_or_placeholder_email",
+          message:
+            "CRITICAL: Caller's email has NOT been provided yet! Placeholder emails (@example.com) are strictly forbidden. Please ask the caller: 'And what is your email address so I can send your calendar invite and confirmation?' and wait for their answer.",
+        };
+      }
 
       const services = biz.services || [];
       const matchedService =
@@ -308,9 +371,9 @@ export async function executeTool(
       if (problem || !email) {
         return {
           ok: false,
-          reason: "bad_email",
+          reason: "unverified_email",
           message:
-            "That email address doesn't look valid. Could you please confirm your email address clearly?",
+            "That email address is not deliverable or has no active mail servers. Please ask the caller for their real, working email address.",
         };
       }
 
@@ -358,11 +421,20 @@ export async function executeTool(
         } catch {}
       }
 
+      // Automatically send calendar invite (.ics) email immediately to ensure delivery
+      try {
+        sendCalendarConfirmation(booking, biz).catch((err) =>
+          console.error("[book_appointment] Auto-confirmation email failed:", err)
+        );
+      } catch (emailErr) {
+        console.error("[book_appointment] Email trigger failed:", emailErr);
+      }
+
       const spoken = `I have scheduled your ${serviceLabel} for ${formatDaySpoken(
         dateStr
       )} at ${formatTimeSpoken(timeStr)}. Your confirmation code is ${
         booking.confirmation_code
-      }.`;
+      }. I have sent a calendar invite to ${email}.`;
 
       return {
         ok: true,
@@ -379,11 +451,17 @@ export async function executeTool(
     }
 
     case "send_confirmation": {
-      const code = (args.confirmation_code || "").trim();
-      let booking: Booking | null = await getBookingByCode(code);
+      const code = (
+        args.confirmation_code ||
+        args.code ||
+        args.confirmationCode ||
+        args.booking_code ||
+        ""
+      ).trim();
+      let booking: Booking | null = code ? await getBookingByCode(code) : null;
 
       // Dual DB: check in-memory store if demo business
-      if (!booking && biz.id === "biz_demo_dental") {
+      if (!booking && biz.id === "biz_demo_dental" && code) {
         const storeRec = store.get(code);
         if (storeRec) {
           booking = {
@@ -404,11 +482,19 @@ export async function executeTool(
         }
       }
 
+      // Fallback: If no code or code not found, retrieve most recent booking for this business
+      if (!booking) {
+        const recentBookings = await listBookings(biz.id);
+        if (recentBookings && recentBookings.length > 0) {
+          booking = recentBookings[0];
+        }
+      }
+
       if (!booking) {
         return {
           ok: false,
           reason: "unknown_code",
-          message: `I couldn't find an appointment with confirmation code ${code}.`,
+          message: `I couldn't find an appointment with confirmation code ${code || "provided"}.`,
         };
       }
 

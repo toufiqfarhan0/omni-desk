@@ -1,6 +1,6 @@
 {
   "name": "omnidesk-voice",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Embeddable autonomous voice receptionist widget and client SDK for OmniDesk & AssemblyAI",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

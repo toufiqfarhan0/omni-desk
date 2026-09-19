@@ -6,7 +6,7 @@ export function formatTimeSpoken(timeStr: string): string {
   const parts = timeStr.split(":");
   let hour = parseInt(parts[0], 10);
   const minute = parts[1] || "00";
-  const suffix = hour >= 12 ? "pm" : "am";
+  const suffix = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
   return `${hour}:${minute} ${suffix}`;
 }
@@ -84,11 +84,11 @@ export async function sendCalendarConfirmation(
   booking: Booking,
   business?: Business | null
 ): Promise<{ sent: boolean; reason?: string; id?: string }> {
-  const smtpUser = process.env.SMTP_USER || "omni.desk.com@gmail.com";
+  const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
 
-  if (!smtpPass) {
-    return { sent: false, reason: "no_smtp_password" };
+  if (!smtpUser || !smtpPass) {
+    return { sent: false, reason: "no_smtp_credentials" };
   }
 
   let toEmail = booking.customer_email;

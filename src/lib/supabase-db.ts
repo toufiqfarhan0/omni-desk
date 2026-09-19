@@ -116,9 +116,24 @@ export async function supabaseSignUpOwner(
     const ownerName = name || normalized.split("@")[0] || "OmniDesk Operator";
     const hash = await bcrypt.hash(password, 10);
 
+    // Try inserting with password_hash first
     const newOwner = { id, email: normalized, name: ownerName, password_hash: hash, created_at: now };
     const { error } = await client.from("owners").insert(newOwner);
     if (error) {
+      // Fallback: If table does not have password_hash column (PGRST204), insert without it
+      if (error.code === "PGRST204" || error.message?.includes("password_hash")) {
+        const { error: fallbackErr } = await client.from("owners").insert({
+          id,
+          email: normalized,
+          name: ownerName,
+          created_at: now,
+        });
+        if (fallbackErr) {
+          console.error("[Supabase] signUpOwner fallback error:", fallbackErr.message);
+          return null;
+        }
+        return { id, email: normalized, name: ownerName, created_at: now };
+      }
       console.warn("[Supabase] signUpOwner insert error:", error.message);
       return null;
     }
@@ -186,11 +201,7 @@ export async function supabaseListBusinesses(ownerId = "owner_demo"): Promise<Bu
       return [];
     }
 
-    // Filter for demo operator to strictly keep ONLY the Hair Salon demo
-    const effectiveBusinesses =
-      ownerId === "owner_demo"
-        ? businesses.filter((b) => b.id === "biz_demo_dental")
-        : businesses;
+    const effectiveBusinesses = businesses;
 
     // Fetch services for all returned businesses
     const bizIds = effectiveBusinesses.map((b) => b.id);
@@ -274,14 +285,22 @@ export async function supabaseCreateBusiness(data: {
   const now = new Date().toISOString();
   const ownerId = data.owner_id || "owner_demo";
 
-  // Ensure owner exists first
+  // Ensure owner exists without overwriting real owner email/name
   if (client) {
-    await client.from("owners").upsert({
-      id: ownerId,
-      email: ownerId === "owner_demo" ? "demo@omnidesk.ai" : `${ownerId}@omnidesk.ai`,
-      name: "OmniDesk Operator",
-      created_at: now,
-    });
+    const { data: existingOwner } = await client
+      .from("owners")
+      .select("id")
+      .eq("id", ownerId)
+      .maybeSingle();
+
+    if (!existingOwner) {
+      await client.from("owners").insert({
+        id: ownerId,
+        email: ownerId === "owner_demo" ? "demo@omnidesk.ai" : `${ownerId}@omnidesk.ai`,
+        name: "OmniDesk Operator",
+        created_at: now,
+      });
+    }
   }
 
   const bizRecord = {

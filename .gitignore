@@ -1,7 +1,9 @@
 # Environment & Secrets
 .env
 .env.local
-.env*.local
+.env.*.local
+.env.*
+!.env.example
 agent_id.txt
 
 # Python & Virtual Environments

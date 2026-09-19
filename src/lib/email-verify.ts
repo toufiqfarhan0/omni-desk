@@ -161,6 +161,26 @@ export async function validateAndVerifyEmail(
     };
   }
 
+  const FAKE_OR_EXAMPLE_DOMAINS = new Set([
+    "example.com",
+    "test.com",
+    "sample.com",
+    "domain.com",
+    "fake.com",
+    "placeholder.com",
+    "mailinator.com",
+    "tempmail.com",
+  ]);
+
+  if (FAKE_OR_EXAMPLE_DOMAINS.has(domainPart)) {
+    return {
+      ok: false,
+      valid: false,
+      reason: "example_domain",
+      message: "Placeholder or example email domains (like @example.com) are not accepted. Please provide your real, active email address.",
+    };
+  }
+
   if (DISPOSABLE_EMAIL_DOMAINS.has(domainPart)) {
     return {
       ok: false,
@@ -172,13 +192,18 @@ export async function validateAndVerifyEmail(
   }
 
   let dnsVerified = true;
-  if (!["localhost", "example.com", "test.com"].includes(domainPart)) {
+  if (domainPart !== "localhost") {
     try {
       const addresses = await dns.resolve(domainPart, "MX").catch(async () => {
         return await dns.resolve(domainPart, "A");
       });
       if (!addresses || addresses.length === 0) {
-        dnsVerified = false;
+        return {
+          ok: false,
+          valid: false,
+          reason: "no_mx_records",
+          message: `The domain '@${domainPart}' has no active mail server (no MX or DNS records found). Please check for spelling mistakes.`,
+        };
       }
     } catch {
       return {
@@ -190,11 +215,9 @@ export async function validateAndVerifyEmail(
     }
   }
 
-
   const bizKey = bizId || "default";
   try {
     await setActiveVerifiedEmail(bizKey, s);
-    await setActiveVerifiedEmail("default", s);
   } catch {}
 
   return {
@@ -226,11 +249,6 @@ export async function normalizeEmail(
   const res = await validateAndVerifyEmail(raw, bizId);
   if (res.ok && res.email) {
     return { email: res.email, problem: "" };
-  }
-
-  const cached = await getActiveVerifiedEmail(bizId || "default");
-  if (cached) {
-    return { email: cached, problem: "" };
   }
 
   return { email: null, problem: res.reason || "bad_email" };

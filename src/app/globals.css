@@ -108,3 +108,62 @@ body {
   background-color: #d4d4d8;
   border-radius: 3px;
 }
+
+/* Global Nav and Button Styles */
+.container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.nav-link {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.nav-link:hover {
+  color: var(--text);
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16,1,0.3,1);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+.btn-primary {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-primary:hover {
+  background: #262626;
+  border-color: #262626;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+.btn-outline {
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.btn-outline:hover {
+  background: var(--surface-subtle);
+  border-color: var(--border-hover);
+  color: var(--text);
+}

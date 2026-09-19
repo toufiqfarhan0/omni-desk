@@ -61,8 +61,8 @@ export function getDbMode(): DbMode {
   }
 
   if (hasSupabase) {
-    // Local developer dual-testing mode
-    return "dual";
+    // Use Supabase directly when configured so localhost and production are in sync
+    return "supabase";
   }
 
   // Pure zero-config SQLite for judges
@@ -428,16 +428,17 @@ export async function emailExists(email: string): Promise<boolean> {
 export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]> {
   const mode = getDbMode();
   if (mode === "supabase") {
-    return await supabaseListBusinesses(ownerId);
+    try {
+      return await supabaseListBusinesses(ownerId);
+    } catch (e) {
+      console.warn("[DB] Supabase listBusinesses failed:", e);
+      return [];
+    }
   }
 
   const db = getDb();
+  if (!db) return [];
   let rows = db.prepare("SELECT * FROM businesses WHERE owner_id = ? ORDER BY created_at DESC").all(ownerId) as any[];
-
-  // Demo operator strictly keeps ONLY the OmniDesk Hair Salon demo
-  if (ownerId === "owner_demo") {
-    rows = rows.filter((r) => r.id === "biz_demo_dental");
-  }
 
   return rows.map((r) => {
     const services = db.prepare("SELECT * FROM services WHERE business_id = ? ORDER BY price ASC").all(r.id) as Service[];
@@ -458,10 +459,16 @@ export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]
 export async function getBusiness(businessId: string): Promise<Business | null> {
   const mode = getDbMode();
   if (mode === "supabase") {
-    return await supabaseGetBusiness(businessId);
+    try {
+      return await supabaseGetBusiness(businessId);
+    } catch (e) {
+      console.warn("[DB] Supabase getBusiness failed:", e);
+      return null;
+    }
   }
 
   const db = getDb();
+  if (!db) return null;
   const r = db.prepare("SELECT * FROM businesses WHERE id = ?").get(businessId) as any;
   if (!r) return null;
 

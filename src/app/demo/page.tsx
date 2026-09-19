@@ -5,6 +5,9 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { AssemblyAIVoiceClient } from "@/lib/audio";
 import { UnderTheHoodPlayground } from "@/components/demo/under-the-hood";
+import { UserNav } from "@/components/user-nav";
+import { Navbar } from "@/components/navbar";
+import { toast } from "sonner";
 
 interface TemplateInfo {
   id: string;
@@ -36,16 +39,14 @@ export default function DemoPage() {
   const [callDuration, setCallDuration] = useState("0:00");
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Auth modal
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [authName, setAuthName] = useState("");
-  const [authAlert, setAuthAlert] = useState<{ msg: string; type: "error" | "success" } | null>(null);
-  const [authNotFound, setAuthNotFound] = useState(false);
-  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  // Email input bar states
+  const [showEmailBar, setShowEmailBar] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailSuccess, setEmailSuccess] = useState("");
 
+  // Auth modal
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
@@ -55,17 +56,11 @@ export default function DemoPage() {
 
   // Initialize transcript when template changes
   useEffect(() => {
-    setMessages([
-      {
-        id: "initial",
-        who: "agent",
-        text: activeTemplate.greeting,
-      },
-    ]);
-  }, [templateKey, activeTemplate.greeting]);
+    setMessages([]);
+  }, [templateKey]);
 
   useEffect(() => {
-    if (messages.length > 1) {
+    if (messages.length > 0) {
       transcriptBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
@@ -74,13 +69,10 @@ export default function DemoPage() {
     if (callStatus !== "idle") {
       handleEndCall();
     }
-    setMessages([
-      {
-        id: `initial-${Date.now()}`,
-        who: "agent",
-        text: activeTemplate.greeting,
-      },
-    ]);
+    setShowEmailBar(false);
+    setEmailError("");
+    setEmailSuccess("");
+    setMessages([]);
   };
 
   // Timer helpers
@@ -146,6 +138,28 @@ export default function DemoPage() {
               text: event.text,
             },
           ]);
+          if (event.who === "agent") {
+            const lower = event.text.toLowerCase();
+            const normalized = lower.replace(/[\s\-_]/g, "");
+            if (
+              normalized.includes("email") ||
+              lower.includes("e-mail") ||
+              lower.includes("email") ||
+              lower.includes("mail address") ||
+              lower.includes("your mail") ||
+              lower.includes("send your confirmation") ||
+              lower.includes("send the confirmation") ||
+              lower.includes("calendar invite") ||
+              lower.includes("where should i send") ||
+              lower.includes("where can i send") ||
+              lower.includes("what is your address") ||
+              lower.includes("spell your") ||
+              lower.includes("provide your") ||
+              lower.includes("type your")
+            ) {
+              setShowEmailBar(true);
+            }
+          }
         },
         onError: (err) => {
           console.warn("Voice error:", err);
@@ -170,142 +184,67 @@ export default function DemoPage() {
     }
     setCallStatus("idle");
     stopTimer();
+    setShowEmailBar(false);
+    setEmailError("");
+    setEmailSuccess("");
   };
 
-  // Instant demo account
-  const handleInstantDemo = () => {
-    localStorage.setItem("omnidesk_owner_id", "owner_demo");
-    localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
-    localStorage.setItem("omnidesk_owner_name", "OmniDesk Demo Operator");
-    localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
-    window.location.href = "/dashboard";
-  };
-
-
-  // Auth form submit
-  const handleAuthSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthAlert(null);
-    setAuthNotFound(false);
-    if (!authEmail || !authPassword) {
-      setAuthAlert({ msg: "Please provide both email and password.", type: "error" });
-      return;
-    }
-    if (authPassword.length < 6) {
-      setAuthAlert({ msg: "Password must be at least 6 characters.", type: "error" });
-      return;
-    }
+    const trimmed = emailInput.trim();
+    if (!trimmed) return;
 
-    setIsSubmittingAuth(true);
+    setIsVerifyingEmail(true);
+    setEmailError("");
+    setEmailSuccess("");
+
     try {
-      const res = await fetch("/api/auth/owner", {
+      const res = await fetch("/api/tools/biz_demo_dental/verify_customer_email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: authEmail.trim().toLowerCase(),
-          password: authPassword,
-          name: authName || authEmail.split("@")[0],
-          mode: authMode,
-        }),
+        body: JSON.stringify({ email: trimmed }),
       });
       const data = await res.json();
-      if (data.ok && data.owner) {
-        localStorage.setItem("omnidesk_owner_id", data.owner.id);
-        localStorage.setItem("omnidesk_owner_email", data.owner.email);
-        localStorage.setItem("omnidesk_owner_name", data.owner.name);
-        if (data.businesses && data.businesses.length > 0) {
-          localStorage.setItem("omnidesk_selected_biz_id", data.businesses[0].id);
-        }
-        window.location.href = "/dashboard";
-      } else if (data.code === "NOT_FOUND") {
-        setAuthNotFound(true);
-      } else {
-        setAuthAlert({ msg: data.error || "Authentication failed", type: "error" });
+
+      if (!res.ok || !data.valid || !data.email) {
+        setEmailError(data.message || "Invalid email or domain has no active mail server.");
+        setIsVerifyingEmail(false);
+        return;
       }
+
+      const verifiedEmail = data.email;
+      setEmailSuccess(`Verified: ${verifiedEmail}. Sent to agent.`);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `user-${Date.now()}`,
+          who: "user",
+          text: `My email is ${verifiedEmail}`,
+        },
+      ]);
+
+      if (voiceClientRef.current) {
+        voiceClientRef.current.sendEmailInput(verifiedEmail);
+      }
+
+      setEmailInput("");
+      setTimeout(() => {
+        setShowEmailBar(false);
+        setEmailSuccess("");
+      }, 2500);
     } catch (err: any) {
-      setAuthAlert({ msg: err.message || "Authentication error", type: "error" });
+      setEmailError(err.message || "Failed to verify email with mail server.");
     } finally {
-      setIsSubmittingAuth(false);
+      setIsVerifyingEmail(false);
     }
   };
 
 
   return (
     <div style={{ background: "#ffffff", color: "#09090b", minHeight: "100vh", fontFamily: "var(--font)" }}>
-      {/* ----------------- TOP STICKY HEADER ----------------- */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 32px",
-          background: "#ffffff",
-          borderBottom: "1px solid #e4e4e7",
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "10px",
-            textDecoration: "none",
-            color: "#09090b",
-          }}
-        >
-          <div style={{ width: "32px", height: "32px", display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <BrandLogo size={32} />
-          </div>
-          <span style={{ fontSize: "16px", fontWeight: 700, letterSpacing: "-0.025em" }}>OmniDesk</span>
-        </Link>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthAlert(null);
-              setAuthMode("signin");
-              setAuthModalOpen(true);
-            }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              background: "#000000",
-              color: "#ffffff",
-              fontFamily: "var(--font)",
-              fontSize: "13px",
-              fontWeight: 600,
-              padding: "8px 16px",
-              borderRadius: "10px",
-              border: "1px solid #000000",
-              cursor: "pointer",
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <line x1="19" x2="19" y1="8" y2="14" />
-              <line x1="22" x2="16" y1="11" y2="11" />
-            </svg>
-            Sign In / Sign Up
-          </button>
-        </div>
-      </header>
+      {/* ----------------- TOP STICKY HEADER (REUSABLE COMPONENT) ----------------- */}
+      <Navbar activeSection="demo" />
 
       {/* ----------------- PAGE CONTAINER ----------------- */}
       <div style={{ maxWidth: "1240px", margin: "0 auto", padding: "28px 24px 60px" }}>
@@ -334,13 +273,8 @@ export default function DemoPage() {
               Speaks naturally with callers, checks live practice calendars, and books confirmed slots directly into your database.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setAuthAlert(null);
-              setAuthMode("signup");
-              setAuthModalOpen(true);
-            }}
+          <Link
+            href="/dashboard"
             style={{
               position: "relative",
               zIndex: 1,
@@ -355,14 +289,13 @@ export default function DemoPage() {
               fontWeight: 600,
               padding: "10px 20px",
               borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
+              textDecoration: "none",
               whiteSpace: "nowrap",
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
             }}
           >
-            Create Voice Agent &rarr;
-          </button>
+            <span>Explore Demo Dashboard &rarr;</span>
+          </Link>
         </section>
 
         {/* DEMO SHOWCASE CARD (LIVE CLIENT SITE) */}
@@ -639,6 +572,44 @@ export default function DemoPage() {
                 background: "#ffffff",
               }}
             >
+              {/* Placeholder in Gray Background */}
+              {messages.length === 0 && (
+                <div
+                  style={{
+                    margin: "auto",
+                    textAlign: "center",
+                    padding: "10px 18px",
+                    background: "#f4f4f5",
+                    border: "1px solid #e4e4e7",
+                    color: "#52525b",
+                    borderRadius: "12px",
+                    fontSize: "12.5px",
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    alignSelf: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: callStatus === "live" ? "#22c55e" : "#a1a1aa",
+                      display: "inline-block",
+                    }}
+                  />
+                  <span>
+                    {callStatus === "live"
+                      ? "Connected · Speak to our receptionist"
+                      : callStatus === "busy"
+                      ? "Connecting to receptionist..."
+                      : "Start a call to talk to our receptionist"}
+                  </span>
+                </div>
+              )}
+
               {messages.map((m, idx) => (
                 <div
                   key={m.id || idx}
@@ -690,6 +661,122 @@ export default function DemoPage() {
               <div ref={transcriptBottomRef} />
             </div>
 
+            {/* Live email entry bar */}
+            {showEmailBar && callStatus === "live" && (
+              <div
+                style={{
+                  padding: "12px 18px",
+                  background: "#f0fdf4",
+                  borderTop: "1px solid #bbf7d0",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      color: "#15803d",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "7px",
+                        height: "7px",
+                        borderRadius: "50%",
+                        background: "#22c55e",
+                        display: "inline-block",
+                        boxShadow: "0 0 6px #22c55e",
+                      }}
+                    />
+                    Agent Requesting Email • Verified Mailbox Entry
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailBar(false)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#15803d",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                    }}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleEmailSubmit} style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="email"
+                    autoFocus
+                    value={emailInput}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value);
+                      setEmailError("");
+                    }}
+                    placeholder="Enter your real email (e.g. name@gmail.com)"
+                    disabled={isVerifyingEmail}
+                    required
+                    style={{
+                      flex: 1,
+                      fontFamily: "var(--font)",
+                      fontSize: "13px",
+                      padding: "9px 13px",
+                      borderRadius: "8px",
+                      border: emailError ? "1.5px solid #ef4444" : "1px solid #86efac",
+                      background: "#ffffff",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isVerifyingEmail || !emailInput.trim()}
+                    style={{
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "9px 18px",
+                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      cursor: isVerifyingEmail ? "wait" : "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.15s ease",
+                      opacity: isVerifyingEmail ? 0.7 : 1,
+                    }}
+                  >
+                    {isVerifyingEmail ? "Verifying..." : "Verify & Send"}
+                  </button>
+                </form>
+
+                {emailError && (
+                  <div style={{ fontSize: "11.5px", color: "#dc2626", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>⚠️</span> {emailError}
+                  </div>
+                )}
+                {emailSuccess && (
+                  <div style={{ fontSize: "11.5px", color: "#15803d", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>✓</span> {emailSuccess}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Voice Call Bar */}
             <div
               style={{
@@ -702,31 +789,33 @@ export default function DemoPage() {
                 flexShrink: 0,
               }}
             >
-              <button
-                type="button"
-                onClick={handleToggleCall}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "9px 18px",
-                  background: callStatus === "live" ? "#dc2626" : "#000000",
-                  color: "#ffffff",
-                  borderRadius: "10px",
-                  border: "none",
-                  fontSize: "13.5px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                </svg>
-                <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleToggleCall}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "9px 18px",
+                    background: callStatus === "live" ? "#dc2626" : "#000000",
+                    color: "#ffffff",
+                    borderRadius: "10px",
+                    border: "none",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                  <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
+                </button>
+              </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 {callStatus === "live" && (
@@ -760,274 +849,6 @@ export default function DemoPage() {
         {/* ========================================================================= */}
         <UnderTheHoodPlayground />
       </div>
-
-      {/* ----------------- AUTH MODAL ----------------- */}
-      {authModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(4px)",
-            zIndex: 100,
-            display: "grid",
-            placeItems: "center",
-            padding: "20px",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setAuthModalOpen(false);
-          }}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e4e4e7",
-              borderRadius: "18px",
-              padding: "28px",
-              maxWidth: "460px",
-              width: "100%",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-              <div>
-                <h3 style={{ fontSize: "20px", fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
-                  OmniDesk Portal Access
-                </h3>
-                <p style={{ fontSize: "13px", color: "#71717a", margin: 0 }}>
-                  Manage your AI voice receptionist, customize prompts, and inspect live customer call logs.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAuthModalOpen(false)}
-                style={{ background: "transparent", border: "none", fontSize: "22px", color: "#71717a", cursor: "pointer", padding: "0 4px" }}
-              >
-                &times;
-              </button>
-            </div>
-
-            {/* 1-Click Demo Account */}
-            <div
-              style={{
-                background: "#f4f4f5",
-                border: "1px solid #e4e4e7",
-                borderRadius: "10px",
-                padding: "14px",
-                marginBottom: "20px",
-              }}
-            >
-              <div style={{ fontSize: "12.5px", fontWeight: 600, marginBottom: "8px" }}>
-                Don&apos;t want to sign in? Use Demo Account
-              </div>
-              <button
-                type="button"
-                onClick={handleInstantDemo}
-                style={{
-                  width: "100%",
-                  background: "#000000",
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "9px 14px",
-                  borderRadius: "6px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                }}
-              >
-                Continue with Instant Demo Account &rarr;
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div style={{ display: "flex", borderBottom: "1px solid #e4e4e7", marginBottom: "20px" }}>
-              <button
-                type="button"
-                onClick={() => { setAuthMode("signin"); setAuthNotFound(false); setAuthAlert(null); }}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  textAlign: "center",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: authMode === "signin" ? "2px solid #000000" : "2px solid transparent",
-                  fontSize: "13.5px",
-                  fontWeight: 600,
-                  color: authMode === "signin" ? "#09090b" : "#71717a",
-                  cursor: "pointer",
-                }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setAuthMode("signup"); setAuthNotFound(false); setAuthAlert(null); }}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  textAlign: "center",
-                  background: "transparent",
-                  border: "none",
-                  borderBottom: authMode === "signup" ? "2px solid #000000" : "2px solid transparent",
-                  fontSize: "13.5px",
-                  fontWeight: 600,
-                  color: authMode === "signup" ? "#09090b" : "#71717a",
-                  cursor: "pointer",
-                }}
-              >
-                Create Account
-              </button>
-            </div>
-
-            {/* NOT FOUND — contextual prompt */}
-            {authNotFound && authMode === "signin" ? (
-              <div style={{ background: "#f9fafb", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "20px", textAlign: "center", marginBottom: "4px" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#f4f4f5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "4px" }}>No account found</div>
-                <div style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, marginBottom: "16px" }}>
-                  <strong style={{ color: "#3f3f46" }}>{authEmail}</strong> isn&apos;t registered yet.
-                  <br />Create a free account to get started.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode("signup"); setAuthNotFound(false); }}
-                  style={{ width: "100%", padding: "11px", background: "#09090b", color: "#fff", border: "none", borderRadius: "8px", fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700, cursor: "pointer" }}
-                >
-                  Create Account with this Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthNotFound(false); setAuthEmail(""); setAuthPassword(""); }}
-                  style={{ marginTop: "8px", background: "none", border: "none", fontSize: "12.5px", color: "#a1a1aa", cursor: "pointer", fontFamily: "var(--font)" }}
-                >
-                  Use a different email
-                </button>
-              </div>
-            ) : (
-            <>
-            {authAlert && (
-              <div
-                style={{
-                  fontSize: "12.5px",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  marginBottom: "12px",
-                  background: authAlert.type === "error" ? "#fee2e2" : "#dcfce7",
-                  color: authAlert.type === "error" ? "#991b1b" : "#166534",
-                }}
-              >
-                {authAlert.msg}
-              </div>
-            )}
-
-            <form onSubmit={handleAuthSubmit}>
-              {authMode === "signup" && (
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px" }}>
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={authName}
-                    onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="Jane Doe"
-                    style={{
-                      width: "100%",
-                      fontFamily: "var(--font)",
-                      fontSize: "13.5px",
-                      padding: "9px 12px",
-                      border: "1px solid #e4e4e7",
-                      borderRadius: "10px",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
-              )}
-
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px" }}>
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="owner@practice.com"
-                  required
-                  style={{
-                    width: "100%",
-                    fontFamily: "var(--font)",
-                    fontSize: "13.5px",
-                    padding: "9px 12px",
-                    border: "1px solid #e4e4e7",
-                    borderRadius: "10px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, marginBottom: "6px" }}>
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: "100%",
-                    fontFamily: "var(--font)",
-                    fontSize: "13.5px",
-                    padding: "9px 12px",
-                    border: "1px solid #e4e4e7",
-                    borderRadius: "10px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmittingAuth}
-                style={{
-                  width: "100%",
-                  background: "#000000",
-                  color: "#ffffff",
-                  border: "none",
-                  padding: "11px",
-                  borderRadius: "10px",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: isSubmittingAuth ? "not-allowed" : "pointer",
-                  marginTop: "10px",
-                  opacity: isSubmittingAuth ? 0.7 : 1,
-                }}
-              >
-                {isSubmittingAuth
-                  ? authMode === "signin"
-                    ? "Signing In..."
-                    : "Creating Account..."
-                  : authMode === "signin"
-                  ? "Sign In"
-                  : "Create Account"}
-              </button>
-            </form>
-            </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

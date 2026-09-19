@@ -60,7 +60,20 @@ export default function DashboardPage() {
           }
         }
 
-        // Client-side guard: if no owner logged in and no demo session, redirect to home
+        // Check if demo query param is set (user explicitly clicked Enter as Demo Account)
+        const isDemoParam = typeof window !== "undefined" && window.location.search.includes("demo=true");
+
+        if (isDemoParam && !savedOwnerId) {
+          savedOwnerId = "owner_demo";
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("omnidesk_owner_id", "owner_demo");
+            localStorage.setItem("omnidesk_owner_email", "demo@omnidesk.ai");
+            localStorage.setItem("omnidesk_owner_name", "OmniDesk Operator");
+            localStorage.setItem("omnidesk_selected_biz_id", "biz_demo_dental");
+          }
+        }
+
+        // Client-side guard: if no owner logged in, redirect to home with auth modal
         if (!savedOwnerId) {
           setIsLoading(false);
           window.location.href = "/?auth=required&redirect=/dashboard";
@@ -71,7 +84,7 @@ export default function DashboardPage() {
 
         // Make sure cookie is also in sync with localStorage
         if (typeof document !== "undefined" && !document.cookie.includes("omnidesk_session=")) {
-          const maxAge = effectiveOwnerId === "owner_demo" ? 86400 : 604800;
+          const maxAge = 604800;
           document.cookie = `omnidesk_session=${encodeURIComponent(effectiveOwnerId)}; path=/; max-age=${maxAge}; SameSite=Lax`;
         }
 

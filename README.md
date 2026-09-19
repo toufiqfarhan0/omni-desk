@@ -1,6 +1,7 @@
 # OmniDesk — Autonomous Voice Receptionist & Scheduling Platform
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-omni--desk--rho.vercel.app-blue?style=flat&logo=vercel)](https://omni-desk-rho.vercel.app)
+[![npm version](https://img.shields.io/npm/v/omnidesk-voice.svg?color=blue)](https://www.npmjs.com/package/omnidesk-voice)
 [![AssemblyAI](https://img.shields.io/badge/Powered%20by-AssemblyAI%20Voice%20Agents-blueviolet?style=flat)](https://www.assemblyai.com)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=flat&logo=next.js)](https://nextjs.org)
 [![React 19](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev)
@@ -8,8 +9,10 @@
 OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time bidirectional 16kHz Web Audio streaming with deterministic server-side webhook tools to execute live calendar checks, appointment bookings, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
 
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
+- **npm Package**: [`omnidesk-voice@0.1.3`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
 - **Premier Showcase**: **OmniDesk Hair Salon & Studio (Luxe & Mane)** at [`/demo/salon`](https://omni-desk-rho.vercel.app/demo/salon)
 - **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
+- **Under The Hood / Code Architecture**: [`/demo`](https://omni-desk-rho.vercel.app/demo)
 
 > **Unified Next.js Full-Stack Architecture**: OmniDesk is self-contained within `src/`. All client interfaces, WebSocket voice streaming, serverless API route handlers, database persistence, and AssemblyAI tool integrations run without separate Python or microservice backends.
 
@@ -204,17 +207,22 @@ To ensure multi-tenant security, privacy, and zero risk of accidental overwrites
 assemblyai-voice-agent-scheduler/
 ├── .env.example                 # Example template for environment variables
 ├── package.json                 # Next.js 16 & React 19 dependencies
+├── packages/
+│   └── widget/                  # 'omnidesk-voice' npm package (0.1.3)
+│       ├── src/                 # Audio client, React widget & vanilla launcher
+│       └── tsup.config.ts       # CJS, ESM & IIFE multi-format bundler
 ├── public/
 │   ├── widget.js                # Standalone embeddable launcher script
 │   └── favicon.svg              # OmniDesk brand favicon
 ├── data/
 │   └── omnidesk.db              # Zero-setup local SQLite database
 └── src/
+    ├── proxy.ts                 # Next.js 16 proxy routing & dashboard auth protection
     ├── app/
     │   ├── page.tsx             # Marketing landing page
     │   ├── dashboard/page.tsx   # Practice management console (4 tabs)
     │   ├── demo/
-    │   │   ├── page.tsx         # Interactive showroom index
+    │   │   ├── page.tsx         # Interactive showroom & under-the-hood architecture
     │   │   └── salon/page.tsx   # Premier Hair Salon & Studio voice booking page
     │   ├── tools/[...slug]/     # Direct root webhook tool endpoints
     │   └── api/
@@ -225,10 +233,12 @@ assemblyai-voice-agent-scheduler/
     ├── components/
     │   ├── voice-widget.tsx     # Embeddable floating voice widget
     │   └── dashboard/
-    │       ├── agent-builder.tsx# Persona prompt, voice picker, catalog manager
+    │       ├── agent-builder.tsx# Persona prompt, voice picker (18 voices), catalog manager
     │       ├── voice-tester.tsx # Live audio tester with deployment guard
     │       ├── bookings-crm.tsx # Appointments table & calendar invite trigger
     │       └── call-history.tsx # Recorded conversation logs & transcripts
+    ├── scripts/
+    │   └── update-assemblyai-agents.mjs # Batch agent instruction & tool updater
     └── lib/
         ├── assemblyai.ts        # Token minting, tool registration, agent deploy
         ├── audio.ts             # Browser PCM16 audio capture, playback & visualizer
@@ -260,19 +270,18 @@ Configure the variables:
 # [REQUIRED] AssemblyAI API Key (from https://www.assemblyai.com/dashboard)
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# [OPTIONAL] Pre-configured AssemblyAI Voice Agent ID
-# Leave blank by default! OmniDesk fetches and stores the agent ID directly
-# in your database (SQLite locally or Supabase in production).
-AGENT_ID=
+# [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
+# Provide an existing AssemblyAI Voice Agent ID so calls work immediately.
+AGENT_ID=your_assemblyai_agent_id_here
 
-# [OPTIONAL] Public HTTPS Base URL for AssemblyAI Webhook Tools
-# In production on Vercel: NOT NEEDED. Tools auto-route to https://omni-desk-rho.vercel.app!
-# In local dev: Leave empty to route tools to the production deployment,
-# or set to your Cloudflare Tunnel URL if actively modifying local tool code.
+# [ONLY NEEDED IF deploying a brand-new agent from localhost or running update script]
+# ✅ JUDGES: Leave this BLANK! The pre-configured AGENT_ID above already has tools
+#    pointing to the live Vercel deployment — zero tunnels needed for local testing.
 PUBLIC_API_BASE_URL=
 
 # [OPTIONAL] Free Gmail SMTP for Calendar Invites (.ics)
-SMTP_USER=omni.desk.com@gmail.com
+# Leave blank to test bookings with on-screen confirmation code
+SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_16_char_google_app_password
 
 # [OPTIONAL] Supabase Cloud Database (Required for Vercel deployment)
@@ -373,9 +382,81 @@ Response: { "ok": true, "sent": true, "email": "alex.smith@gmail.com" }
 
 ---
 
-## Embeddable Website Widget
+## Embeddable Voice Widget & npm Package (`omnidesk-voice`)
 
-Embed the OmniDesk voice receptionist into any external website with a single script tag:
+OmniDesk ships with a standalone, production-ready npm package: **[`omnidesk-voice`](https://www.npmjs.com/package/omnidesk-voice)** (v0.1.3). It includes a 24kHz Web Audio streaming client, waveform audio visualizers, full-screen expandable dialogs, and a built-in **Verified Mailbox Entry** banner for anti-hallucinated email capture.
+
+### 1. React & Next.js Installation
+
+```bash
+npm install omnidesk-voice
+# or: pnpm add omnidesk-voice
+```
+
+```tsx
+import { OmniDeskWidget } from "omnidesk-voice";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+
+        {/* Floating AI Voice Receptionist */}
+        <OmniDeskWidget
+          host="https://omni-desk-rho.vercel.app"
+          businessId="biz_demo_dental"
+          theme="dark"
+          position="bottom-right"
+          label="Talk to Receptionist"
+          accent="emerald"
+          onCallStart={() => console.log("Voice call connected")}
+          onCallEnd={(duration) => console.log(`Call lasted ${duration}s`)}
+        />
+      </body>
+    </html>
+  );
+}
+```
+
+### 2. Zero-Install Vanilla HTML / CDN (Cloudflare ESM)
+
+No bundler or build step needed:
+
+```html
+<script type="module">
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.3";
+
+  initOmniDeskWidget({
+    host: "https://omni-desk-rho.vercel.app",
+    businessId: "biz_demo_dental",
+    theme: "dark",
+    position: "bottom-right",
+    label: "Talk to Receptionist"
+  });
+</script>
+```
+
+### 3. Headless Audio Client SDK
+
+If you are building your own custom voice UI:
+
+```ts
+import { AssemblyAIVoiceClient } from "omnidesk-voice";
+
+const client = new AssemblyAIVoiceClient({
+  onTranscript: ({ who, text }) => console.log(`${who}: ${text}`),
+  onAudioLevel: (userLevel, agentLevel) => updateWaveforms(userLevel, agentLevel),
+  onStatusChange: (status) => console.log("Call status:", status),
+  onToolEvent: (event) => console.log("Tool invoked:", event.tool, event.args),
+});
+
+// Mint temporary token & connect
+const { token, agent_id } = await fetch("/api/token?businessId=biz_demo_dental").then(r => r.json());
+await client.start(token, agent_id);
+```
+
+### 4. Standalone Script Tag
 
 ```html
 <script 
@@ -385,23 +466,6 @@ Embed the OmniDesk voice receptionist into any external website with a single sc
   data-position="bottom-right" 
   defer>
 </script>
-```
-
-Or as a React component:
-
-```tsx
-import { VoiceWidget } from "@/components/voice-widget";
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-        <VoiceWidget businessId="biz_demo_dental" theme="dark" position="bottom-right" />
-      </body>
-    </html>
-  );
-}
 ```
 
 ---
