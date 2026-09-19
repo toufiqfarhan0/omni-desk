@@ -3,9 +3,9 @@ if (!apiKey) {
   console.error("❌  NEXT_ASSEMBLYAI_API_KEY is not set. Run: export NEXT_ASSEMBLYAI_API_KEY=<your_key>");
   process.exit(1);
 }
-const agentIdsRaw = process.env.AGENT_IDS;
+const agentIdsRaw = process.env.AGENT_ID || process.env.AGENT_IDS;
 if (!agentIdsRaw) {
-  console.error("❌  AGENT_IDS is not set. Run: export AGENT_IDS=agent_xxx,agent_yyy");
+  console.error("❌  AGENT_ID is not set. Set AGENT_ID=agent_xxx in your .env");
   process.exit(1);
 }
 const agentIds = agentIdsRaw.split(",").map((s) => s.trim()).filter(Boolean);
