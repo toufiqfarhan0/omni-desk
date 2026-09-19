@@ -32,6 +32,7 @@ import {
   Bot,
   Layers,
   ArrowRight,
+  RotateCw,
 } from "lucide-react";
 
 interface AgentBuilderProps {
@@ -213,6 +214,7 @@ export function AgentBuilder({
   const [services, setServices] = useState<Service[]>(business.services || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isRefreshingAgentId, setIsRefreshingAgentId] = useState(false);
 
   useEffect(() => {
     setFormData(business);
@@ -297,15 +299,46 @@ export function AgentBuilder({
 
       toast.success("Voice agent provisioned & active on AssemblyAI");
       if (deployData.agent_id) {
-        setFormData((prev) => ({
-          ...prev,
+        const updatedBiz = {
+          ...formData,
           assemblyai_agent_id: deployData.agent_id,
-        }));
+        };
+        setFormData(updatedBiz);
+        onUpdateBusiness(updatedBiz);
       }
     } catch (err: any) {
       toast.error(err.message || "Deployment error");
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleRefreshAgentId = async () => {
+    if (!formData.id) return;
+    setIsRefreshingAgentId(true);
+    try {
+      const res = await fetch(`/api/owner/businesses/${formData.id}`);
+      const data = await res.json();
+      if (res.ok && data.business) {
+        const latestAgentId = data.business.assemblyai_agent_id || "";
+        const updatedBiz = {
+          ...formData,
+          assemblyai_agent_id: latestAgentId,
+        };
+        setFormData(updatedBiz);
+        onUpdateBusiness({ ...business, ...data.business });
+        if (latestAgentId) {
+          toast.success(`Agent ID synced from database: ${latestAgentId}`);
+        } else {
+          toast.info("No agent ID found in database yet. Click 'Deploy to AssemblyAI' above.");
+        }
+      } else {
+        toast.error("Failed to fetch latest business status from database.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to refresh Agent ID");
+    } finally {
+      setIsRefreshingAgentId(false);
     }
   };
 
@@ -472,6 +505,37 @@ export function AgentBuilder({
                 placeholder="Auto-generated on deployment — Click 'Save & Deploy' above"
                 value={formData.assemblyai_agent_id || ""}
               />
+              <button
+                type="button"
+                onClick={handleRefreshAgentId}
+                disabled={isRefreshingAgentId}
+                title="Fetch latest Agent ID from database (Supabase / SQLite)"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "var(--radius)",
+                  border: "1px solid var(--border)",
+                  background: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: isRefreshingAgentId ? "wait" : "pointer",
+                  whiteSpace: "nowrap",
+                  color: "var(--text)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  flexShrink: 0,
+                  opacity: isRefreshingAgentId ? 0.7 : 1,
+                }}
+              >
+                <RotateCw
+                  style={{
+                    width: "13px",
+                    height: "13px",
+                    animation: isRefreshingAgentId ? "spin 1s linear infinite" : "none",
+                  }}
+                />
+                <span>Sync DB</span>
+              </button>
               {Boolean(formData.assemblyai_agent_id) && (
                 <button
                   type="button"
@@ -636,20 +700,32 @@ export function AgentBuilder({
                   {formData.assemblyai_agent_id || "Undeployed (Click Save & Deploy above)"}
                 </div>
               </div>
-              {Boolean(formData.assemblyai_agent_id) && (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (formData.assemblyai_agent_id) {
-                      navigator.clipboard.writeText(formData.assemblyai_agent_id);
-                      toast.success("Copied Agent ID");
-                    }
-                  }}
-                  style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: "pointer", flexShrink: 0 }}
+                  onClick={handleRefreshAgentId}
+                  disabled={isRefreshingAgentId}
+                  title="Fetch latest Agent ID from database"
+                  style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: isRefreshingAgentId ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}
                 >
-                  Copy
+                  <RotateCw style={{ width: "11px", height: "11px", animation: isRefreshingAgentId ? "spin 1s linear infinite" : "none" }} />
+                  <span>Sync</span>
                 </button>
-              )}
+                {Boolean(formData.assemblyai_agent_id) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.assemblyai_agent_id) {
+                        navigator.clipboard.writeText(formData.assemblyai_agent_id);
+                        toast.success("Copied Agent ID");
+                      }
+                    }}
+                    style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: "pointer", flexShrink: 0 }}
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Connected tools */}
