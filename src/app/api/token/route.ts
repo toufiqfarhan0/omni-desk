@@ -8,11 +8,17 @@ export async function GET(request: Request) {
     const businessId = searchParams.get("businessId") || "biz_demo_dental";
 
     const biz = await getBusiness(businessId);
-    let agentId = biz?.assemblyai_agent_id;
+    let agentId = "";
 
-    // Only allow default AGENT_ID fallback for the official pre-configured hair salon demo
-    if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      agentId = process.env.AGENT_ID || "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    // For the pre-configured hair salon demo, prioritize explicit AGENT_ID env variable,
+    // followed by database assemblyai_agent_id, followed by the verified default demo agent ID.
+    if (businessId === "biz_demo_dental" || !biz) {
+      agentId =
+        process.env.AGENT_ID ||
+        biz?.assemblyai_agent_id ||
+        "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    } else {
+      agentId = biz?.assemblyai_agent_id || process.env.AGENT_ID || "";
     }
 
     if (!agentId) {
