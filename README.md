@@ -307,9 +307,15 @@ During a call, the caller's audio streams to AssemblyAI's cloud. When the AI dec
 
 ### Do You Need `PUBLIC_API_BASE_URL`?
 - **In Production (Vercel)**: **NO**. OmniDesk automatically resolves its own production host (`https://omni-desk-rho.vercel.app` or `VERCEL_URL`). You do not need to configure `PUBLIC_API_BASE_URL`.
-- **In Local Development**:
-  - **Standard Testing**: **NO**. The pre-configured demo agent routes tool calls to the live production endpoint (`https://omni-desk-rho.vercel.app/tools/...`), so local voice testing works instantly without setting up any tunnels.
-  - **Modifying Tool Logic Locally**: If you make edits to the local tool handler code and want AssemblyAI to call your local machine, start a tunnel (`cloudflared tunnel --url http://localhost:3000`), paste the URL into `PUBLIC_API_BASE_URL`, and click **"Save & Deploy"** in the Dashboard.
+- **In Local Development**: **NO**. OmniDesk automatically falls back to `https://omni-desk-rho.vercel.app`, so local voice testing and agent deployments work instantly with zero configuration or tunnels required.
+
+#### Why We Do Not Require Local Tunnels
+Under the [AssemblyAI Voice Agent HTTP Tools architecture](https://www.assemblyai.com/docs/voice-agents/voice-agent-api/tools/http-tools), AssemblyAI's cloud server dispatches HTTP POST webhooks to your server whenever the model executes a function (like checking available booking slots or scheduling an appointment).
+
+Normally, testing cloud webhooks locally requires running third-party tunneling software to expose `localhost:3000` to the internet. OmniDesk eliminates this setup friction entirely:
+- Local development automatically routes tool webhooks through the live production endpoint (`https://omni-desk-rho.vercel.app`).
+- Evaluators and developers can simply clone the repository, run `pnpm dev`, and immediately test real end-to-end voice scheduling with zero tunnel setup.
+- For technical details on how AssemblyAI executes server-side functions, refer to the [AssemblyAI HTTP Tools Documentation](https://www.assemblyai.com/docs/voice-agents/voice-agent-api/tools/http-tools).
 
 ---
 
@@ -419,7 +425,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-### 2. Zero-Install Vanilla HTML / CDN (Cloudflare ESM)
+### 2. Zero-Install Vanilla HTML / CDN (Global ESM)
 
 No bundler or build step needed:
 

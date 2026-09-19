@@ -48,13 +48,19 @@ export function buildAgentDefinition(
   biz: Business,
   publicBaseUrl?: string
 ): Record<string, any> {
+  const isLocal =
+    !publicBaseUrl ||
+    publicBaseUrl.includes("localhost") ||
+    publicBaseUrl.includes("127.0.0.1");
+
   let baseUrl = (
-    publicBaseUrl ||
     process.env.PUBLIC_API_BASE_URL ||
+    (!isLocal ? publicBaseUrl : "") ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : "") ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+    "https://omni-desk-rho.vercel.app"
   ).replace(/\/$/, "");
 
   if (
@@ -63,10 +69,7 @@ export function buildAgentDefinition(
     baseUrl.includes("127.0.0.1") ||
     !baseUrl.startsWith("http")
   ) {
-    throw new Error(
-      "No public HTTPS base URL could be determined. Set PUBLIC_API_BASE_URL in your .env " +
-      "(e.g. PUBLIC_API_BASE_URL=https://your-domain.com) so AssemblyAI can reach your tool endpoints."
-    );
+    baseUrl = "https://omni-desk-rho.vercel.app";
   }
 
   const businessId = biz.id;

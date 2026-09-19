@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
     // Only allow default AGENT_ID fallback for the official pre-configured hair salon demo
     if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      agentId = process.env.AGENT_ID || "";
+      agentId = process.env.AGENT_ID || "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     }
 
     if (!agentId) {

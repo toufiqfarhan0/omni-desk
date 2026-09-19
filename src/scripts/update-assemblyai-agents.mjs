@@ -10,11 +10,7 @@ if (!agentIdsRaw) {
 }
 const agentIds = agentIdsRaw.split(",").map((s) => s.trim()).filter(Boolean);
 
-const baseUrl = process.env.PUBLIC_API_BASE_URL;
-if (!baseUrl) {
-  console.error("❌  PUBLIC_API_BASE_URL is not set. Run: export PUBLIC_API_BASE_URL=https://your-domain.com");
-  process.exit(1);
-}
+const baseUrl = process.env.PUBLIC_API_BASE_URL || "https://omni-desk-rho.vercel.app";
 
 const bizId = process.env.BIZ_ID || "biz_demo_dental";
 

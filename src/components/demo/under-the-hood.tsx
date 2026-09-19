@@ -1080,7 +1080,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <strong>Direct Body Injection:</strong> Injects the modal and button directly into the <code style={{ background: "#f4f4f5", padding: "1px 6px", borderRadius: "4px", fontSize: "12.5px" }}>document.body</code> of any static website, WordPress, Webflow, or Shopify store without requiring React.
                 </li>
                 <li>
-                  <strong>Cloudflare CDN Ready:</strong> Resolves directly from Cloudflare via <code style={{ background: "#f4f4f5", padding: "1px 6px", borderRadius: "4px", fontSize: "12.5px" }}>https://esm.sh/omnidesk-voice</code> with 0 compilation or npm install.
+                  <strong>Zero-Config CDN Ready:</strong> Resolves directly via <code style={{ background: "#f4f4f5", padding: "1px 6px", borderRadius: "4px", fontSize: "12.5px" }}>https://esm.sh/omnidesk-voice</code> with 0 compilation or npm install.
                 </li>
                 <li>
                   <strong>Controller Lifecycle:</strong> Returns a clean controller <code style={{ background: "#f4f4f5", padding: "1px 6px", borderRadius: "4px", fontSize: "12.5px" }}>{`{ destroy(), startCall() }`}</code> to programmatically control the widget.
@@ -1299,7 +1299,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <span style={{ fontSize: "12px", fontWeight: 700, color: "#71717a", textTransform: "uppercase" }}>
                   Universal HTML / Shopify / WordPress Script Tag:
                 </span>
-                <span style={{ fontSize: "11.5px", color: "#71717a" }}>Hosted on Cloudflare CDN via esm.sh</span>
+                <span style={{ fontSize: "11.5px", color: "#71717a" }}>Hosted on global CDN via esm.sh</span>
               </div>
               <div style={{ position: "relative" }}>
                 <pre
