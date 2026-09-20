@@ -43,10 +43,10 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 +==================================================================================================+
 |                              ASSEMBLYAI CLOUD (Voice Agent Engine)                               |
 |                                                                                                  |
-|   +-------------------+       +-----------------------+       +------------------------------+   |
-|   | Universal-1 / STT | ----> | LLM Reasoning Engine  | ----> | Cartesia / ElevenLabs (TTS)  |   |
-|   | (Voice to Text)   |       | (Prompt + Tool Calls) |       | (Text to Voice Streaming)    |   |
-|   +-------------------+       +-----------------------+       +------------------------------+   |
+|   +-----------------------+       +-----------------------+       +------------------------------+   |
+|   | Universal-3 Pro / STT | ----> | LLM Reasoning Engine  | ----> | Cartesia / ElevenLabs (TTS)  |   |
+|   | (Real-Time Streaming) |       | (Prompt + Tool Calls) |       | (Text to Voice Streaming)    |   |
+|   +-----------------------+       +-----------------------+       +------------------------------+   |
 |                                           |                                                      |
 |                                           | (3. Function Webhook POST                            |
 |                                           |     https://omni-desk-rho.vercel.app/tools/...)      |
@@ -107,7 +107,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 ### Step 2: Bidirectional Audio Streaming & Real-Time Voice Processing
 1. The client browser opens a direct WebSocket to AssemblyAI (`wss://agents.assemblyai.com/v1/stream?token=...`).
 2. The browser's Web Audio API captures microphone input, resamples it to 16kHz 16-bit linear PCM, and streams audio packets.
-3. AssemblyAI's **Universal-1 Speech-to-Text (STT)** transcribes spoken words in real time.
+3. AssemblyAI's **Universal-3 Pro Streaming Speech-to-Text (STT)** transcribes spoken words in real time with ultra-low latency (<300ms) and high entity accuracy.
 4. The **LLM Reasoning Engine** evaluates the conversation using the business's custom prompt, tone, and operational rules.
 5. Synthesized voice audio streams back to the browser via Cartesia / ElevenLabs TTS for natural, conversational playback.
 6. **Instant Barge-In / Interruption**: If the caller speaks while the agent is talking, the engine silences itself and clears audio buffers in under 100ms.
