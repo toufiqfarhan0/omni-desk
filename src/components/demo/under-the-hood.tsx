@@ -401,8 +401,10 @@ export function UnderTheHoodPlayground() {
 
               {/* Showcase Links */}
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <Link
-                  href="/demo/salon"
+                <a
+                  href="https://salon-demo-script.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -418,9 +420,31 @@ export function UnderTheHoodPlayground() {
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <span>Open Salon Demo</span>
+                  <span>Script Demo (AURA)</span>
                   <ArrowRight size={13} />
-                </Link>
+                </a>
+                <a
+                  href="https://salon-demo-react.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    background: "#18181b",
+                    color: "#ffffff",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span>React Demo (Lumière)</span>
+                  <ArrowRight size={13} />
+                </a>
               </div>
             </div>
 

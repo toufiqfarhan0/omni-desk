@@ -10,7 +10,8 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
 - **npm Package**: [`omnidesk-voice@0.1.3`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
-- **Premier Showcase**: **OmniDesk Hair Salon & Studio (Luxe & Mane)** at [`/demo/salon`](https://omni-desk-rho.vercel.app/demo/salon)
+- **Live Script Embed Demo**: [https://salon-demo-script.vercel.app](https://salon-demo-script.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script))
+- **Live React npm Demo**: [https://salon-demo-react.vercel.app](https://salon-demo-react.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-react](https://github.com/toufiqfarhan0/salon-demo-react))
 - **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
 - **Under The Hood / Code Architecture**: [`/demo`](https://omni-desk-rho.vercel.app/demo)
 
@@ -31,8 +32,8 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 |          v                                                  v                                    |
 |  +--------------------------------------------------------------------------------------------+  |
 |  | NEXT.JS FRONTEND (React 19 / App Router)                                                   |  |
-|  |   - Landing Page (/) & Premier Hair Salon Showcase (/demo/salon)                           |  |
-|  |   - Floating Voice Widget (<VoiceWidget /> & /widget.js embed script)                      |  |
+|  |   - Landing Page (/) & Client Showcase Links                                                |  |
+|  |   - Floating Voice Widget (<VoiceWidget /> & Published npm SDK / CDN embed)                 |  |
 |  |   - Practice Owner Dashboard (/dashboard) with SSE Live Feed & Live Voice Tester           |  |
 |  +--------------------------------------------------------------------------------------------+  |
 +=============================================|====================================================+
@@ -219,11 +220,10 @@ assemblyai-voice-agent-scheduler/
 └── src/
     ├── proxy.ts                 # Next.js 16 proxy routing & dashboard auth protection
     ├── app/
-    │   ├── page.tsx             # Marketing landing page
+    │   ├── page.tsx             # Marketing landing page with live deployment showcases
     │   ├── dashboard/page.tsx   # Practice management console (4 tabs)
     │   ├── demo/
-    │   │   ├── page.tsx         # Interactive showroom & under-the-hood architecture
-    │   │   └── salon/page.tsx   # Premier Hair Salon & Studio voice booking page
+    │   │   └── page.tsx         # Interactive showroom & under-the-hood architecture
     │   ├── tools/[...slug]/     # Direct root webhook tool endpoints
     │   └── api/
     │       ├── token/route.ts   # Temporary WebSocket session token minting
@@ -462,17 +462,33 @@ const { token, agent_id } = await fetch("/api/token?businessId=biz_demo_dental")
 await client.start(token, agent_id);
 ```
 
-### 4. Standalone Script Tag
+### 4. Standalone Universal Script Tag (CDN Embed)
+
+Zero build tools or node setup required. Works in WordPress, Webflow, Shopify, or plain HTML:
 
 ```html
 <script 
-  src="https://omni-desk-rho.vercel.app/widget.js" 
-  data-business="biz_demo_dental" 
-  data-theme="dark" 
-  data-position="bottom-right" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.3/dist/widget.global.global.js" 
+  data-host="https://omni-desk-rho.vercel.app"
+  data-business-id="biz_demo_dental"
+  data-agent="agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
+  data-position="bottom-right"
+  data-theme="dark"
+  data-label="Talk to Receptionist"
   defer>
 </script>
 ```
+
+---
+
+## Live External Client Deployments
+
+Two independent production websites demonstrate both integration methods in the wild:
+
+| Website | Integration Type | Live URL | Repository |
+| :--- | :--- | :--- | :--- |
+| **AURA Hair & Beauty** | Universal `<script>` Embed | [salon-demo-script.vercel.app](https://salon-demo-script.vercel.app/) | [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script) |
+| **Lumière Studio** | React 19 / npm component | [salon-demo-react.vercel.app](https://salon-demo-react.vercel.app/) | [toufiqfarhan0/salon-demo-react](https://github.com/toufiqfarhan0/salon-demo-react) |
 
 ---
 

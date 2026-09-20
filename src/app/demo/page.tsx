@@ -315,11 +315,14 @@ export default function DemoPage() {
 
           <div
             style={{
-              maxWidth: "680px",
+              maxWidth: "840px",
               margin: "0 auto",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+              gap: "18px",
             }}
           >
-            {/* CARD: HAIR SALON */}
+            {/* CARD 1: SCRIPT EMBED (AURA STUDIO) */}
             <div
               style={{
                 background: "#ffffff",
@@ -346,27 +349,28 @@ export default function DemoPage() {
                       letterSpacing: "0.04em",
                     }}
                   >
-                    HAIR SALON &amp; MEDSPA
+                    UNIVERSAL &lt;SCRIPT&gt; EMBED
                   </span>
-                  <span style={{ fontSize: "12px", color: "#71717a", fontWeight: 500 }}>
-                    45m–120m Appointments
+                  <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
+                    ● Live on Vercel
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: "19px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
-                  Luxe &amp; Mane Hair Studio
+                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
+                  AURA Hair &amp; Beauty Studio
                 </h3>
-                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 18px" }}>
-                  High-end salon with live calendar booking for precision haircuts, coloring, and balayage. Experience how visitors schedule treatments directly from the homepage.
+                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 16px" }}>
+                  Vanilla HTML/JS luxury salon site. Embeds the voice receptionist using a single published CDN script tag without any framework build tools.
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", paddingTop: "8px" }}>
-                <Link
-                  href="/demo/salon"
+              <div style={{ paddingTop: "8px" }}>
+                <a
+                  href="https://salon-demo-script.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
-                    flex: 1,
-                    minWidth: "150px",
+                    width: "100%",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -382,9 +386,79 @@ export default function DemoPage() {
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <span>Open Salon Website</span>
-                  <span>&rarr;</span>
-                </Link>
+                  <span>Visit Script Demo (AURA)</span>
+                  <span>↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* CARD 2: REACT NPM PACKAGE (LUMIÈRE STUDIO) */}
+            <div
+              style={{
+                background: "#ffffff",
+                border: "1px solid #e4e4e7",
+                borderRadius: "18px",
+                padding: "24px",
+                boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <span
+                    style={{
+                      background: "#f4f4f5",
+                      color: "#09090b",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: "9999px",
+                      border: "1px solid #e4e4e7",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    REACT &bull; NPM COMPONENT
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
+                    ● Live on Vercel
+                  </span>
+                </div>
+
+                <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 6px", color: "#09090b" }}>
+                  Lumière Studio
+                </h3>
+                <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 16px" }}>
+                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice</code> from npm with typed props and direct AssemblyAI streaming.
+                </p>
+              </div>
+
+              <div style={{ paddingTop: "8px" }}>
+                <a
+                  href="https://salon-demo-react.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    width: "100%",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    background: "#000000",
+                    color: "#ffffff",
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span>Visit React Demo (Lumière)</span>
+                  <span>↗</span>
+                </a>
               </div>
             </div>
           </div>

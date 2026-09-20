@@ -305,54 +305,120 @@ export default function LandingPage() {
             <p>These are real production demo websites with the OmniDesk voice widget embedded. Click to visit and experience it live.</p>
           </div>
 
-          {/* Premier Hair Salon showcase card */}
+          {/* Dual Live Demo Deployments Showcase */}
           <div
             style={{
-              maxWidth: "800px",
+              maxWidth: "1080px",
               margin: "0 auto",
-              background: "#fff",
-              border: "1px solid #e4e4e7",
-              borderRadius: "20px",
-              overflow: "hidden",
-              boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              gap: "24px",
             }}
           >
-            <div style={{ background: "#09090b", padding: "32px 40px", color: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                <div>
-                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(255,255,255,0.12)", color: "#ffffff", padding: "4px 12px", borderRadius: "999px", display: "inline-block", marginBottom: "8px" }}>Hair Salon &amp; MedSpa</div>
-                  <h3 style={{ fontSize: "24px", fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Luxe &amp; Mane Hair Studio</h3>
+            {/* Card 1: Plain Script Embed (AURA Studio) */}
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid #e4e4e7",
+                borderRadius: "20px",
+                overflow: "hidden",
+                boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ background: "#09090b", padding: "28px 32px", color: "#fff" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(255,255,255,0.12)", color: "#ffffff", padding: "4px 12px", borderRadius: "999px" }}>
+                    Universal &lt;script&gt; Embed
+                  </span>
+                  <span style={{ fontSize: "11.5px", color: "#22c55e", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }} />
+                    Live Deployed
+                  </span>
                 </div>
+                <h3 style={{ fontSize: "21px", fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.02em" }}>
+                  AURA Hair &amp; Beauty Studio
+                </h3>
+                <p style={{ fontSize: "13.5px", color: "#a1a1aa", lineHeight: 1.6, margin: 0 }}>
+                  A luxury salon website built with pure HTML, CSS, and Vanilla JS. Zero framework build steps — embeds OmniDesk using a single <code>&lt;script&gt;</code> tag with automatic CORS audio streaming.
+                </p>
               </div>
-              <p style={{ fontSize: "14px", color: "#a1a1aa", lineHeight: 1.6, margin: 0 }}>
-                High-end salon with live calendar booking for precision haircuts, coloring, and artisan balayage. Experience how visitors schedule directly from the homepage.
-              </p>
+              <div style={{ padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", background: "#fafafa", borderTop: "1px solid #f4f4f5" }}>
+                <div style={{ fontSize: "12px", color: "#71717a", fontFamily: "monospace" }}>
+                  salon-demo-script.vercel.app
+                </div>
+                <a
+                  href="https://salon-demo-script.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    background: "#000000", color: "#fff",
+                    fontFamily: "var(--font)", fontSize: "13px", fontWeight: 700,
+                    padding: "10px 20px", borderRadius: "10px",
+                    textDecoration: "none", whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Visit Script Demo ↗
+                </a>
+              </div>
             </div>
-            <div style={{ padding: "28px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px" }}>
-              <div style={{ display: "flex", gap: "24px" }}>
-                {[["Haircuts", "45min"], ["Balayage", "120min"], ["Coloring", "90min"]].map(([s, d]) => (
-                  <div key={s} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "16px", fontWeight: 700, color: "#09090b" }}>{s}</div>
-                    <div style={{ fontSize: "12px", color: "#71717a" }}>{d}</div>
-                  </div>
-                ))}
+
+            {/* Card 2: React Component (Lumière Studio) */}
+            <div
+              style={{
+                background: "#fff",
+                border: "1px solid #e4e4e7",
+                borderRadius: "20px",
+                overflow: "hidden",
+                boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ background: "#09090b", padding: "28px 32px", color: "#fff" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(255,255,255,0.12)", color: "#ffffff", padding: "4px 12px", borderRadius: "999px" }}>
+                    React &bull; npm package
+                  </span>
+                  <span style={{ fontSize: "11.5px", color: "#22c55e", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e" }} />
+                    Live Deployed
+                  </span>
+                </div>
+                <h3 style={{ fontSize: "21px", fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.02em" }}>
+                  Lumière Hair Studio
+                </h3>
+                <p style={{ fontSize: "13.5px", color: "#a1a1aa", lineHeight: 1.6, margin: 0 }}>
+                  A modern React 19 + Vite + TypeScript application consuming <code>omnidesk-voice@0.1.3</code> directly from npm. Features typed props, custom accent colors, and real-time appointment booking.
+                </p>
               </div>
-              <a
-                href="https://omni-desk-rho.vercel.app/demo/salon"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: "8px",
-                  background: "#000000", color: "#fff",
-                  fontFamily: "var(--font)", fontSize: "14px", fontWeight: 700,
-                  padding: "12px 24px", borderRadius: "12px",
-                  textDecoration: "none", whiteSpace: "nowrap",
-                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.18)",
-                  transition: "all 0.2s",
-                }}
-              >
-                Open Salon Website ↗
-              </a>
+              <div style={{ padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", background: "#fafafa", borderTop: "1px solid #f4f4f5" }}>
+                <div style={{ fontSize: "12px", color: "#71717a", fontFamily: "monospace" }}>
+                  salon-demo-react.vercel.app
+                </div>
+                <a
+                  href="https://salon-demo-react.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    background: "#000000", color: "#fff",
+                    fontFamily: "var(--font)", fontSize: "13px", fontWeight: 700,
+                    padding: "10px 20px", borderRadius: "10px",
+                    textDecoration: "none", whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Visit React Demo ↗
+                </a>
+              </div>
             </div>
           </div>
         </div>

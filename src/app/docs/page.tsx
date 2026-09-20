@@ -96,8 +96,11 @@ export default function DocsPage() {
             <a href="https://www.assemblyai.com/docs" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
               AssemblyAI Docs ↗
             </a>
-            <a href="https://omni-desk-rho.vercel.app/demo/salon" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
-              Salon Demo ↗
+            <a href="https://salon-demo-script.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
+              Script Demo (AURA) ↗
+            </a>
+            <a href="https://salon-demo-react.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
+              React Demo (Lumière) ↗
             </a>
             <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
               GitHub Repo ↗
@@ -202,9 +205,22 @@ function OverviewSection() {
 
       <h2 className="doc-h2">Live Demo</h2>
       <p className="doc-p">Experience OmniDesk deployed on a real business website:</p>
-      <div style={{ maxWidth: "540px" }}>
+      <div style={{ maxWidth: "600px", display: "flex", flexDirection: "column", gap: "14px" }}>
         {[
-          { name: "Luxe & Mane Hair Studio", desc: "High-end salon with precision haircuts, coloring & balayage booking.", url: "https://omni-desk-rho.vercel.app/demo/salon", color: "#10b981", label: "Open Salon Demo" },
+          {
+            name: "AURA Hair & Beauty Studio",
+            desc: "Universal <script> embed on a vanilla HTML/JS site. Zero build steps, connects directly to OmniDesk backend with CORS.",
+            url: "https://salon-demo-script.vercel.app/",
+            color: "#18181b",
+            label: "Open Script Demo",
+          },
+          {
+            name: "Lumière Studio (React 19 / Vite)",
+            desc: "Full React app consuming omnidesk-voice@0.1.3 from npm with full TypeScript support and custom widget accent styling.",
+            url: "https://salon-demo-react.vercel.app/",
+            color: "#18181b",
+            label: "Open React Demo",
+          },
         ].map((demo) => (
           <a key={demo.name} href={demo.url} target="_blank" rel="noopener noreferrer" style={{ display: "block", padding: "20px", background: "#fff", border: "1px solid #e4e4e7", borderRadius: "12px", textDecoration: "none", transition: "all 0.2s" }}>
             <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>{demo.name}</div>
