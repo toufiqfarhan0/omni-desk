@@ -290,9 +290,21 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     startTimer();
 
     try {
-      const cleanHost = host ? host.replace(/\/$/, "") : (typeof window !== "undefined" ? window.location.origin : "");
+      let hostToUse = host;
+      if (!hostToUse && typeof document !== "undefined") {
+        const scriptEl = document.querySelector("script[src*='widget.js']") as HTMLScriptElement;
+        if (scriptEl && scriptEl.src && scriptEl.src.startsWith("http")) {
+          try {
+            hostToUse = new URL(scriptEl.src).origin;
+          } catch {}
+        }
+      }
+      if (!hostToUse && typeof window !== "undefined" && !window.location.origin.includes("localhost")) {
+        hostToUse = window.location.origin;
+      }
+      const cleanHost = (hostToUse || "https://omni-desk-rho.vercel.app").replace(/\/$/, "");
       const res = await fetch(`${cleanHost}/api/token?businessId=${encodeURIComponent(businessId)}`);
-      if (!res.ok) throw new Error("Failed to get session token");
+      if (!res.ok) throw new Error(`Failed to get session token (${res.status})`);
       const data: VoiceSessionTokenResponse = await res.json();
 
       if (data.business_name && !propBusinessName) {
@@ -365,7 +377,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       });
 
       await client.start(data.token, targetAgentId);
-    } catch {
+    } catch (err: any) {
+      console.error("[OmniDesk Voice Widget Error]:", err);
       statusText.innerText = "Error";
       statusDot.style.background = "#ef4444";
       btnText.innerText = "Start Voice Call";
@@ -407,15 +420,22 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
 if (typeof document !== "undefined") {
   const currentScript =
     document.currentScript ||
-    document.querySelector("script[data-agent], script[data-business-id]");
+    document.querySelector("script[data-agent], script[data-business-id], script[src*='widget.js']");
   if (currentScript) {
+    let autoHost: string | undefined;
+    const scriptSrc = (currentScript as HTMLScriptElement).src || "";
+    if (scriptSrc && scriptSrc.startsWith("http")) {
+      try {
+        autoHost = new URL(scriptSrc).origin;
+      } catch {}
+    }
     const businessId = currentScript.getAttribute("data-business-id") || undefined;
     const agentId = currentScript.getAttribute("data-agent") || undefined;
     const theme = (currentScript.getAttribute("data-theme") as any) || "dark";
     const accent = (currentScript.getAttribute("data-accent") as any) || "emerald";
     const position = (currentScript.getAttribute("data-position") as any) || "bottom-right";
     const label = currentScript.getAttribute("data-label") || undefined;
-    const host = currentScript.getAttribute("data-host") || undefined;
+    const host = currentScript.getAttribute("data-host") || autoHost || "https://omni-desk-rho.vercel.app";
     const greeting = currentScript.getAttribute("data-greeting") || undefined;
 
     if (document.readyState === "loading") {

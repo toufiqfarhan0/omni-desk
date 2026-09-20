@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { executeTool } from "@/lib/tools-handler";
 import { store } from "@/lib/store";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: CORS_HEADERS,
+  });
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string[] }> }
@@ -12,7 +25,7 @@ export async function POST(
     let toolName = "";
 
     if (!slug || slug.length === 0) {
-      return NextResponse.json({ error: "Missing tool name" }, { status: 400 });
+      return NextResponse.json({ error: "Missing tool name" }, { status: 400, headers: CORS_HEADERS });
     }
 
     if (slug.length === 1) {
@@ -30,11 +43,11 @@ export async function POST(
     const result = await executeTool(toolName, businessId, args);
     const toolPath = `/tools/${slug.join("/")}`;
     store.logEvent(toolPath, args, result);
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: CORS_HEADERS });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err.message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
