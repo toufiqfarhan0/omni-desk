@@ -165,7 +165,7 @@ export class AssemblyAIVoiceClient {
     this.callbacks = callbacks;
   }
 
-  async start(token: string, agentId: string) {
+  async start(token: string, agentId?: string, voice?: string) {
     try {
       this.callbacks.onStatusChange?.("connecting");
 
@@ -213,11 +213,18 @@ export class AssemblyAIVoiceClient {
       };
 
       this.ws.onopen = () => {
+        const sessionUpdate: Record<string, any> = {};
         if (agentId && agentId.trim()) {
+          sessionUpdate.agent_id = agentId.trim();
+        }
+        if (voice && voice.trim()) {
+          sessionUpdate.output = { voice: voice.trim() };
+        }
+        if (Object.keys(sessionUpdate).length > 0) {
           this.ws?.send(
             JSON.stringify({
               type: "session.update",
-              session: { agent_id: agentId.trim() },
+              session: sessionUpdate,
             })
           );
         }

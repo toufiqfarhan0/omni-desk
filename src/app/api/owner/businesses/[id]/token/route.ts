@@ -17,8 +17,8 @@ export async function GET(
     let agentId = biz.assemblyai_agent_id;
     if (id === "biz_demo_dental") {
       agentId =
-        process.env.AGENT_ID ||
         biz.assemblyai_agent_id ||
+        process.env.AGENT_ID ||
         "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     } else if (!agentId) {
       agentId = process.env.AGENT_ID || "";
@@ -30,6 +30,7 @@ export async function GET(
       business_id: biz.id,
       business_name: biz.name,
       greeting: biz.greeting,
+      voice: biz.voice_id || "alba",
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

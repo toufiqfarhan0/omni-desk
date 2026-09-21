@@ -23,12 +23,11 @@ export async function GET(request: Request) {
     const biz = await getBusiness(businessId);
     let agentId = "";
 
-    // For the pre-configured hair salon demo, prioritize explicit AGENT_ID env variable,
-    // followed by database assemblyai_agent_id, followed by the verified default demo agent ID.
+    // Prioritize dynamically deployed database agent ID, followed by AGENT_ID env, followed by default demo agent.
     if (businessId === "biz_demo_dental" || !biz) {
       agentId =
-        process.env.AGENT_ID ||
         biz?.assemblyai_agent_id ||
+        process.env.AGENT_ID ||
         "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     } else {
       agentId = biz?.assemblyai_agent_id || process.env.AGENT_ID || "";
@@ -53,6 +52,7 @@ export async function GET(request: Request) {
         business_id: businessId,
         business_name: biz?.name || "OmniDesk",
         greeting: biz?.greeting,
+        voice: biz?.voice_id || "alba",
       },
       { headers: CORS_HEADERS }
     );

@@ -108,6 +108,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
         data.agent_id ||
         business.assemblyai_agent_id ||
         "";
+      const voice = data.voice || business.voice_id || "alba";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -165,7 +166,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       });
 
       voiceClientRef.current = client;
-      await client.start(data.token, agentId);
+      await client.start(data.token, agentId, voice);
     } catch (err: any) {
       toast.error(err.message || "Failed to start call");
       setCallStatus("error");

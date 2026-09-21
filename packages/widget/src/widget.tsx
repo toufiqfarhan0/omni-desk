@@ -175,7 +175,7 @@ export function OmniDeskWidget({
       });
 
       clientRef.current = client;
-      await client.start(data.token, targetAgentId);
+      await client.start(data.token, targetAgentId, data.voice);
     } catch {
       setCallStatus("error");
       stopTimer();

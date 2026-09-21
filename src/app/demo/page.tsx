@@ -116,6 +116,7 @@ export default function DemoPage() {
       const data = await res.json();
       const token = data.token;
       const agentId = data.agent_id || "";
+      const voice = data.voice || "alba";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -169,7 +170,7 @@ export default function DemoPage() {
       });
 
       voiceClientRef.current = client;
-      await client.start(token, agentId);
+      await client.start(token, agentId, voice);
     } catch (err: any) {
       console.error(err);
       setCallStatus("error");
