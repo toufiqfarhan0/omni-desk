@@ -426,8 +426,11 @@ export async function executeTool(
       try {
         const emailResult = await sendCalendarConfirmation(booking, biz);
         emailSent = !!emailResult.sent;
-        if (emailSent && biz.id === "biz_demo_dental") {
-          store.markConfirmationSent(booking.confirmation_code);
+        if (emailSent) {
+          await markBookingConfirmationSent(booking.confirmation_code);
+          if (biz.id === "biz_demo_dental") {
+            store.markConfirmationSent(booking.confirmation_code);
+          }
         }
       } catch (emailErr) {
         console.error("[book_appointment] Email delivery failed:", emailErr);
@@ -505,6 +508,22 @@ export async function executeTool(
           ok: false,
           reason: "unknown_code",
           message: `I couldn't find an appointment with confirmation code ${code || "provided"}.`,
+        };
+      }
+
+      // STRICT DEDUPLICATION: If confirmation email was already dispatched by book_appointment, do NOT send a second duplicate email!
+      const isAlreadySent = Boolean(
+        booking.confirmation_sent ||
+        (biz.id === "biz_demo_dental" && booking.confirmation_code && store.get(booking.confirmation_code)?.confirmation_sent)
+      );
+
+      if (isAlreadySent && !args.force) {
+        return {
+          ok: true,
+          sent: true,
+          already_sent: true,
+          email: booking.customer_email,
+          message: `Confirmation email with calendar invite (.ics) has already been sent to ${booking.customer_email}.`,
         };
       }
 

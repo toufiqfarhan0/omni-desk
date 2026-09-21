@@ -110,6 +110,7 @@ export function VoiceWidget({
   const callStartTimeRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
+  const emailCapturedRef = useRef<boolean>(false);
 
   const activeAccent = useMemo(() => {
     if (accentColor) return accentColor;
@@ -152,6 +153,8 @@ export function VoiceWidget({
   const handleStartCall = useCallback(async () => {
     try {
       setCallStatus("connecting");
+      emailCapturedRef.current = false;
+      setShowEmailBar(false);
       startTimer();
       const cleanHost = host ? host.replace(/\/$/, "") : "";
       const tokenUrl = `${cleanHost}/api/token?businessId=${encodeURIComponent(businessId)}`;
@@ -182,25 +185,49 @@ export function VoiceWidget({
         onTranscript: (ev) => {
           setTranscripts((prev) => [...prev, { who: ev.who, text: ev.text }]);
           onTranscript?.(ev);
-          if (ev.who === "agent") {
+          if (ev.who === "user") {
+            if (ev.text.includes("@") || (ev.text.toLowerCase().includes(" at ") && ev.text.toLowerCase().includes(" dot "))) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+            }
+          } else if (ev.who === "agent") {
             const lower = ev.text.toLowerCase();
-            const normalized = lower.replace(/[\s\-_]/g, "");
+            // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
-              normalized.includes("email") ||
-              lower.includes("e-mail") ||
-              lower.includes("email") ||
-              lower.includes("mail address") ||
-              lower.includes("your mail") ||
-              lower.includes("send your confirmation") ||
-              lower.includes("send the confirmation") ||
-              lower.includes("calendar invite") ||
-              lower.includes("where should i send") ||
-              lower.includes("where can i send") ||
-              lower.includes("what is your address") ||
-              lower.includes("spell your") ||
-              lower.includes("provide your") ||
-              lower.includes("type your")
+              lower.includes("verified your email") ||
+              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("sent a calendar invite") ||
+              lower.includes("sent your confirmation") ||
+              lower.includes("confirmation code is") ||
+              lower.includes("i have sent")
             ) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+              return;
+            }
+
+            // If already captured, never re-show email bar
+            if (emailCapturedRef.current) {
+              setShowEmailBar(false);
+              return;
+            }
+
+            // Only show bar if the agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
+
+            if (isAskingForEmail) {
               setShowEmailBar(true);
             }
           }
@@ -288,11 +315,10 @@ export function VoiceWidget({
           voiceClientRef.current.sendEmailInput(verifiedEmail);
         }
 
+        emailCapturedRef.current = true;
         setEmailInput("");
-        setTimeout(() => {
-          setShowEmailBar(false);
-          setEmailSuccess("");
-        }, 2500);
+        setShowEmailBar(false);
+        setEmailSuccess("");
       } catch (err: any) {
         setEmailError(err.message || "Failed to verify email with mail server.");
       } finally {

@@ -51,6 +51,7 @@ export default function DemoPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
   const transcriptBottomRef = useRef<HTMLDivElement | null>(null);
+  const emailCapturedRef = useRef<boolean>(false);
 
   const activeTemplate = TEMPLATES[templateKey];
 
@@ -69,6 +70,7 @@ export default function DemoPage() {
     if (callStatus !== "idle") {
       handleEndCall();
     }
+    emailCapturedRef.current = false;
     setShowEmailBar(false);
     setEmailError("");
     setEmailSuccess("");
@@ -81,10 +83,10 @@ export default function DemoPage() {
     setCallDuration("0:00");
     timerRef.current = setInterval(() => {
       const ms = Date.now() - timerStartRef.current;
-      const totalSec = Math.floor(ms / 1000);
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      setCallDuration(`${m}:${String(s).padStart(2, "0")}`);
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      setCallDuration(`${m}:${String(rem).padStart(2, "0")}`);
     }, 250);
   };
 
@@ -107,13 +109,17 @@ export default function DemoPage() {
   const handleStartCall = async () => {
     try {
       setCallStatus("busy");
+      emailCapturedRef.current = false;
+      setShowEmailBar(false);
       startTimer();
 
-      const res = await fetch("/api/token");
-      if (!res.ok) {
-        throw new Error("Could not mint session token");
-      }
+      // Fetch dynamic voice token
+      const res = await fetch(`/api/token?businessId=${encodeURIComponent(activeTemplate.id)}`);
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Failed to initialize voice session");
+      }
+
       const token = data.token;
       const agentId = data.agent_id || "";
       const voice = data.voice || "alba";
@@ -139,25 +145,49 @@ export default function DemoPage() {
               text: event.text,
             },
           ]);
-          if (event.who === "agent") {
+          if (event.who === "user") {
+            if (event.text.includes("@") || (event.text.toLowerCase().includes(" at ") && event.text.toLowerCase().includes(" dot "))) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+            }
+          } else if (event.who === "agent") {
             const lower = event.text.toLowerCase();
-            const normalized = lower.replace(/[\s\-_]/g, "");
+            // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
-              normalized.includes("email") ||
-              lower.includes("e-mail") ||
-              lower.includes("email") ||
-              lower.includes("mail address") ||
-              lower.includes("your mail") ||
-              lower.includes("send your confirmation") ||
-              lower.includes("send the confirmation") ||
-              lower.includes("calendar invite") ||
-              lower.includes("where should i send") ||
-              lower.includes("where can i send") ||
-              lower.includes("what is your address") ||
-              lower.includes("spell your") ||
-              lower.includes("provide your") ||
-              lower.includes("type your")
+              lower.includes("verified your email") ||
+              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("sent a calendar invite") ||
+              lower.includes("sent your confirmation") ||
+              lower.includes("confirmation code is") ||
+              lower.includes("i have sent")
             ) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+              return;
+            }
+
+            // If already captured, never re-show email bar
+            if (emailCapturedRef.current) {
+              setShowEmailBar(false);
+              return;
+            }
+
+            // Only show bar if the agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
+
+            if (isAskingForEmail) {
               setShowEmailBar(true);
             }
           }
@@ -229,11 +259,10 @@ export default function DemoPage() {
         voiceClientRef.current.sendEmailInput(verifiedEmail);
       }
 
+      emailCapturedRef.current = true;
       setEmailInput("");
-      setTimeout(() => {
-        setShowEmailBar(false);
-        setEmailSuccess("");
-      }, 2500);
+      setShowEmailBar(false);
+      setEmailSuccess("");
     } catch (err: any) {
       setEmailError(err.message || "Failed to verify email with mail server.");
     } finally {

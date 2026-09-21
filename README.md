@@ -9,7 +9,7 @@
 OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time bidirectional 16kHz Web Audio streaming with deterministic server-side webhook tools to execute live calendar checks, appointment bookings, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
 
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
-- **npm Package**: [`omnidesk-voice@0.1.3`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
+- **npm Package**: [`omnidesk-voice@0.1.4`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
 - **Live Script Embed Demo**: [https://salon-demo-script.vercel.app](https://salon-demo-script.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script))
 - **Live React npm Demo**: [https://salon-demo-react.vercel.app](https://salon-demo-react.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-react](https://github.com/toufiqfarhan0/salon-demo-react))
 - **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
@@ -117,10 +117,10 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 When the caller asks for information or requests an appointment, AssemblyAI triggers HTTP POST webhooks to OmniDesk (`https://omni-desk-rho.vercel.app/tools/[businessId]/[tool]`):
 - **`get_today`**: Anchors relative terms ("tomorrow", "this Friday") to the practice's real calendar.
 - **`get_services_and_pricing`**: Returns exact service names, durations, and pricing.
-- **`verify_customer_email`**: Normalizes spoken email formats (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`) and checks DNS/MX records.
+- **`verify_customer_email`**: Normalizes spoken email formats (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`) and checks DNS/MX records. In supported widgets, an interactive auto-verification input bar appears dynamically when an email is requested and automatically closes upon submission.
 - **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present available time slots.
-- **`book_appointment`**: Validates the selected slot, commits the reservation to the database, and generates a unique 6-character confirmation code.
-- **`send_confirmation`**: Dispatches the confirmation email with the calendar invite file.
+- **`book_appointment`**: Validates the selected slot, commits the reservation to the database, generates a unique 6-character confirmation code, and dispatches the calendar confirmation email with `.ics` attachment.
+- **`send_confirmation`**: Dispatches the confirmation email with the calendar invite file. Features strict deduplication (`isAlreadySent`) so caller receives exactly one email even if both tools execute during the session.
 
 ### Step 4: Multi-Tenant Database Storage
 - All reservation commits, customer details, and conversation logs are immediately saved to the database.
@@ -130,6 +130,7 @@ When the caller asks for information or requests an appointment, AssemblyAI trig
 ### Step 5: Transactional Email & RFC 5545 Calendar Dispatch (.ics)
 - The system generates an RFC 5545 compliant `.ics` iCalendar file containing start time, end time, timezone, and a 1-hour alarm reminder.
 - Dispatches a transactional HTML email via Google Gmail SMTP to the verified customer email address.
+- **Single Email Guarantee**: Strict deduplication checks prevent duplicate dispatches between `book_appointment` and `send_confirmation`.
 - The customer clicks the `.ics` file to instantly add the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook**.
 
 ### Step 6: Real-Time Practice Dashboard & Monitoring

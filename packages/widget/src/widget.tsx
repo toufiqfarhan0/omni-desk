@@ -51,6 +51,7 @@ export function OmniDeskWidget({
   const callStartTimeRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
+  const emailCapturedRef = useRef<boolean>(false);
 
   const activeAccent = useMemo(() => {
     if (accentColor) return accentColor;
@@ -101,18 +102,16 @@ export function OmniDeskWidget({
   const handleStartCall = useCallback(async () => {
     try {
       setCallStatus("connecting");
+      emailCapturedRef.current = false;
+      setShowEmailBar(false);
       startTimer();
-
-      const tokenUrl = resolvedHost
-        ? `${resolvedHost}/api/token?businessId=${encodeURIComponent(businessId)}`
-        : `/api/token?businessId=${encodeURIComponent(businessId)}`;
+      const cleanHost = resolvedHost ? resolvedHost.replace(/\/$/, "") : "";
+      const tokenUrl = `${cleanHost}/api/token?businessId=${encodeURIComponent(businessId)}`;
 
       const res = await fetch(tokenUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch session token (${res.status})`);
-      }
-
+      if (!res.ok) throw new Error("Failed to initialize voice session");
       const data: VoiceSessionTokenResponse = await res.json();
+
       if (data.business_name && !propBusinessName) {
         setBusinessName(data.business_name);
       }
@@ -132,34 +131,58 @@ export function OmniDeskWidget({
           } else if (status === "idle") {
             stopTimer();
             if (callStartTimeRef.current > 0) {
-              const duration = Math.round((Date.now() - callStartTimeRef.current) / 1000);
+              const dur = Math.round((Date.now() - callStartTimeRef.current) / 1000);
               callStartTimeRef.current = 0;
-              onCallEnd?.(duration);
+              onCallEnd?.(dur);
             }
           }
         },
         onTranscript: (msg) => {
           setTranscripts((prev) => [...prev, msg]);
           onTranscript?.(msg);
-          if (msg.who === "agent") {
+          if (msg.who === "user") {
+            if (msg.text.includes("@") || (msg.text.toLowerCase().includes(" at ") && msg.text.toLowerCase().includes(" dot "))) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+            }
+          } else if (msg.who === "agent") {
             const lower = msg.text.toLowerCase();
-            const normalized = lower.replace(/[\s\-_]/g, "");
+            // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
-              normalized.includes("email") ||
-              lower.includes("e-mail") ||
-              lower.includes("email") ||
-              lower.includes("mail address") ||
-              lower.includes("your mail") ||
-              lower.includes("send your confirmation") ||
-              lower.includes("send the confirmation") ||
-              lower.includes("calendar invite") ||
-              lower.includes("where should i send") ||
-              lower.includes("where can i send") ||
-              lower.includes("what is your address") ||
-              lower.includes("spell your") ||
-              lower.includes("provide your") ||
-              lower.includes("type your")
+              lower.includes("verified your email") ||
+              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("sent a calendar invite") ||
+              lower.includes("sent your confirmation") ||
+              lower.includes("confirmation code is") ||
+              lower.includes("i have sent")
             ) {
+              emailCapturedRef.current = true;
+              setShowEmailBar(false);
+              return;
+            }
+
+            // If already captured, never re-show email bar
+            if (emailCapturedRef.current) {
+              setShowEmailBar(false);
+              return;
+            }
+
+            // Only show bar if the agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
+
+            if (isAskingForEmail) {
               setShowEmailBar(true);
             }
           }
@@ -235,11 +258,10 @@ export function OmniDeskWidget({
           clientRef.current.sendEmailInput(verifiedEmail);
         }
 
+        emailCapturedRef.current = true;
         setEmailInput("");
-        setTimeout(() => {
-          setShowEmailBar(false);
-          setEmailSuccess("");
-        }, 2500);
+        setShowEmailBar(false);
+        setEmailSuccess("");
       } catch (err: any) {
         setEmailError(err.message || "Failed to verify email with mail server.");
       } finally {

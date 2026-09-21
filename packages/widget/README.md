@@ -8,8 +8,11 @@ Add a 24kHz conversational voice AI receptionist to any React, Next.js, or HTML 
 
 ## Features
 
-- **Real-Time 24kHz Web Audio**: Bidirectional PCM streaming directly to AssemblyAI Voice Agent.
+- **Real-Time 16kHz/24kHz Web Audio**: Bidirectional PCM streaming directly to AssemblyAI Voice Agent.
 - **Autonomous Tool Execution**: Check calendar availability, book appointments, and send email invites during natural speech turns.
+- **Dynamic Voice Model Synthesis**: Supports instant voice selection (Anna, Alba, etc.) via AssemblyAI `output.voice` session parameters.
+- **Smart Email Verification Bar**: Automatically presents an interactive DNS/MX mail server validation input when the agent requests an email address, then silently closes upon capture.
+- **Strict Deduplication**: Guarantees exactly 1 calendar invite (`.ics`) email is sent per appointment.
 - **Self-Contained Styling**: Beautiful dark/light/auto themes with zero Tailwind or external CSS setup required.
 - **Audio Frequency Visualizer**: Animated waveform indicating both user speech and agent audio levels.
 - **Live Transcript Feed**: Real-time turn-by-turn conversation bubbles.
@@ -92,12 +95,17 @@ const client = new AssemblyAIVoiceClient({
   onError: (err) => console.error(err),
 });
 
-// Start session with token and agent ID from your OmniDesk API
+// Start session with token, agent ID, and selected voice from OmniDesk API
 const res = await fetch("https://your-domain.com/api/token?businessId=biz_123");
-const { token, agent_id } = await res.json();
-await client.start(token, agent_id);
+const { token, agent_id, voice } = await res.json();
+await client.start(token, agent_id, voice);
+
+// Send verified email input programmatically:
+client.sendEmailInput("customer@gmail.com");
 
 // Later: Stop call
+client.stop();
+```
 client.stop();
 ```
 
