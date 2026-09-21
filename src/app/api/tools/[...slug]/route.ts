@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { executeTool } from "@/lib/tools-handler";
 import { store } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",

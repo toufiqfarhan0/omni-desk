@@ -172,6 +172,9 @@ export async function sendCalendarConfirmation(
         user: smtpUser,
         pass: cleanPass,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
     const info = await transporter.sendMail({

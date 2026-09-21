@@ -421,20 +421,29 @@ export async function executeTool(
         } catch {}
       }
 
-      // Automatically send calendar invite (.ics) email immediately to ensure delivery
+      // Await email dispatch so Vercel Serverless Function does not freeze before SMTP delivery
+      let emailSent = false;
       try {
-        sendCalendarConfirmation(booking, biz).catch((err) =>
-          console.error("[book_appointment] Auto-confirmation email failed:", err)
-        );
+        const emailResult = await sendCalendarConfirmation(booking, biz);
+        emailSent = !!emailResult.sent;
+        if (emailSent && biz.id === "biz_demo_dental") {
+          store.markConfirmationSent(booking.confirmation_code);
+        }
       } catch (emailErr) {
-        console.error("[book_appointment] Email trigger failed:", emailErr);
+        console.error("[book_appointment] Email delivery failed:", emailErr);
       }
 
-      const spoken = `I have scheduled your ${serviceLabel} for ${formatDaySpoken(
-        dateStr
-      )} at ${formatTimeSpoken(timeStr)}. Your confirmation code is ${
-        booking.confirmation_code
-      }. I have sent a calendar invite to ${email}.`;
+      const spoken = emailSent
+        ? `I have scheduled your ${serviceLabel} for ${formatDaySpoken(
+            dateStr
+          )} at ${formatTimeSpoken(timeStr)}. Your confirmation code is ${
+            booking.confirmation_code
+          }. I have sent a calendar invite to ${email}.`
+        : `I have scheduled your ${serviceLabel} for ${formatDaySpoken(
+            dateStr
+          )} at ${formatTimeSpoken(timeStr)}. Your confirmation code is ${
+            booking.confirmation_code
+          }.`;
 
       return {
         ok: true,
@@ -446,6 +455,7 @@ export async function executeTool(
         customer_name: customerName,
         email,
         price,
+        email_sent: emailSent,
         message: spoken,
       };
     }
