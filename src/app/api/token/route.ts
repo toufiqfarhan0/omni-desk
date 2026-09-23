@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { mintAgentToken } from "@/lib/assemblyai";
+import { mintAgentToken, getOrProvisionAgent } from "@/lib/assemblyai";
 import { getBusiness } from "@/lib/db";
 
 const CORS_HEADERS = {
@@ -23,21 +23,25 @@ export async function GET(request: Request) {
     const biz = await getBusiness(businessId);
     let agentId = "";
 
-    // Prioritize dynamically deployed database agent ID, followed by AGENT_ID env, followed by default demo agent.
-    if (businessId === "biz_demo_dental" || !biz) {
-      agentId =
-        biz?.assemblyai_agent_id ||
-        process.env.AGENT_ID ||
-        "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    const publicBaseUrl =
+      process.env.PUBLIC_API_BASE_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : null) ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      new URL(request.url).origin;
+
+    if (biz) {
+      agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
-      agentId = biz?.assemblyai_agent_id || process.env.AGENT_ID || "";
+      agentId = process.env.AGENT_ID || "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     }
 
     if (!agentId) {
       return NextResponse.json(
         {
           error: "NOT_DEPLOYED",
-          message: "This agent has not been deployed to AssemblyAI yet. Please click 'Deploy to AssemblyAI' in the AI Agent Builder first.",
+          message: "Unable to find or provision an AssemblyAI Voice Agent for this business.",
         },
         { status: 400, headers: CORS_HEADERS }
       );

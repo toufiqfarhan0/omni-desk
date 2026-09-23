@@ -261,7 +261,7 @@ Instructions:
 
 export async function deployOrUpdateAgent(
   biz: Business,
-  publicBaseUrl: string
+  publicBaseUrl?: string
 ): Promise<AgentProvisionResult> {
   const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
   if (!apiKey) {
@@ -344,3 +344,72 @@ export async function deployOrUpdateAgent(
 
   return { ok: false, error: lastErr, status_code: lastStatus };
 }
+
+/**
+ * Checks whether an agent ID actually exists on AssemblyAI's cloud API.
+ */
+export async function verifyAgentExists(agentId?: string | null): Promise<boolean> {
+  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
+  if (!apiKey || !agentId || !agentId.trim()) return false;
+  try {
+    const res = await fetch(
+      `https://agents.assemblyai.com/v1/agents/${encodeURIComponent(agentId.trim())}`,
+      {
+        method: "GET",
+        headers: { Authorization: apiKey },
+        cache: "no-store",
+      }
+    );
+    return res.status === 200;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Dynamically resolves a verified, working AssemblyAI Voice Agent ID for a business.
+ * 1. If the business already has an agent_id in the DB, verifies it exists on AssemblyAI.
+ * 2. If it does not exist (404/deleted) or hasn't been deployed yet, automatically provisions
+ *    a real agent for this business on AssemblyAI and saves the new agent_id to the database.
+ * 3. Falls back to process.env.AGENT_ID only if provisioning fails.
+ */
+export async function getOrProvisionAgent(
+  biz: Business,
+  publicBaseUrl?: string
+): Promise<string> {
+  const existingId = biz.assemblyai_agent_id?.trim();
+
+  // 1. If business already has an agent ID, check that it actually exists on AssemblyAI
+  if (existingId) {
+    const exists = await verifyAgentExists(existingId);
+    if (exists) {
+      return existingId;
+    }
+    console.warn(
+      `[AssemblyAI] Stored agent ${existingId} for business ${biz.id} (${biz.name}) was not found (404). Auto-provisioning a fresh agent...`
+    );
+  }
+
+  // 2. Auto-provision a new real agent on AssemblyAI
+  const deployResult = await deployOrUpdateAgent(
+    { ...biz, assemblyai_agent_id: undefined },
+    publicBaseUrl
+  );
+
+  if (deployResult.ok && deployResult.agent_id) {
+    try {
+      const { updateBusiness } = await import("@/lib/db");
+      await updateBusiness(biz.id, { assemblyai_agent_id: deployResult.agent_id });
+      console.log(
+        `[AssemblyAI] Auto-provisioned and persisted agent ${deployResult.agent_id} for business ${biz.id}`
+      );
+    } catch (e) {
+      console.error("[AssemblyAI] Failed to save auto-provisioned agent ID to database:", e);
+    }
+    return deployResult.agent_id;
+  }
+
+  // 3. Fallback to process.env.AGENT_ID if auto-deploy failed
+  return process.env.AGENT_ID || "";
+}
+
