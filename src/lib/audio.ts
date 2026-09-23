@@ -224,9 +224,10 @@ export class AssemblyAIVoiceClient {
       this.ws.onopen = () => {
         const sessionUpdate: Record<string, any> = {};
         if (agentId && agentId.trim()) {
+          // Stored Agent: AssemblyAI requires agent_id to be mutually exclusive with other session fields
           sessionUpdate.agent_id = agentId.trim();
-        }
-        if (voice && voice.trim()) {
+        } else if (voice && voice.trim()) {
+          // Ad-hoc session only: voice is configured inline when no agent_id is used
           sessionUpdate.output = { voice: voice.trim() };
         }
         if (Object.keys(sessionUpdate).length > 0) {
