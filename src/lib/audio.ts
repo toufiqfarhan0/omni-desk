@@ -6,10 +6,16 @@ export interface AudioVisualizerCallback {
 
 export interface VoiceSessionCallbacks {
   onStatusChange?: (status: "idle" | "connecting" | "connected" | "error") => void;
-  onTranscript?: (event: { who: "user" | "agent"; text: string; isFinal?: boolean }) => void;
+  onTranscript?: (event: {
+    who: "user" | "agent";
+    text: string;
+    isFinal?: boolean;
+    itemId?: string;
+  }) => void;
   onToolEvent?: (event: { type: "call" | "result"; tool: string; args?: any; result?: any }) => void;
   onError?: (err: string) => void;
   onAudioLevel?: AudioVisualizerCallback;
+  onSessionId?: (sessionId: string) => void;
 }
 
 const WIRE_RATE = 24000;
@@ -161,6 +167,7 @@ export class AssemblyAIVoiceClient {
   private captureNode: AudioWorkletNode | null = null;
   private micStream: MediaStream | null = null;
   private isConnected = false;
+  public sessionId: string = "";
   private callbacks: VoiceSessionCallbacks;
   private userLevel = 0;
   private agentLevel = 0;
@@ -240,30 +247,86 @@ export class AssemblyAIVoiceClient {
         }
       };
 
+      let currentAgentText = "";
+      let currentAgentItemId = "";
+      let currentUserText = "";
+      let currentUserItemId = "";
+
       this.ws.onmessage = ({ data }) => {
         try {
           const msg = JSON.parse(data);
           switch (msg.type) {
             case "session.ready":
               this.isConnected = true;
+              this.sessionId = msg.session_id || "";
               this.callbacks.onStatusChange?.("connected");
+              if (msg.session_id) {
+                this.callbacks.onSessionId?.(msg.session_id);
+              }
               break;
 
             case "input.speech.started":
               // Instantaneous barge-in cut
               this.playbackNode?.port.postMessage("stop");
               this.agentLevel = 0;
+              currentUserText = "";
+              currentUserItemId = `user_${Date.now()}`;
+              break;
+
+            case "transcript.user.delta":
+              if (msg.text) {
+                currentUserText = msg.text;
+                this.callbacks.onTranscript?.({
+                  who: "user",
+                  text: msg.text,
+                  isFinal: false,
+                  itemId: msg.item_id || currentUserItemId,
+                });
+              }
               break;
 
             case "transcript.user":
               if (msg.text) {
-                this.callbacks.onTranscript?.({ who: "user", text: msg.text, isFinal: true });
+                currentUserText = msg.text;
+                this.callbacks.onTranscript?.({
+                  who: "user",
+                  text: msg.text,
+                  isFinal: true,
+                  itemId: msg.item_id || currentUserItemId,
+                });
+              }
+              break;
+
+            case "reply.started":
+              currentAgentText = "";
+              currentAgentItemId = msg.reply_id || msg.item_id || `agent_${Date.now()}`;
+              break;
+
+            case "transcript.agent.delta":
+              if (msg.delta) {
+                if (currentAgentText && !currentAgentText.endsWith(" ") && !/^[.,!?;:%)]/.test(msg.delta)) {
+                  currentAgentText += " " + msg.delta;
+                } else {
+                  currentAgentText += msg.delta;
+                }
+                this.callbacks.onTranscript?.({
+                  who: "agent",
+                  text: currentAgentText,
+                  isFinal: false,
+                  itemId: msg.item_id || currentAgentItemId,
+                });
               }
               break;
 
             case "transcript.agent":
               if (msg.text) {
-                this.callbacks.onTranscript?.({ who: "agent", text: msg.text, isFinal: true });
+                currentAgentText = msg.text;
+                this.callbacks.onTranscript?.({
+                  who: "agent",
+                  text: msg.text,
+                  isFinal: true,
+                  itemId: msg.item_id || currentAgentItemId,
+                });
               }
               break;
 

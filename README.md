@@ -44,10 +44,10 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 +==================================================================================================+
 |                              ASSEMBLYAI CLOUD (Voice Agent Engine)                               |
 |                                                                                                  |
-|   +-----------------------+       +-----------------------+       +------------------------------+   |
-|   | Universal-3 Pro / STT | ----> | LLM Reasoning Engine  | ----> | Cartesia / ElevenLabs (TTS)  |   |
-|   | (Real-Time Streaming) |       | (Prompt + Tool Calls) |       | (Text to Voice Streaming)    |   |
-|   +-----------------------+       +-----------------------+       +------------------------------+   |
+|   +-----------------------------+       +-----------------------+       +----------------------+ |
+|   | Universal-3.5 Pro Streaming | ----> | LLM Reasoning Engine  | ----> | ElevenLabs / Cartesia| |
+|   | (min_latency / 700ms Turn)  |       | (Prompt + Tool Calls) |       | (Text to Voice)      | |
+|   +-----------------------------+       +-----------------------+       +----------------------+ |
 |                                           |                                                      |
 |                                           | (3. Function Webhook POST                            |
 |                                           |     https://omni-desk-rho.vercel.app/tools/...)      |
@@ -57,12 +57,14 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 |                            NEXT.JS BACKEND (API Route Handlers)                                  |
 |                                                                                                  |
 |   /api/token                       --> Mints temporary AssemblyAI WebSocket session tokens       |
+|   /api/owner/conversations/:id/rec --> Fetches pre-signed S3 call audio recording (.ogg)         |
 |   /tools/[id]/get_today            --> Real calendar reference & upcoming open business days     |
-|   /tools/[id]/get_services         --> Dynamic pricing, duration & service catalog               |
+|   /tools/[id]/get_services         --> Dynamic pricing, duration & service catalog fallback      |
 |   /tools/[id]/verify_email         --> Normalizes spoken emails, DNS/MX check & spam validation  |
 |   /tools/[id]/check_avail          --> Computes open time slots for operating schedule           |
 |   /tools/[id]/book_appointment     --> Commits reservation, generates 6-char confirmation code   |
 |   /tools/[id]/send_confirm         --> Dispatches calendar invite with .ics (Gmail SMTP)         |
+|   /api/owner/businesses            --> Auto-provisions AssemblyAI agent upon business creation   |
 |   /api/owner/businesses/[id]/deploy--> Syncs agent instructions & webhook tools to AssemblyAI    |
 |   /api/events                      --> Server-Sent Events (SSE) real-time dashboard notifications|
 +===========================================|======================================================+
@@ -70,7 +72,8 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
                       (4. Reads / Writes:   |
                           businesses,       |
                           agent_id,         |
-                          bookings)         v
+                          bookings,         |
+                          conversations)    v
 +==================================================================================================+
 |                        ADAPTIVE DATABASE ENGINE (Supabase vs SQLite)                             |
 |                                                                                                  |
@@ -93,36 +96,36 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 ## How OmniDesk Works (Step-by-Step Flow)
 
 ```text
-[1. User Initiates Call] ──> [2. Ephemeral Token Minted] ──> [3. 16kHz WebSocket Stream]
+[1. User Initiates Call] ──> [2. Ephemeral Token Minted] ──> [3. 24kHz/16kHz WebSocket Stream]
                                                                         │
-[6. Real-Time Dashboard] <── [5. Calendar Sync (.ics)] <── [4. Autonomous Webhook Tools]
+[6. Dashboard & Audio Recording] <── [5. Calendar Sync (.ics)] <── [4. Autonomous Webhook Tools]
 ```
 
-### Step 1: Session Initiation & Secure Token Minting
+### Step 1: Session Initiation & Automatic Cloud Provisioning
 1. The user clicks **"Start Voice Call"** on `/demo/salon`, via the embeddable `<VoiceWidget />`, or inside the Dashboard.
 2. The browser requests a short-lived token from `/api/token?businessId=...`.
-3. The server retrieves the business's `assemblyai_agent_id` from the database (**Supabase PostgreSQL** in production or **SQLite** locally).
-4. The server calls AssemblyAI's token API (`GET https://agents.assemblyai.com/v1/token`) with the private `NEXT_ASSEMBLYAI_API_KEY` to mint a temporary 10-minute session token.
-5. The secret API key is never exposed to the client browser.
+3. If the business is brand new or undeployed, the server dynamically provisions a dedicated cloud agent on AssemblyAI in ~1 second via `getOrProvisionAgent()`, configuring `min_latency`, tuned turn detection, and pre-loading its service catalog.
+4. The server retrieves the business's `assemblyai_agent_id` from the database (**Supabase PostgreSQL** in production or **SQLite** locally).
+5. The server calls AssemblyAI's token API (`GET https://agents.assemblyai.com/v1/token`) with the private `NEXT_ASSEMBLYAI_API_KEY` to mint a temporary 10-minute session token. Secret keys are never exposed to the client browser.
 
 ### Step 2: Bidirectional Audio Streaming & Real-Time Voice Processing
 1. The client browser opens a direct WebSocket to AssemblyAI (`wss://agents.assemblyai.com/v1/stream?token=...`).
-2. The browser's Web Audio API captures microphone input, resamples it to 16kHz 16-bit linear PCM, and streams audio packets.
-3. AssemblyAI's **Universal-3 Pro Streaming Speech-to-Text (STT)** transcribes spoken words in real time with ultra-low latency (<300ms) and high entity accuracy.
-4. The **LLM Reasoning Engine** evaluates the conversation using the business's custom prompt, tone, and operational rules.
-5. Synthesized voice audio streams back to the browser via Cartesia / ElevenLabs TTS for natural, conversational playback.
-6. **Instant Barge-In / Interruption**: If the caller speaks while the agent is talking, the engine silences itself and clears audio buffers in under 100ms.
+2. The browser's Web Audio API captures microphone input, resamples it to 16-bit linear PCM at 24kHz, and streams audio packets.
+3. AssemblyAI's **Universal-3.5 Pro Streaming Speech-to-Text (STT)** transcribes spoken words in real time with `input.transcription_mode: "min_latency"`, eliminating buffer waits.
+4. **Tuned Turn Detection**: Configured with `vad_threshold: 0.5`, `min_silence: 700ms`, and `max_silence: 2500ms`, allowing human-speed conversation turnarounds (<700ms).
+5. **Real-Time Word Streaming**: Client receives `transcript.agent.delta` and displays message bubbles word-by-word simultaneously with speech playback (zero visual delay).
+6. **Instant Barge-In / Interruption**: If the caller speaks while the agent is talking, playback halts in under 48ms and the agent immediately pivots to the caller's new intent.
 
-### Step 3: Server-Side Autonomous Tool Execution
-When the caller asks for information or requests an appointment, AssemblyAI triggers HTTP POST webhooks to OmniDesk (`https://omni-desk-rho.vercel.app/tools/[businessId]/[tool]`):
+### Step 3: Server-Side Autonomous Tool Execution & Pre-Loaded Knowledge
+- **Pre-Loaded Services & Pricing Knowledge Base**: Standard treatments, pricing, and clinic hours are pre-compiled directly into the agent's system prompt, allowing the agent to answer catalog questions immediately without making an HTTP request.
+- **Conversational Continuity & Bridge Fillers (Zero Dead Air)**: During background calendar lookups or bookings, the agent speaks brief natural verbal bridges (*"Looking up our calendar right now..."*, *"Checking that email address now..."*) so callers are never left in silence.
 - **`get_today`**: Anchors relative terms ("tomorrow", "this Friday") to the practice's real calendar.
-- **`get_services_and_pricing`**: Returns exact service names, durations, and pricing.
-- **`verify_customer_email`**: Normalizes spoken email formats (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`) and checks DNS/MX records. In supported widgets, an interactive auto-verification input bar appears dynamically when an email is requested and automatically closes upon submission.
 - **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present available time slots.
+- **`verify_customer_email`**: Normalizes spoken email formats (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`) and verifies deliverability against DNS/MX records.
 - **`book_appointment`**: Validates the selected slot, commits the reservation to the database, generates a unique 6-character confirmation code, and dispatches the calendar confirmation email with `.ics` attachment.
-- **`send_confirmation`**: Dispatches the confirmation email with the calendar invite file. Features strict deduplication (`isAlreadySent`) so caller receives exactly one email even if both tools execute during the session.
+- **`send_confirmation`**: Dispatches the confirmation email with the calendar invite file with strict deduplication (`isAlreadySent`).
 
-### Step 4: Multi-Tenant Database Storage
+### Step 4: Multi-Tenant Database Storage & Auto-Sync
 - All reservation commits, customer details, and conversation logs are immediately saved to the database.
 - **In Production**: Committed directly to **Supabase Cloud PostgreSQL** across serverless instances.
 - **In Local Dev**: Committed to **SQLite** (`data/omnidesk.db`).
@@ -130,12 +133,12 @@ When the caller asks for information or requests an appointment, AssemblyAI trig
 ### Step 5: Transactional Email & RFC 5545 Calendar Dispatch (.ics)
 - The system generates an RFC 5545 compliant `.ics` iCalendar file containing start time, end time, timezone, and a 1-hour alarm reminder.
 - Dispatches a transactional HTML email via Google Gmail SMTP to the verified customer email address.
-- **Single Email Guarantee**: Strict deduplication checks prevent duplicate dispatches between `book_appointment` and `send_confirmation`.
 - The customer clicks the `.ics` file to instantly add the reservation to **Google Calendar, Apple Calendar, or Microsoft Outlook**.
 
-### Step 6: Real-Time Practice Dashboard & Monitoring
+### Step 6: Real-Time Practice Dashboard & Audio Recording Playback
 - The Owner Dashboard (`/dashboard`) receives live updates over Server-Sent Events (SSE) via `/api/events`.
-- Practice managers see instant KPI updates, review live transcripts in Call History, search bookings, or manually resend calendar invites.
+- **Call History & S3 Audio Player**: Full audio recordings stored by AssemblyAI in `.ogg` format are streamable directly inside the Call History transcript modal via `/api/owner/conversations/[id]/recording`, with one-click audio downloads.
+- Practice managers see instant KPI updates, review live transcripts, search bookings, or manually resend calendar invites.
 
 ---
 
@@ -181,14 +184,19 @@ To ensure multi-tenant security, privacy, and zero risk of accidental overwrites
 ## Key Capabilities
 
 ### 1. AssemblyAI Voice Agent Integration
-- **Real-Time Bidirectional Streaming**: Ultra-low-latency 16kHz PCM audio streaming directly between the caller's browser and AssemblyAI via WebSockets.
+- **Universal-3.5 Pro Realtime STT**: Powered by AssemblyAI's flagship Universal-3.5 Pro speech foundation model with `transcription_mode: "min_latency"` for instantaneous audio transcription.
+- **Real-Time Bidirectional Streaming**: Ultra-low-latency 24kHz/16kHz PCM audio streaming directly between the caller's browser and AssemblyAI via WebSockets and AudioWorklet ring buffers.
+- **Tuned Human Turn Detection**: Tuned VAD thresholds (0.5), 700ms silence detection, and 2500ms max silence for natural conversational cadence (<700ms handoffs).
+- **Simultaneous Word Streaming**: Instant visual display using `transcript.agent.delta` — text bubbles appear word-by-word simultaneously with speech audio.
 - **Server Token Minting**: Tokens are securely minted server-side (`GET https://agents.assemblyai.com/v1/token`) so private API keys are never exposed to the client.
-- **Instant Interruption Handling**: The voice engine automatically silences agent speech and clears playback buffers the millisecond the caller starts speaking.
+- **Instant Interruption Handling (<48ms)**: The voice engine automatically silences agent speech and clears playback buffers the millisecond the caller starts speaking.
 - **Live Tool Event Visualizer**: Transcripts, tool execution arguments, and results stream in real time.
 
-### 2. Autonomous Webhook Tools
+### 2. Autonomous Webhook Tools & Pre-Loaded Knowledge
+- **Pre-Loaded Knowledge Base**: Service catalog, pricing, and operating schedule are pre-loaded directly into the agent's prompt, allowing instant answers without HTTP delay.
+- **Conversational Continuity & Bridge Fillers**: Natural bridging phrases spoken during tool lookups completely eliminate awkward dead air.
 - **`get_today`**: Anchors relative date references to the real calendar and returns upcoming open days.
-- **`get_services_and_pricing`**: Returns exact service catalog keys, labels, pricing, and duration metadata.
+- **`get_services_and_pricing`**: Optional fallback returning exact service catalog keys, labels, pricing, and duration metadata.
 - **`verify_customer_email`**: Converts spoken email representations (`"alex dot smith at gmail dot com"` &rarr; `"alex.smith@gmail.com"`), autocorrects common domain typos, and checks DNS/MX records.
 - **`check_availability`**: Evaluates operating hours, business days, and existing reservations to present open appointment slots.
 - **`book_appointment`**: Commits verified reservations, generates a unique 6-character confirmation code, and prevents double-booking.
@@ -196,10 +204,11 @@ To ensure multi-tenant security, privacy, and zero risk of accidental overwrites
 
 ### 3. Practice Management Dashboard (`/dashboard`)
 - **AI Agent Builder**: Persona editor, voice picker, dynamic service catalog, operating hours schedule, read-only Agent ID display with copy button, and one-click **"Save & Deploy"**.
+- **Instant Auto-Provisioning**: Brand-new businesses created in the dashboard automatically deploy dedicated cloud agents to AssemblyAI with all low-latency optimizations.
 - **Multi-Tenant Agent Isolation**: Each business maintains its own distinct `assemblyai_agent_id` in the database.
-- **Live Voice Tester**: Interactive in-browser tester with frequency visualizer, real-time transcript stream, and an **agent deployment guard** (verifies agent is deployed before starting calls).
+- **Live Voice Tester**: Interactive in-browser tester with frequency visualizer, real-time word-by-word transcript stream, and automatic session recording capture.
 - **Bookings CRM**: Search, filter by status, and one-click manual Resend `.ics` confirmation trigger.
-- **Call History**: Recorded conversation logs with duration, token counts, and full transcript dialogs.
+- **Call History with In-Browser Audio Player**: Full audio recordings stored by AssemblyAI on S3 (`.ogg`) are playable directly inside the transcript modal, complete with one-click audio downloads.
 
 ---
 
@@ -210,7 +219,7 @@ assemblyai-voice-agent-scheduler/
 ├── .env.example                 # Example template for environment variables
 ├── package.json                 # Next.js 16 & React 19 dependencies
 ├── packages/
-│   └── widget/                  # 'omnidesk-voice' npm package (0.1.3)
+│   └── widget/                  # 'omnidesk-voice' npm package (0.1.4)
 │       ├── src/                 # Audio client, React widget & vanilla launcher
 │       └── tsup.config.ts       # CJS, ESM & IIFE multi-format bundler
 ├── public/
@@ -225,24 +234,27 @@ assemblyai-voice-agent-scheduler/
     │   ├── dashboard/page.tsx   # Practice management console (4 tabs)
     │   ├── demo/
     │   │   └── page.tsx         # Interactive showroom & under-the-hood architecture
+    │   ├── docs/
+    │   │   └── page.tsx         # In-depth technical documentation & API guides
     │   ├── tools/[...slug]/     # Direct root webhook tool endpoints
     │   └── api/
     │       ├── token/route.ts   # Temporary WebSocket session token minting
     │       ├── tools/[...slug]/ # API webhook tool route handlers
-    │       ├── owner/           # Businesses, bookings, deployment API routes
+    │       ├── owner/           # Businesses, bookings, deployment & conversation APIs
+    │       │   └── conversations/[id]/recording/route.ts # S3 audio recording endpoint
     │       └── events/          # Server-Sent Events (SSE) live feed
     ├── components/
     │   ├── voice-widget.tsx     # Embeddable floating voice widget
     │   └── dashboard/
     │       ├── agent-builder.tsx# Persona prompt, voice picker (18 voices), catalog manager
-    │       ├── voice-tester.tsx # Live audio tester with deployment guard
+    │       ├── voice-tester.tsx # Live audio tester with real-time delta streaming
     │       ├── bookings-crm.tsx # Appointments table & calendar invite trigger
-    │       └── call-history.tsx # Recorded conversation logs & transcripts
+    │       └── call-history.tsx # Recorded conversation logs, transcripts & audio player
     ├── scripts/
     │   └── update-assemblyai-agents.mjs # Batch agent instruction & tool updater
     └── lib/
-        ├── assemblyai.ts        # Token minting, tool registration, agent deploy
-        ├── audio.ts             # Browser PCM16 audio capture, playback & visualizer
+        ├── assemblyai.ts        # Token minting, tool registration, agent deploy & latency tuning
+        ├── audio.ts             # Browser PCM16 audio capture, playback & delta visualizer
         ├── calendar.ts          # RFC 5545 .ics generator & Gmail SMTP client
         ├── email-verify.ts      # Spoken email normalizer & DNS MX validator
         ├── db.ts                # Local SQLite persistence (better-sqlite3)

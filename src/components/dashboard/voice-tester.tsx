@@ -13,6 +13,7 @@ interface SimMessage {
   id: string;
   who: "user" | "agent";
   text: string;
+  isFinal?: boolean;
 }
 
 const ACCENT_COLORS = [
@@ -49,6 +50,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const timerStartRef = useRef<number>(0);
   const feedBottomRef = useRef<HTMLDivElement | null>(null);
   const emailCapturedRef = useRef<boolean>(false);
+  const sessionIdRef = useRef<string>("");
 
   useEffect(() => {
     if (messages.length > 1) {
@@ -79,10 +81,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   );
 
   const handleToggleCall = async () => {
-    if (!isDeployed) {
-      toast.error("Please deploy this agent to AssemblyAI in the AI Agent Builder before testing.");
-      return;
-    }
     if (callStatus === "live" || callStatus === "busy") {
       handleEndCall();
     } else {
@@ -91,10 +89,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   };
 
   const handleStartCall = async () => {
-    if (!isDeployed) {
-      toast.error("Please deploy this agent to AssemblyAI in the AI Agent Builder first.");
-      return;
-    }
     try {
       setCallStatus("busy");
       emailCapturedRef.current = false;
@@ -125,15 +119,33 @@ export function VoiceTester({ business }: VoiceTesterProps) {
             stopTimer();
           }
         },
+        onSessionId: (sid) => {
+          sessionIdRef.current = sid;
+        },
         onTranscript: (event) => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `${Date.now()}-${Math.random()}`,
-              who: event.who,
-              text: event.text,
-            },
-          ]);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            // If the last message is from the same speaker and was not finalized, update it in place!
+            if (last && last.who === event.who && !last.isFinal) {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...last,
+                text: event.text,
+                isFinal: event.isFinal ?? false,
+              };
+              return updated;
+            }
+            return [
+              ...prev,
+              {
+                id: `${Date.now()}-${Math.random()}`,
+                who: event.who,
+                text: event.text,
+                isFinal: event.isFinal ?? false,
+              },
+            ];
+          });
+
           if (event.who === "user") {
             if (event.text.includes("@") || event.text.toLowerCase().includes(" at ") && event.text.toLowerCase().includes(" dot ")) {
               emailCapturedRef.current = true;
@@ -201,7 +213,87 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     }
   };
 
+  const messagesRef = useRef<SimMessage[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const saveConversationRecord = async () => {
+    const msgs = messagesRef.current;
+    if (!msgs || msgs.length <= 1) return;
+
+    let callerName: string | null = null;
+    let callerEmail: string | null = null;
+    let isBooked = false;
+
+    for (const m of msgs) {
+      const lower = m.text.toLowerCase();
+      if (
+        lower.includes("confirmation code is") ||
+        lower.includes("scheduled your") ||
+        lower.includes("calendar invite") ||
+        lower.includes("booking code")
+      ) {
+        isBooked = true;
+      }
+      if (!callerEmail) {
+        const match = m.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (match) callerEmail = match[0];
+      }
+      if (!callerName && m.who === "user" && !m.text.includes("@")) {
+        const clean = m.text
+          .replace(/^(my name is|this is|i am|it's|it is)\s+/i, "")
+          .replace(/[?.!,]/g, "")
+          .trim();
+        if (
+          clean.length >= 2 &&
+          clean.length < 25 &&
+          !["yes", "no", "okay", "yeah", "sure", "hello", "hi", "thanks", "thank you"].includes(
+            clean.toLowerCase()
+          )
+        ) {
+          callerName = clean;
+        }
+      }
+    }
+
+    const elapsed = timerStartRef.current
+      ? Math.max(5, Math.floor((Date.now() - timerStartRef.current) / 1000))
+      : 30;
+
+    try {
+      await fetch("/api/conversations/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: sessionIdRef.current || `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          business_id: business.id,
+          caller_name: callerName || "Demo Caller",
+          caller_email: callerEmail || null,
+          started_at: new Date(Date.now() - elapsed * 1000).toISOString(),
+          ended_at: new Date().toISOString(),
+          duration_seconds: elapsed,
+          status: isBooked ? "booked" : "completed",
+          outcome: isBooked ? "appointment_scheduled" : "inquiry",
+          transcript: msgs.map((m) => ({ who: m.who, text: m.text })),
+          tool_calls: [],
+        }),
+      });
+    } catch (err) {
+      console.error("[VoiceTester] Failed to save conversation transcript:", err);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (messagesRef.current.length > 1) {
+        saveConversationRecord();
+      }
+    };
+  }, []);
+
   const handleEndCall = () => {
+    saveConversationRecord();
     if (voiceClientRef.current) {
       voiceClientRef.current.stop();
       voiceClientRef.current = null;
@@ -214,6 +306,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   };
 
   const handleReset = () => {
+    saveConversationRecord();
     handleEndCall();
     setShowEmailBar(false);
     setEmailError("");

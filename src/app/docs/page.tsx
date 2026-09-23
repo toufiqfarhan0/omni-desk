@@ -275,8 +275,8 @@ SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 
 # Optional — Gmail SMTP (for booking confirmation emails)
-GMAIL_USER=you@gmail.com
-GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_16_char_google_app_password
 
 # Optional — Force database mode
 DB_MODE=sqlite   # or: dual | supabase`}</div>
@@ -416,11 +416,15 @@ function ApiReferenceSection() {
         </div>
       ))}
 
-      <h2 className="doc-h2">Owner Portal APIs</h2>
+      <h2 className="doc-h2">Owner Portal & Management APIs</h2>
       {[
         { method: "GET", path: "/api/owner/businesses?ownerId=...", desc: "Lists all businesses belonging to a specific owner ID." },
+        { method: "POST", path: "/api/owner/businesses", desc: "Creates a new business and auto-provisions a dedicated AssemblyAI cloud voice agent." },
+        { method: "POST", path: "/api/owner/businesses/[id]/deploy", desc: "Deploys or updates the business configuration to AssemblyAI's API via PUT/POST." },
+        { method: "GET", path: "/api/owner/conversations/[id]/recording", desc: "Retrieves the signed AWS S3 URL for the call audio recording (.ogg) from AssemblyAI session artifacts." },
+        { method: "POST", path: "/api/conversations/save", desc: "Saves live call transcripts, outcomes, and session IDs to Supabase or SQLite." },
         { method: "GET", path: "/api/owner-stats", desc: "Returns aggregate booking and revenue stats for the dashboard." },
-        { method: "GET", path: "/api/token", desc: "Mints a short-lived AssemblyAI session token for the voice widget." },
+        { method: "GET", path: "/api/token?businessId=...", desc: "Mints a short-lived AssemblyAI session token for the voice widget or tester." },
         { method: "GET", path: "/api/config", desc: "Returns the current AssemblyAI agent ID and public config." },
       ].map((ep) => (
         <div key={ep.path} className="endpoint-row">
@@ -438,38 +442,50 @@ function ApiReferenceSection() {
 function IntegrationsSection() {
   return (
     <div>
-      <h1 className="doc-h1">Integrations</h1>
-      <p className="doc-lead">OmniDesk integrates with AssemblyAI for voice, Supabase for data, and Gmail for email delivery.</p>
+      <h1 className="doc-h1">Integrations & Voice Engine</h1>
+      <p className="doc-lead">OmniDesk integrates with AssemblyAI for voice, Supabase for cloud data, and Gmail for email delivery.</p>
 
-      <h2 className="doc-h2">AssemblyAI Voice Agent</h2>
-      <p className="doc-p">OmniDesk is built on top of the AssemblyAI Voice Agent API. You need to:</p>
+      <h2 className="doc-h2">AssemblyAI Voice Agent API</h2>
+      <p className="doc-p">OmniDesk is built on top of the AssemblyAI Voice Agent API with sub-300ms real-time audio processing:</p>
+      
       <div className="doc-step">
         <div className="step-num-circle">1</div>
         <div className="step-content" style={{ flex: 1 }}>
-          <p className="doc-p">Create an account at <a href="https://assemblyai.com" target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>assemblyai.com</a> and get your API key.</p>
-          <div className="doc-code">{`ASSEMBLYAI_API_KEY=your_api_key_here`}</div>
-        </div>
-      </div>
-      <div className="doc-step">
-        <div className="step-num-circle">2</div>
-        <div className="step-content" style={{ flex: 1 }}>
-          <p className="doc-p">In the AssemblyAI dashboard, create a Voice Agent. Configure it with the following HTTP tool URLs pointing to your deployed domain:</p>
-          <div className="doc-code">{`https://your-domain.com/api/tools/get_today
-https://your-domain.com/api/tools/get_services
-https://your-domain.com/api/tools/check_availability
-https://your-domain.com/api/tools/book_appointment`}</div>
-        </div>
-      </div>
-      <div className="doc-step">
-        <div className="step-num-circle">3</div>
-        <div className="step-content" style={{ flex: 1 }}>
-          <p className="doc-p">Copy your Agent ID and add it to your environment:</p>
-          <div className="doc-code">{`ASSEMBLYAI_AGENT_ID=agent_xxxxxxxxxxxxxxxx`}</div>
+          <p className="doc-p">Create an account at <a href="https://assemblyai.com" target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>assemblyai.com</a> and retrieve your API key.</p>
+          <div className="doc-code">{`NEXT_ASSEMBLYAI_API_KEY=your_api_key_here`}</div>
         </div>
       </div>
 
+      <h3 className="doc-h3">Universal-3.5 Pro Streaming & Ultra-Low Latency</h3>
+      <p className="doc-p">
+        OmniDesk runs on AssemblyAI&apos;s flagship <strong>Universal-3.5 Pro Realtime</strong> Speech-to-Text foundation model. Every agent deployed through OmniDesk automatically includes performance-tuned parameters:
+      </p>
+
+      <div className="doc-code">{`"input": {
+  "transcription_mode": "min_latency",       // Universal-3.5 Pro continuous stream, 0 buffer wait
+  "turn_detection": {
+    "vad_threshold": 0.5,                    // Voice activity detection threshold
+    "min_silence": 700,                      // 700ms silence ends user turn (prevents awkward pauses)
+    "max_silence": 2500,                     // Max pause cutoff window
+    "interrupt_response": true               // <48ms instant barge-in interruption
+  }
+}`}</div>
+
+      <h3 className="doc-h3">Pre-Loaded Knowledge Base & Zero Dead Air</h3>
+      <p className="doc-p">
+        Rather than making external HTTP tool calls just to fetch standard service pricing or operating hours, OmniDesk pre-compiles each business&apos;s full catalog directly into the agent&apos;s system prompt. When a caller asks <em>&quot;How much is a haircut?&quot;</em>, the agent answers instantly from memory in a single turn.
+      </p>
+      <p className="doc-p">
+        During background calendar lookups or bookings, the agent speaks natural verbal bridges (<em>&quot;Looking up our calendar right now...&quot;</em>, <em>&quot;Checking that email address now...&quot;</em>) so callers are never left in silence.
+      </p>
+
+      <h3 className="doc-h3">Call Audio Recording & Playback</h3>
+      <p className="doc-p">
+        AssemblyAI records every call session automatically in <span className="doc-inline-code">.ogg</span> format on AWS S3. OmniDesk stores the AssemblyAI <span className="doc-inline-code">session_id</span> with each conversation, and the Owner Dashboard provides an embedded HTML5 audio player and one-click audio downloads directly in the Call History modal.
+      </p>
+
       <h2 className="doc-h2">Gmail SMTP (Email Confirmations)</h2>
-      <p className="doc-p">OmniDesk uses Gmail's free SMTP server to send booking confirmation emails with .ics calendar attachments.</p>
+      <p className="doc-p">OmniDesk uses Gmail&apos;s free SMTP server to send booking confirmation emails with .ics calendar attachments.</p>
 
       <div className="doc-callout callout-warn">
         <div className="callout-title">App Password Required</div>
@@ -478,8 +494,8 @@ https://your-domain.com/api/tools/book_appointment`}</div>
         </p>
       </div>
 
-      <div className="doc-code">{`GMAIL_USER=you@gmail.com
-GMAIL_APP_PASSWORD=abcd efgh ijkl mnop   # 16-char app password`}</div>
+      <div className="doc-code">{`SMTP_USER=you@gmail.com
+SMTP_PASS=abcd efgh ijkl mnop   # 16-char app password`}</div>
 
       <h2 className="doc-h2">Supabase (Production Database)</h2>
       <p className="doc-p">For production, configure Supabase to store bookings, conversations, and owner accounts persistently in the cloud.</p>

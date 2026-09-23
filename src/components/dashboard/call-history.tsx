@@ -13,6 +13,41 @@ export function CallHistory({ business }: CallHistoryProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [isLoadingRecording, setIsLoadingRecording] = useState(false);
+
+  useEffect(() => {
+    if (!selectedConv || !modalOpen) {
+      setRecordingUrl(null);
+      setIsLoadingRecording(false);
+      return;
+    }
+    let isCancelled = false;
+    if (selectedConv.id && selectedConv.id.startsWith("sess_")) {
+      setIsLoadingRecording(true);
+      fetch(`/api/owner/conversations/${encodeURIComponent(selectedConv.id)}/recording`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (!isCancelled && data.ok && data.recording_url) {
+            setRecordingUrl(data.recording_url);
+          } else {
+            setRecordingUrl(null);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) setRecordingUrl(null);
+        })
+        .finally(() => {
+          if (!isCancelled) setIsLoadingRecording(false);
+        });
+    } else {
+      setRecordingUrl(null);
+      setIsLoadingRecording(false);
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedConv, modalOpen]);
 
   const fetchConversations = async () => {
     try {
@@ -181,6 +216,58 @@ export function CallHistory({ business }: CallHistoryProps) {
                 &times;
               </button>
             </div>
+
+            {/* Audio Recording Player */}
+            {(isLoadingRecording || recordingUrl) && (
+              <div
+                style={{
+                  marginBottom: "14px",
+                  padding: "12px 14px",
+                  background: "#f4f4f5",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "14px" }}>🎙️</span>
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>
+                      Call Audio Recording
+                    </span>
+                  </div>
+                  {recordingUrl && (
+                    <a
+                      href={recordingUrl}
+                      download={`call_${selectedConv.id}.ogg`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: "11px",
+                        color: "#2563eb",
+                        textDecoration: "underline",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Download Audio (.ogg)
+                    </a>
+                  )}
+                </div>
+                {isLoadingRecording ? (
+                  <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
+                    Loading AssemblyAI audio stream...
+                  </div>
+                ) : (
+                  <audio
+                    controls
+                    src={recordingUrl || undefined}
+                    style={{ width: "100%", height: "36px", outline: "none" }}
+                  />
+                )}
+              </div>
+            )}
 
             <div
               style={{
