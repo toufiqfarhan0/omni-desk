@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { mintAgentToken, getOrProvisionAgent } from "@/lib/assemblyai";
 import { getBusiness } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
