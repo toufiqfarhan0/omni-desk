@@ -34,7 +34,9 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    if (biz) {
+    if (biz?.assemblyai_agent_id?.trim()) {
+      agentId = biz.assemblyai_agent_id.trim();
+    } else if (biz) {
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
       agentId = process.env.AGENT_ID || "";

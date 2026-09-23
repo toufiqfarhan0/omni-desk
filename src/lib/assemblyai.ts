@@ -446,15 +446,10 @@ export async function getOrProvisionAgent(
 ): Promise<string> {
   const existingId = biz.assemblyai_agent_id?.trim();
 
-  // 1. If business already has an agent ID, check that it actually exists on AssemblyAI
+  // 1. If business already has an agent ID, trust and return it directly.
+  // Never wipe or re-provision an existing agent during routine token minting.
   if (existingId) {
-    const exists = await verifyAgentExists(existingId);
-    if (exists) {
-      return existingId;
-    }
-    console.warn(
-      `[AssemblyAI] Stored agent ${existingId} for business ${biz.id} (${biz.name}) was not found (404). Auto-provisioning a fresh agent...`
-    );
+    return existingId;
   }
 
   // 2. Auto-provision a new real agent on AssemblyAI
