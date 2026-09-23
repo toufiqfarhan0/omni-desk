@@ -7,10 +7,19 @@ export interface AgentProvisionResult {
   status_code?: number;
 }
 
+export function getApiKey(): string {
+  return (
+    process.env.NEXT_ASSEMBLYAI_API_KEY ||
+    process.env.ASSEMBLYAI_API_KEY ||
+    ""
+  ).trim();
+}
+
+
 export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
-  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("NEXT_ASSEMBLYAI_API_KEY is not configured in environment");
+    throw new Error("AssemblyAI API key is not configured in environment");
   }
 
   const res = await fetch(
@@ -59,7 +68,6 @@ export function buildAgentDefinition(
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : "") ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
     "https://omni-desk-rho.vercel.app"
   ).replace(/\/$/, "");
 
@@ -322,11 +330,11 @@ export async function deployOrUpdateAgent(
   biz: Business,
   publicBaseUrl?: string
 ): Promise<AgentProvisionResult> {
-  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
     return {
       ok: false,
-      error: "NEXT_ASSEMBLYAI_API_KEY is not set in environment",
+      error: "AssemblyAI API key is not configured in environment",
     };
   }
 
@@ -408,7 +416,7 @@ export async function deployOrUpdateAgent(
  * Checks whether an agent ID actually exists on AssemblyAI's cloud API.
  */
 export async function verifyAgentExists(agentId?: string | null): Promise<boolean> {
-  const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey || !agentId || !agentId.trim()) return false;
   try {
     const res = await fetch(

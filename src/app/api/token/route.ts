@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     if (biz) {
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
-      agentId = process.env.AGENT_ID || "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      agentId = process.env.AGENT_ID || "";
     }
 
     if (!agentId) {
