@@ -17,10 +17,14 @@ interface SimMessage {
 }
 
 const ACCENT_COLORS = [
-  { hex: "#18181b", label: "Black" },
-  { hex: "#7c3aed", label: "Purple" },
-  { hex: "#2563eb", label: "Blue" },
-  { hex: "#059669", label: "Emerald" },
+  { hex: "#18181b", label: "Onyx Black" },
+  { hex: "#7c3aed", label: "Electric Purple" },
+  { hex: "#2563eb", label: "Royal Blue" },
+  { hex: "#059669", label: "Emerald Green" },
+  { hex: "#e11d48", label: "Rose Coral" },
+  { hex: "#d97706", label: "Amber Flame" },
+  { hex: "#0891b2", label: "Cyan Ocean" },
+  { hex: "#4f46e5", label: "Indigo Velvet" },
 ];
 
 export function VoiceTester({ business }: VoiceTesterProps) {
@@ -31,12 +35,14 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const [agentLevel, setAgentLevel] = useState(0);
 
   // Widget customizer & live preview state
-  const [widgetTheme, setWidgetTheme] = useState<"dark" | "light">("dark");
+  const [widgetTheme, setWidgetTheme] = useState<"dark" | "light">("light");
   const [widgetAccent, setWidgetAccent] = useState("#18181b");
   const [widgetPos, setWidgetPos] = useState<"bottom-right" | "bottom-left">("bottom-right");
   const [widgetLabel, setWidgetLabel] = useState("Talk to Receptionist");
   const [embedTab, setEmbedTab] = useState<"script" | "react">("script");
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const isDark = widgetTheme === "dark";
 
   // Email input bar states
   const [showEmailBar, setShowEmailBar] = useState(false);
@@ -412,7 +418,7 @@ export default function App() {
         display: "grid",
         gridTemplateColumns: "1.05fr 0.95fr",
         gap: "24px",
-        alignItems: "stretch",
+        alignItems: "start",
       }}
     >
       {/* Backdrop when expanded to fullscreen */}
@@ -433,11 +439,13 @@ export default function App() {
       {/* LEFT: Live Simulator Box Matching the state-of-the-art Demo Widget */}
       <div
         style={{
-          background: "#ffffff",
-          border: "1px solid #e4e4e7",
+          background: isDark ? "#09090b" : "#ffffff",
+          border: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
           borderRadius: "20px",
           boxShadow: isExpanded
             ? "0 32px 64px -16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1)"
+            : isDark
+            ? "0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)"
             : "0 20px 40px -10px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)",
           overflow: "hidden",
           display: "flex",
@@ -459,9 +467,9 @@ export default function App() {
         {/* Widget Topbar — Matching user reference */}
         <div
           style={{
-            background: "#18181b",
-            color: "#ffffff",
-            borderBottom: "1px solid #27272a",
+            background: isDark ? "#18181b" : "#ffffff",
+            color: isDark ? "#ffffff" : "#09090b",
+            borderBottom: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
             padding: "13px 18px",
             display: "flex",
             alignItems: "center",
@@ -473,7 +481,7 @@ export default function App() {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
             {/* 3 vertical dots icon */}
-            <div style={{ color: "rgba(255,255,255,0.6)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <div style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#71717a", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="1" />
                 <circle cx="12" cy="5" r="1" />
@@ -487,11 +495,11 @@ export default function App() {
                 width: "28px",
                 height: "28px",
                 borderRadius: "50%",
-                background: "rgba(255,255,255,0.15)",
+                background: isDark ? "rgba(255,255,255,0.15)" : `${widgetAccent}18`,
                 display: "grid",
                 placeItems: "center",
                 flexShrink: 0,
-                color: "#ffffff",
+                color: isDark ? "#ffffff" : (widgetAccent === "#18181b" ? "#09090b" : widgetAccent),
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -503,16 +511,16 @@ export default function App() {
 
             {/* Title & Status */}
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ fontSize: "13.5px", fontWeight: 600, color: isDark ? "#ffffff" : "#09090b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {business.name}
               </div>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "rgba(255,255,255,0.75)" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: isDark ? "rgba(255,255,255,0.75)" : "#71717a" }}>
                 <span
                   style={{
                     width: "6px",
                     height: "6px",
                     borderRadius: "50%",
-                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : "rgba(255,255,255,0.4)",
+                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : (isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa"),
                   }}
                 />
                 <span>
@@ -535,10 +543,10 @@ export default function App() {
               onClick={() => setIsExpanded(!isExpanded)}
               title={isExpanded ? "Exit Fullscreen" : "Open Full"}
               style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.15)",
+                background: isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5",
+                border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
                 borderRadius: "7px",
-                color: "#ffffff",
+                color: isDark ? "#ffffff" : "#52525b",
                 width: "30px",
                 height: "30px",
                 cursor: "pointer",
@@ -546,8 +554,8 @@ export default function App() {
                 placeItems: "center",
                 transition: "all 0.15s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.2)" : "#e4e4e7")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5")}
             >
               {isExpanded ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -570,10 +578,10 @@ export default function App() {
               onClick={handleReset}
               title="Reset Conversation"
               style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.15)",
+                background: isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5",
+                border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
                 borderRadius: "7px",
-                color: "#ffffff",
+                color: isDark ? "#ffffff" : "#52525b",
                 width: "30px",
                 height: "30px",
                 cursor: "pointer",
@@ -581,8 +589,8 @@ export default function App() {
                 placeItems: "center",
                 transition: "all 0.15s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.2)" : "#e4e4e7")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -618,7 +626,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Conversation Feed — Crisp White Background */}
+        {/* Conversation Feed */}
         <div
           style={{
             flex: 1,
@@ -628,7 +636,7 @@ export default function App() {
             display: "flex",
             flexDirection: "column",
             gap: "12px",
-            background: "#ffffff",
+            background: isDark ? "#09090b" : "#ffffff",
           }}
         >
           {/* Placeholder in Gray Background */}
@@ -638,9 +646,9 @@ export default function App() {
                 margin: "auto",
                 textAlign: "center",
                 padding: "10px 18px",
-                background: "#f4f4f5",
-                border: "1px solid #e4e4e7",
-                color: "#52525b",
+                background: isDark ? "#18181b" : "#f4f4f5",
+                border: isDark ? "1px solid #27272a" : "1px solid #e4e4e7",
+                color: isDark ? "#a1a1aa" : "#52525b",
                 borderRadius: "12px",
                 fontSize: "12.5px",
                 fontWeight: 500,
@@ -655,7 +663,7 @@ export default function App() {
                   width: "6px",
                   height: "6px",
                   borderRadius: "50%",
-                  background: callStatus === "live" ? "#22c55e" : "#a1a1aa",
+                  background: callStatus === "live" ? "#22c55e" : widgetAccent,
                   display: "inline-block",
                 }}
               />
@@ -707,9 +715,10 @@ export default function App() {
                     borderRadius: m.who === "agent" ? "14px 14px 14px 2px" : "14px 14px 2px 14px",
                     fontSize: "13px",
                     lineHeight: "1.45",
-                    background: m.who === "agent" ? "#f4f4f5" : "#18181b",
-                    color: m.who === "agent" ? "#09090b" : "#ffffff",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                    background: m.who === "agent" ? (isDark ? "#18181b" : "#f4f4f5") : widgetAccent,
+                    color: m.who === "agent" ? (isDark ? "#fafafa" : "#09090b") : "#ffffff",
+                    border: m.who === "agent" && isDark ? "1px solid #27272a" : "none",
+                    boxShadow: m.who === "agent" ? "0 1px 2px rgba(0,0,0,0.04)" : `0 2px 8px ${widgetAccent}35`,
                   }}
                 >
                   {m.text}
@@ -814,12 +823,12 @@ export default function App() {
           </div>
         )}
 
-        {/* Bottom Call Bar (Matching Reference Image) */}
+        {/* Bottom Call Bar */}
         <div
           style={{
             padding: "12px 16px",
-            borderTop: "1px solid #e4e4e7",
-            background: "#fafafa",
+            borderTop: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
+            background: isDark ? "#121214" : "#fafafa",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -838,10 +847,17 @@ export default function App() {
               padding: "8px 16px",
               borderRadius: "10px",
               border: "none",
-              background: callStatus === "live" ? "#dc2626" : "#000000",
+              background: callStatus === "live"
+                ? "#dc2626"
+                : callStatus === "busy"
+                ? "#64748b"
+                : widgetAccent,
               color: "#ffffff",
               fontSize: "13px",
               fontWeight: 600,
+              boxShadow: callStatus === "live"
+                ? "0 4px 14px rgba(220, 38, 38, 0.35)"
+                : `0 4px 14px ${widgetAccent}40`,
               cursor: !isDeployed || callStatus === "busy" ? "not-allowed" : "pointer",
               transition: "all 0.15s ease",
             }}
@@ -864,7 +880,7 @@ export default function App() {
                     style={{
                       width: "2.5px",
                       height: `${Math.max(4, Math.min(14, Math.round(h * (0.35 + Math.max(userLevel, agentLevel) * 1.5))))}px`,
-                      background: "#000000",
+                      background: widgetAccent,
                       borderRadius: "1px",
                       transition: "height 0.12s ease",
                     }}
@@ -879,8 +895,9 @@ export default function App() {
                 fontWeight: 600,
                 padding: "3px 8px",
                 borderRadius: "6px",
-                background: callStatus === "live" ? "#000000" : "#f4f4f5",
-                color: callStatus === "live" ? "#ffffff" : "#71717a",
+                background: isDark ? "#18181b" : (callStatus === "live" ? "#000000" : "#f4f4f5"),
+                color: isDark ? "#ffffff" : (callStatus === "live" ? "#ffffff" : "#71717a"),
+                border: isDark ? "1px solid #27272a" : "none",
               }}
             >
               {timerText}
@@ -892,27 +909,43 @@ export default function App() {
         <div
           style={{
             padding: "10px 16px",
-            background: widgetTheme === "dark" ? "#09090b" : "#f4f4f5",
-            borderTop: `1px solid ${widgetTheme === "dark" ? "#27272a" : "#e4e4e7"}`,
+            background: isDark ? "#09090b" : "#f4f4f5",
+            borderTop: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
             display: "flex",
             alignItems: "center",
             justifyContent: widgetPos === "bottom-right" ? "flex-end" : "flex-start",
           }}
         >
-          <div
+          <button
+            type="button"
+            onClick={handleToggleCall}
+            disabled={!isDeployed || callStatus === "busy"}
+            title={callStatus === "live" ? "Click to end voice call" : "Click to launch test call"}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: "10px",
-              background: widgetTheme === "dark" ? "#18181b" : "#ffffff",
-              color: widgetTheme === "dark" ? "#fafafa" : "#09090b",
-              border: `1px solid ${widgetTheme === "dark" ? "#27272a" : "#e4e4e7"}`,
+              background: isDark ? "#18181b" : "#ffffff",
+              color: isDark ? "#fafafa" : "#09090b",
+              border: `1.5px solid ${widgetAccent === "#18181b" ? (isDark ? "#3f3f46" : "#e4e4e7") : widgetAccent}`,
               padding: "7px 16px",
               borderRadius: "9999px",
               fontSize: "12.5px",
               fontWeight: 600,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              boxShadow: widgetAccent === "#18181b"
+                ? "0 4px 12px rgba(0,0,0,0.12)"
+                : `0 4px 14px ${widgetAccent}35`,
+              cursor: !isDeployed || callStatus === "busy" ? "not-allowed" : "pointer",
               userSelect: "none",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              if (isDeployed && callStatus !== "busy") {
+                e.currentTarget.style.transform = "translateY(-1px) scale(1.02)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) scale(1)";
             }}
           >
             <span
@@ -920,13 +953,14 @@ export default function App() {
                 width: "8px",
                 height: "8px",
                 borderRadius: "50%",
-                background: callStatus === "live" ? "#ef4444" : (widgetAccent === "#18181b" ? "#10b981" : widgetAccent),
-                boxShadow: `0 0 8px ${callStatus === "live" ? "#ef4444" : (widgetAccent === "#18181b" ? "#10b981" : widgetAccent)}`,
+                background: callStatus === "live" ? "#ef4444" : widgetAccent,
+                boxShadow: `0 0 8px ${callStatus === "live" ? "#ef4444" : widgetAccent}`,
+                display: "inline-block",
               }}
             />
-            <span>{widgetLabel || "Talk to Receptionist"}</span>
-            <span style={{ fontSize: "11px", opacity: 0.6 }}>▲</span>
-          </div>
+            <span>{callStatus === "live" ? "End Call (Live)" : (widgetLabel || "Talk to Receptionist")}</span>
+            <span style={{ fontSize: "11px", opacity: 0.6 }}>{callStatus === "live" ? "▼" : "▲"}</span>
+          </button>
         </div>
       </div>
 
@@ -940,8 +974,7 @@ export default function App() {
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
           display: "flex",
           flexDirection: "column",
-          minHeight: "640px",
-          height: "100%",
+          minHeight: "680px",
           boxSizing: "border-box",
         }}
       >
@@ -1007,28 +1040,92 @@ export default function App() {
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "6px" }}>
-              Accent Color:
+          <div style={{ flex: "1 1 100%" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Accent Color:</span>
+              <span style={{ fontSize: "11px", fontFamily: "var(--mono, monospace)", color: "var(--text)", fontWeight: 500 }}>
+                {widgetAccent}
+              </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {ACCENT_COLORS.map((c) => (
-                <div
-                  key={c.hex}
-                  onClick={() => setWidgetAccent(c.hex)}
-                  title={c.label}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              {ACCENT_COLORS.map((c) => {
+                const isSelected = widgetAccent.toLowerCase() === c.hex.toLowerCase();
+                return (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    onClick={() => setWidgetAccent(c.hex)}
+                    title={c.label}
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      background: c.hex,
+                      border: isSelected ? "2px solid #ffffff" : "1px solid rgba(0,0,0,0.15)",
+                      boxShadow: isSelected ? `0 0 0 2px ${c.hex}` : "none",
+                      cursor: "pointer",
+                      transform: isSelected ? "scale(1.15)" : "scale(1)",
+                      transition: "all 0.15s ease",
+                      padding: 0,
+                    }}
+                  />
+                );
+              })}
+
+              {/* Custom Color Picker Swatch & Hex input */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginLeft: "4px", paddingLeft: "8px", borderLeft: "1px solid var(--border)" }}>
+                <label
+                  title="Pick your own custom color"
                   style={{
-                    width: "22px",
-                    height: "22px",
+                    position: "relative",
+                    width: "24px",
+                    height: "24px",
                     borderRadius: "50%",
-                    background: c.hex,
+                    background: widgetAccent,
+                    border: "2px solid #ffffff",
+                    boxShadow: "0 0 0 1.5px var(--border)",
                     cursor: "pointer",
-                    boxShadow: widgetAccent === c.hex ? "0 0 0 2px #000000" : "0 0 0 1px var(--border)",
-                    transform: widgetAccent === c.hex ? "scale(1.18)" : "scale(1)",
-                    transition: "all 0.15s ease",
+                    display: "inline-block",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                  }}
+                >
+                  <input
+                    type="color"
+                    value={widgetAccent.startsWith("#") && widgetAccent.length === 7 ? widgetAccent : "#7c3aed"}
+                    onChange={(e) => setWidgetAccent(e.target.value)}
+                    style={{
+                      position: "absolute",
+                      top: "-50%",
+                      left: "-50%",
+                      width: "200%",
+                      height: "200%",
+                      opacity: 0,
+                      cursor: "pointer",
+                    }}
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={widgetAccent}
+                  onChange={(e) => setWidgetAccent(e.target.value)}
+                  placeholder="#7c3aed"
+                  maxLength={7}
+                  style={{
+                    width: "72px",
+                    fontSize: "11px",
+                    fontFamily: "var(--mono, monospace)",
+                    fontWeight: 600,
+                    padding: "4px 6px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border)",
+                    background: "#ffffff",
+                    color: "var(--text)",
+                    outline: "none",
+                    textTransform: "uppercase",
                   }}
                 />
-              ))}
+              </div>
             </div>
           </div>
 

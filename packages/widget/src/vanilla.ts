@@ -18,7 +18,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     host,
     businessId = "biz_demo_dental",
     agentId: propAgentId,
-    theme = "dark",
+    theme = "light",
     position = "bottom-right",
     label = "Talk to Receptionist",
     accent = "emerald",
@@ -118,11 +118,11 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>
         </svg>
       </div>
-      <div style="display: flex; flexDirection: column; min-width: 0;">
+      <div style="display: flex; flex-direction: column; min-width: 0;">
         <div id="omnidesk-biz-title" style="font-size: 13.5px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           ${propBusinessName || "OmniDesk Hair Salon & Studio"}
         </div>
-        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.75);">
+        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.75); white-space: nowrap;">
           <span id="omnidesk-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); display: inline-block;"></span>
           <span id="omnidesk-status-text">Idle · Ready</span>
         </div>

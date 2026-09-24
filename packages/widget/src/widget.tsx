@@ -18,7 +18,7 @@ export function OmniDeskWidget({
   host = "",
   businessId = "biz_demo_dental",
   agentId: propAgentId,
-  theme = "dark",
+  theme = "light",
   position = "bottom-right",
   label = "Talk to Receptionist",
   accent = "emerald",
