@@ -104,11 +104,25 @@ export function CallHistory({ business }: CallHistoryProps) {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "32px" }}>
-                  Loading call history...
-                </td>
-              </tr>
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <tr key={i}>
+                    {[1, 2, 3, 4, 5, 6].map((j) => (
+                      <td key={j} style={{ padding: "14px" }}>
+                        <div
+                          className="skeleton-shimmer"
+                          style={{
+                            height: "13px",
+                            borderRadius: "4px",
+                            width: j === 1 ? "90px" : j === 2 ? "130px" : j === 3 ? "100px" : j === 4 ? "50px" : "80px",
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+
             ) : conversations.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: "32px" }}>
@@ -233,7 +247,6 @@ export function CallHistory({ business }: CallHistoryProps) {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontSize: "14px" }}>🎙️</span>
                     <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text)" }}>
                       Call Audio Recording
                     </span>
@@ -324,3 +337,4 @@ export function CallHistory({ business }: CallHistoryProps) {
     </div>
   );
 }
+

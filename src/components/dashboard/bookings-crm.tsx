@@ -175,11 +175,25 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "32px" }}>
-                  Loading customer bookings...
-                </td>
-              </tr>
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <tr key={i}>
+                    {[1, 2, 3, 4, 5, 6, 7].map((j) => (
+                      <td key={j} style={{ padding: "14px" }}>
+                        <div
+                          className="skeleton-shimmer"
+                          style={{
+                            height: "13px",
+                            borderRadius: "4px",
+                            width: j === 1 ? "80px" : j === 2 ? "120px" : j === 3 ? "90px" : "70px",
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+
             ) : bookings.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: "center", color: "var(--text-muted)", padding: "32px" }}>

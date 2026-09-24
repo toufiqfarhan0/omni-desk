@@ -270,9 +270,47 @@ export default function DashboardPage() {
         {/* Main Workspace */}
         <main className="dash-container">
           {isLoading ? (
-            <div style={{ display: "flex", height: "200px", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-              Loading tenant workspace...
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "1260px", margin: "0 auto", width: "100%" }}>
+              {/* Skeleton header */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div className="skeleton-shimmer" style={{ width: "200px", height: "16px", borderRadius: "5px" }} />
+                <div className="skeleton-shimmer" style={{ width: "320px", height: "12px", borderRadius: "4px" }} />
+              </div>
+              {/* Skeleton two-col layout */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px" }}>
+                <div style={{ background: "#ffffff", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "24px", display: "flex", flexDirection: "column", gap: "18px" }}>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                      <div className="skeleton-shimmer" style={{ width: "90px", height: "11px", borderRadius: "3px" }} />
+                      <div className="skeleton-shimmer" style={{ width: "100%", height: "40px", borderRadius: "8px" }} />
+                    </div>
+                  ))}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                    <div className="skeleton-shimmer" style={{ height: "40px", borderRadius: "8px" }} />
+                    <div className="skeleton-shimmer" style={{ height: "40px", borderRadius: "8px" }} />
+                  </div>
+                  <div className="skeleton-shimmer" style={{ width: "100%", height: "90px", borderRadius: "8px" }} />
+                </div>
+                <div style={{ background: "#ffffff", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div className="skeleton-shimmer" style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
+                    <div>
+                      <div className="skeleton-shimmer" style={{ width: "100px", height: "13px", borderRadius: "4px", marginBottom: "6px" }} />
+                      <div className="skeleton-shimmer" style={{ width: "70px", height: "20px", borderRadius: "6px" }} />
+                    </div>
+                  </div>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="skeleton-shimmer" style={{ width: "100%", height: "36px", borderRadius: "8px" }} />
+                  ))}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="skeleton-shimmer" style={{ height: "26px", borderRadius: "6px" }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+
           ) : !selectedBusiness ? (
             <div style={{ display: "flex", height: "200px", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "13px" }}>
               No business tenant found. Click + New Business to create one.

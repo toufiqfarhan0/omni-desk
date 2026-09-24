@@ -6,7 +6,23 @@
 [![Next.js 16](https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=flat&logo=next.js)](https://nextjs.org)
 [![React 19](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev)
 
+---
+
+**Quick Links:**&nbsp;
+[Live Demos](#live-external-client-deployments) &nbsp;·&nbsp;
+[npm SDK](#embeddable-voice-widget--npm-package-omnidesk-voice) &nbsp;·&nbsp;
+[Architecture & Pipeline](#architecture--pipeline) &nbsp;·&nbsp;
+[Key Capabilities](#key-capabilities) &nbsp;·&nbsp;
+[Autonomous Tools](#step-3-server-side-autonomous-tool-execution--pre-loaded-knowledge) &nbsp;·&nbsp;
+[Widget Customizer](#1-react--nextjs-installation) &nbsp;·&nbsp;
+[Database Modes](#database-modes-cloud-vs-local) &nbsp;·&nbsp;
+[Quick Start](#quick-setup-guide)
+
+
+---
+
 OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time bidirectional 16kHz Web Audio streaming with deterministic server-side webhook tools to execute live calendar checks, appointment bookings, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
+
 
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
 - **npm Package**: [`omnidesk-voice@0.1.4`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
@@ -93,6 +109,63 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 
 ---
 
+## Architecture & Pipeline
+
+### End-to-End System Flow
+
+```mermaid
+flowchart TD
+    subgraph SG1["1. Client Audio & Webhook Engine"]
+        A1["Caller / Web Visitor\n(Mic + Speaker)"]
+        A2["Business Owner\n(Owner Dashboard /dashboard)"]
+        A3["OmniDesk Widget\n&lt;VoiceWidget /&gt; · npm SDK · CDN Embed"]
+        A4["/api/token\nMints short-lived session token"]
+        A5["Next.js Frontend\n(React 19 / App Router)"]
+        A1 -->|"(1) Request Session Token"| A4
+        A4 -->|"Token Response"| A3
+        A2 -->|"Manage Prompts / View Bookings"| A5
+        A3 -->|"Floating Voice UI"| A5
+    end
+
+    subgraph SG2["2. AssemblyAI Universal-3.5 Engine"]
+        B1["Universal-3.5 Pro STT\n(min_latency · 700ms turn)"]
+        B2["LLM Reasoning Engine\n(System Prompt + Tool Calls)"]
+        B3["Voice Synthesis\n(ElevenLabs / Cartesia TTS)"]
+        B1 -->|"Transcribed Text"| B2
+        B2 -->|"Agent Speech"| B3
+    end
+
+    subgraph SG3["3. Next.js Autonomous Webhook Tools"]
+        C1["/tools/get_today\nCalendar anchor · open days"]
+        C2["/tools/check_availability\nSlot engine · operating hours"]
+        C3["/tools/verify_customer_email\nSpoken→normalized · DNS/MX check"]
+        C4["/tools/book_appointment\nDB commit · 6-char confirm code"]
+        C5["/tools/send_confirmation\nRFC 5545 .ics · Gmail SMTP"]
+        C1 & C2 & C3 & C4 & C5
+    end
+
+    subgraph SG4["4. Multi-Tenant Adaptive Database"]
+        D1["PRODUCTION\nSupabase PostgreSQL\n(Cloud · Multi-Region)"]
+        D2["LOCAL / EVALUATION\nSQLite — data/omnidesk.db\n(Zero-Setup · Pre-Seeded)"]
+        D1 & D2
+    end
+
+    subgraph SG5["5. Real-Time Event Dispatch & Calendar Sync"]
+        E1["/api/events SSE\nLive Dashboard Feed"]
+        E2["S3 Audio Recording\n.ogg Playback"]
+        E3["Calendar Invite\nRFC 5545 .ics → Google / Apple / Outlook"]
+        E1 & E2 & E3
+    end
+
+    A3 -->|"(2) 16kHz PCM Bidirectional\nWebSocket Stream"| B1
+    B2 -->|"(3) Function Webhook POST\n/tools/[businessId]/..."| SG3
+    SG3 -->|"(4) Reads / Writes\nbusinesses · agent_id\nbookings · conversations"| SG4
+    SG4 -->|"(5) SSE + Audio + Email Dispatch"| SG5
+    SG5 -->|"(6) Live Updates"| A5
+```
+
+---
+
 ## How OmniDesk Works (Step-by-Step Flow)
 
 ```text
@@ -100,6 +173,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
                                                                         │
 [6. Dashboard & Audio Recording] <── [5. Calendar Sync (.ics)] <── [4. Autonomous Webhook Tools]
 ```
+
 
 ### Step 1: Session Initiation & Automatic Cloud Provisioning
 1. The user clicks **"Start Voice Call"** on `/demo/salon`, via the embeddable `<VoiceWidget />`, or inside the Dashboard.

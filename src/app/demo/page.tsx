@@ -872,7 +872,7 @@ export default function DemoPage() {
 
                 {emailError && (
                   <div style={{ fontSize: "11.5px", color: "#dc2626", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span>⚠️</span> {emailError}
+                    {emailError}
                   </div>
                 )}
                 {emailSuccess && (
@@ -958,3 +958,4 @@ export default function DemoPage() {
     </div>
   );
 }
+

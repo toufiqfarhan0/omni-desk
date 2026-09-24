@@ -786,7 +786,7 @@ export function VoiceWidget({
 
                 {emailError && (
                   <div style={{ fontSize: "11px", color: "#ef4444", fontWeight: 500 }}>
-                    ⚠️ {emailError}
+                    {emailError}
                   </div>
                 )}
                 {emailSuccess && (
@@ -881,3 +881,4 @@ export function VoiceWidget({
 
 // Re-export OmniDeskWidget as alias for VoiceWidget
 export const OmniDeskWidget = VoiceWidget;
+

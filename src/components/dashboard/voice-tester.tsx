@@ -812,7 +812,7 @@ export default function App() {
 
             {emailError && (
               <div style={{ fontSize: "11px", color: "#ef4444", fontWeight: 500 }}>
-                ⚠️ {emailError}
+                {emailError}
               </div>
             )}
             {emailSuccess && (
@@ -1364,3 +1364,4 @@ export default function App() {
     </div>
   );
 }
+

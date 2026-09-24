@@ -563,7 +563,7 @@ export function AgentBuilder({
               )}
             </div>
             <p style={{ ...cs.hint, marginTop: "6px" }}>
-              🔒 <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying any environment variables.
+              <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying any environment variables.
             </p>
           </div>
 
@@ -844,3 +844,4 @@ export function AgentBuilder({
     </div>
   );
 }
+
