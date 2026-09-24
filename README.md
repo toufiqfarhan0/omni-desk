@@ -5,6 +5,7 @@
 [![AssemblyAI](https://img.shields.io/badge/Powered%20by-AssemblyAI%20Voice%20Agents-blueviolet?style=flat)](https://www.assemblyai.com)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=flat&logo=next.js)](https://nextjs.org)
 [![React 19](https://img.shields.io/badge/React-19-61dafb?style=flat&logo=react)](https://react.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 
 ---
 
@@ -592,4 +593,10 @@ pnpm build
 
 ## License
 
-MIT License.
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
+
+Copyright (c) 2026 [toufiqfarhan0](https://github.com/toufiqfarhan0)
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full details.
+
+> Submissions must be original and MIT-compliant per [lablab.ai participation terms](https://lablab.ai/terms-of-use#16-participation-terms).
