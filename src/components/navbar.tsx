@@ -25,10 +25,22 @@ export function Navbar({ activeSection, className = "", onOpenAuthModal }: Navba
   useEffect(() => {
     const syncUser = () => {
       if (typeof window === "undefined") return;
-      const id = localStorage.getItem("omnidesk_owner_id");
+      let id = localStorage.getItem("omnidesk_owner_id");
       const email = localStorage.getItem("omnidesk_owner_email");
       const name = localStorage.getItem("omnidesk_owner_name");
+      if (!id && typeof document !== "undefined") {
+        const match = document.cookie.match(/(?:^|;\s*)omnidesk_session=([^;]+)/);
+        if (match && match[1]) {
+          id = decodeURIComponent(match[1]);
+          localStorage.setItem("omnidesk_owner_id", id);
+          if (!email) localStorage.setItem("omnidesk_owner_email", id === "owner_demo" ? "demo@omnidesk.ai" : "operator@omnidesk.ai");
+          if (!name) localStorage.setItem("omnidesk_owner_name", id === "owner_demo" ? "OmniDesk Operator" : "Practice Operator");
+        }
+      }
       if (id) {
+        if (typeof document !== "undefined" && !document.cookie.includes("omnidesk_session=")) {
+          document.cookie = `omnidesk_session=${encodeURIComponent(id)}; path=/; max-age=604800; SameSite=Lax`;
+        }
         setCurrentUser({
           id,
           email:
@@ -57,6 +69,7 @@ export function Navbar({ activeSection, className = "", onOpenAuthModal }: Navba
       localStorage.removeItem("omnidesk_owner_email");
       localStorage.removeItem("omnidesk_owner_name");
       localStorage.removeItem("omnidesk_selected_biz_id");
+      window.dispatchEvent(new Event("storage"));
     }
     setCurrentUser(null);
     toast.success("Signed out successfully.");

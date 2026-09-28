@@ -73,6 +73,14 @@ export default function DashboardPage() {
           }
         }
 
+        // Check if tab query param is set
+        if (typeof window !== "undefined") {
+          const tabParam = new URLSearchParams(window.location.search).get("tab") as TabId | null;
+          if (tabParam && ["builder", "simulator", "bookings", "conversations"].includes(tabParam)) {
+            setActiveTab(tabParam);
+          }
+        }
+
         // Client-side guard: if no owner logged in, redirect to home with auth modal
         if (!savedOwnerId) {
           setIsLoading(false);

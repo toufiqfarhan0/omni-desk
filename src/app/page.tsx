@@ -9,28 +9,78 @@ import { toast } from "sonner";
 
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [modalRedirect, setModalRedirect] = useState("/dashboard");
 
-  // If redirected with ?auth=required from dashboard guard, open auth modal with toast
+  const getAuthenticatedOwnerId = () => {
+    if (typeof window === "undefined") return null;
+    let id = localStorage.getItem("omnidesk_owner_id");
+    if (!id && typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|;\s*)omnidesk_session=([^;]+)/);
+      if (match && match[1]) {
+        id = decodeURIComponent(match[1]);
+        localStorage.setItem("omnidesk_owner_id", id);
+        if (!localStorage.getItem("omnidesk_owner_email")) {
+          localStorage.setItem("omnidesk_owner_email", id === "owner_demo" ? "demo@omnidesk.ai" : "operator@omnidesk.ai");
+        }
+        if (!localStorage.getItem("omnidesk_owner_name")) {
+          localStorage.setItem("omnidesk_owner_name", id === "owner_demo" ? "OmniDesk Operator" : "Practice Operator");
+        }
+      }
+    } else if (id && typeof document !== "undefined" && !document.cookie.includes("omnidesk_session=")) {
+      document.cookie = `omnidesk_session=${encodeURIComponent(id)}; path=/; max-age=604800; SameSite=Lax`;
+    }
+    return id;
+  };
+
+  // If redirected with ?auth=required from dashboard guard, open auth modal with toast only if unauthenticated
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("auth") === "required") {
-        toast.info("You need to login to access the owner portal.");
-        setAuthModalOpen(true);
+        const authedId = getAuthenticatedOwnerId();
+        if (!authedId) {
+          toast.info("You need to login to access the owner portal.");
+          setAuthModalOpen(true);
+        } else {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
       }
     }
   }, []);
 
   const handleOpenOwnerPortal = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
+    const authedId = getAuthenticatedOwnerId();
+    if (authedId) {
+      window.location.href = "/dashboard";
+      return;
+    }
+    setModalRedirect("/dashboard");
     toast.info("You need to login to access the owner portal.");
+    setAuthModalOpen(true);
+  };
+
+  const handleBuildCustomWorkflow = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    const authedId = getAuthenticatedOwnerId();
+    if (authedId) {
+      window.location.href = "/dashboard?tab=builder";
+      return;
+    }
+    setModalRedirect("/dashboard?tab=builder");
+    toast.info("You need to login to access the owner portal.");
+    setAuthModalOpen(true);
+  };
+
+  const handleOpenAuthFromNav = () => {
+    setModalRedirect("/dashboard");
     setAuthModalOpen(true);
   };
 
   return (
     <div style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font)", minHeight: "100vh", fontSize: "15px", lineHeight: "1.6", letterSpacing: "-0.011em", WebkitFontSmoothing: "antialiased" }}>
       {/* SHARED REUSABLE NAVBAR */}
-      <Navbar onOpenAuthModal={handleOpenOwnerPortal} />
+      <Navbar onOpenAuthModal={handleOpenAuthFromNav} />
 
       {/* HERO */}
       <section style={{ padding: "80px 0 64px", textAlign: "center" }}>
@@ -38,7 +88,7 @@ export default function LandingPage() {
           <div style={{ maxWidth: "820px", margin: "0 auto" }}>
             <div className="eyebrow-badge">
               <span className="live-dot" />
-              AssemblyAI Voice Agent API &middot; Server-Side HTTP Tools
+              AssemblyAI Voice Agent API
             </div>
             <h1 style={{ margin: "0 0 20px", fontSize: "52px", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.035em", color: "var(--text)" }}>
               The Voice Receptionist That Actually Books Appointments.
@@ -243,7 +293,7 @@ export default function LandingPage() {
               </div>
               <div className="featurette-cta-row">
                 <a href="/demo" className="btn btn-primary featurette-btn">Try Demos &rarr;</a>
-                <button type="button" onClick={handleOpenOwnerPortal} className="btn btn-outline featurette-btn" style={{ cursor: "pointer" }}>
+                <button type="button" onClick={handleBuildCustomWorkflow} className="btn btn-outline featurette-btn" style={{ cursor: "pointer" }}>
                   Build Custom Workflow &rarr;
                 </button>
               </div>
@@ -570,7 +620,7 @@ export default function LandingPage() {
         onClose={() => setAuthModalOpen(false)}
         onSuccess={() => {
           setAuthModalOpen(false);
-          window.location.href = "/dashboard";
+          window.location.href = modalRedirect || "/dashboard";
         }}
       />
     </div>
