@@ -311,6 +311,7 @@ Instructions:
     },
     input: {
       transcription_mode: "min_latency",
+      speech_model: "universal-3-6-pro",
       turn_detection: {
         vad_threshold: 0.5,
         min_silence: 700,
@@ -423,7 +424,7 @@ export function clearAgentVerificationCache(agentId?: string) {
 }
 
 /**
- * Checks whether an agent ID actually exists on AssemblyAI's cloud API.
+ * Checks whether an agent ID actually exists on AssemblyAI's cloud API for the current API key.
  * Uses a 5-minute memory cache to avoid unnecessary network latency.
  */
 export async function verifyAgentExists(
@@ -434,17 +435,9 @@ export async function verifyAgentExists(
   if (!apiKey || !agentId || !agentId.trim()) return false;
   const cleanId = agentId.trim();
 
-  // Known verified active agents on AssemblyAI are always recognized
-  if (
-    cleanId === "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" ||
-    cleanId === "agent_8a409193fbde43acb6db72541947dc7b" ||
-    cleanId === "agent_ca22cb88c91049fe8c1c52c273c723ac"
-  ) {
-    return true;
-  }
-
+  const cacheKey = `${apiKey.slice(-8)}_${cleanId}`;
   if (!forceRefresh) {
-    const cached = verifiedAgentCache.get(cleanId);
+    const cached = verifiedAgentCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
       return cached.valid;
     }
@@ -460,7 +453,7 @@ export async function verifyAgentExists(
       }
     );
     const valid = res.status === 200;
-    verifiedAgentCache.set(cleanId, { valid, timestamp: Date.now() });
+    verifiedAgentCache.set(cacheKey, { valid, timestamp: Date.now() });
     return valid;
   } catch {
     return false;
@@ -469,8 +462,8 @@ export async function verifyAgentExists(
 
 /**
  * Dynamically resolves a verified, working AssemblyAI Voice Agent ID for a business.
- * 1. If the business already has an agent_id in the DB, verifies it exists on AssemblyAI.
- * 2. If it does not exist (404/deleted), it automatically re-provisions a real agent or
+ * 1. If the business already has an agent_id in the DB, verifies it exists on AssemblyAI under this account.
+ * 2. If it does not exist (404 / new account / deleted), it automatically provisions a real agent or
  *    links to a verified active fallback agent and persists the working ID to the database.
  * 3. Guarantees that callers NEVER encounter an 'agent_not_found' error.
  */
@@ -480,24 +473,15 @@ export async function getOrProvisionAgent(
 ): Promise<string> {
   const existingId = biz.assemblyai_agent_id?.trim();
 
-  // 1. If business has an agent ID, verify that it is actually active and healthy on AssemblyAI
+  // 1. If business has an agent ID, verify that it is actually active and healthy on this AssemblyAI account
   if (existingId) {
     const isLive = await verifyAgentExists(existingId);
     if (isLive) {
       return existingId;
     }
     console.warn(
-      `[AssemblyAI Self-Healing] Stored agent '${existingId}' for business '${biz.id}' returned 404 or does not exist on AssemblyAI. Auto-repairing...`
+      `[AssemblyAI Self-Healing] Stored agent '${existingId}' for business '${biz.id}' does not exist on this AssemblyAI account. Auto-provisioning...`
     );
-  }
-
-  // Guaranteed fallback for standard demo business
-  if (biz.id === "biz_demo_dental") {
-    try {
-      const { updateBusiness } = await import("@/lib/db");
-      await updateBusiness("biz_demo_dental", { assemblyai_agent_id: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" });
-    } catch {}
-    return "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
   }
 
   // 2. Try auto-deploying / provisioning a new real agent on AssemblyAI for this business

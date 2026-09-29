@@ -90,7 +90,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 |                              ASSEMBLYAI CLOUD (Voice Agent Engine)                               |
 |                                                                                                  |
 |   +-----------------------------+       +-----------------------+       +----------------------+ |
-|   | Universal-3.5 Pro Streaming | ----> | LLM Reasoning Engine  | ----> | ElevenLabs / Cartesia| |
+|   | Universal-3.6 Pro Streaming | ----> | LLM Reasoning Engine  | ----> | ElevenLabs / Cartesia| |
 |   | (min_latency / 700ms Turn)  |       | (Prompt + Tool Calls) |       | (Text to Voice)      | |
 |   +-----------------------------+       +-----------------------+       +----------------------+ |
 |                                           |                                                      |
@@ -156,8 +156,8 @@ flowchart TD
         A3 -->|"Floating Voice UI"| A5
     end
 
-    subgraph SG2["2. AssemblyAI Universal-3.5 Engine"]
-        B1["Universal-3.5 Pro STT\n(min_latency · 700ms turn)"]
+    subgraph SG2["2. AssemblyAI Universal-3.6 Engine"]
+        B1["Universal-3.6 Pro STT\n(min_latency · 700ms turn)"]
         B2["LLM Reasoning Engine\n(System Prompt + Tool Calls)"]
         B3["Voice Synthesis\n(ElevenLabs / Cartesia TTS)"]
         B1 -->|"Transcribed Text"| B2
@@ -214,7 +214,7 @@ flowchart TD
 ### Step 2: Bidirectional Audio Streaming & Real-Time Voice Processing
 1. The client browser opens a direct WebSocket to AssemblyAI (`wss://agents.assemblyai.com/v1/stream?token=...`).
 2. The browser's Web Audio API captures microphone input, resamples it to 16-bit linear PCM at 24kHz, and streams audio packets.
-3. AssemblyAI's **Universal-3.5 Pro Streaming Speech-to-Text (STT)** transcribes spoken words in real time with `input.transcription_mode: "min_latency"`, eliminating buffer waits.
+3. AssemblyAI's **Universal-3.6 Pro Streaming Speech-to-Text (STT)** transcribes spoken words in real time with `input.speech_model: "universal-3-6-pro"` and `input.transcription_mode: "min_latency"`, eliminating buffer waits.
 4. **Tuned Turn Detection**: Configured with `vad_threshold: 0.5`, `min_silence: 700ms`, and `max_silence: 2500ms`, allowing human-speed conversation turnarounds (<700ms).
 5. **Real-Time Word Streaming**: Client receives `transcript.agent.delta` and displays message bubbles word-by-word simultaneously with speech playback (zero visual delay).
 6. **Instant Barge-In / Interruption**: If the caller speaks while the agent is talking, playback halts in under 48ms and the agent immediately pivots to the caller's new intent.
@@ -287,7 +287,7 @@ To ensure multi-tenant security, privacy, and zero risk of accidental overwrites
 ## Key Capabilities
 
 ### 1. AssemblyAI Voice Agent Integration
-- **Universal-3.5 Pro Realtime STT**: Powered by AssemblyAI's flagship Universal-3.5 Pro speech foundation model with `transcription_mode: "min_latency"` for instantaneous audio transcription.
+- **Universal-3.6 Pro Realtime STT**: Powered by AssemblyAI's flagship Universal-3.6 Pro speech foundation model with `speech_model: "universal-3-6-pro"` and `transcription_mode: "min_latency"` for instantaneous audio transcription across 32 languages with native code-switching.
 - **Real-Time Bidirectional Streaming**: Ultra-low-latency 24kHz/16kHz PCM audio streaming directly between the caller's browser and AssemblyAI via WebSockets and AudioWorklet ring buffers.
 - **Tuned Human Turn Detection**: Tuned VAD thresholds (0.5), 700ms silence detection, and 2500ms max silence for natural conversational cadence (<700ms handoffs).
 - **Simultaneous Word Streaming**: Instant visual display using `transcript.agent.delta` — text bubbles appear word-by-word simultaneously with speech audio.
@@ -387,8 +387,9 @@ Configure the variables:
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
 # [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
-# Provide an existing AssemblyAI Voice Agent ID so calls work immediately.
-AGENT_ID=your_assemblyai_agent_id_here
+# Option A (Instant Zero-Setup): Use the pre-configured Universal-3.6 Pro agent ID:
+AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
+# Option B (Create Your Own): Replace with your own Agent ID or create a fresh agent in 1-click from the Dashboard (/dashboard)
 
 # [ONLY NEEDED IF deploying a brand-new agent from localhost or running update script]
 # ✅ JUDGES: Leave this BLANK! The pre-configured AGENT_ID above already has tools
@@ -405,6 +406,11 @@ SMTP_PASS=your_16_char_google_app_password
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ```
+
+> 💡 **Judges Zero-Migration Guarantee**: **No migration or database initialization command is required.**
+> - `data/omnidesk.db` is bundled with the repository, fully pre-seeded and synchronized with the cloud database (both demo businesses, services, sample call transcripts, and bookings).
+> - If `data/omnidesk.db` is ever cleared or deleted, OmniDesk's self-healing SQLite runtime automatically recreates all tables and re-seeds the catalog and active AssemblyAI agent IDs on first launch.
+> - Evaluators do **not** need a Supabase account or any cloud database setup for local testing.
 
 ### 3. Start Development Server
 ```bash
@@ -472,7 +478,7 @@ OmniDesk includes automated calendar synchronization powered by **Free Google Gm
 | Environment | Engine | Configuration | Behavior |
 | :--- | :--- | :--- | :--- |
 | **Production (Vercel)** | **Supabase PostgreSQL** | `SUPABASE_URL` + `SUPABASE_ANON_KEY` | Serverless-safe, multi-region cloud persistence. Stores `assemblyai_agent_id` in cloud. SQLite is completely bypassed. |
-| **Local Testing** | **Local SQLite** | None (leave Supabase keys empty) | Instant zero-setup evaluation using built-in `data/omnidesk.db` pre-seeded with the Hair Salon demo. |
+| **Local Testing (Judges)** | **Local SQLite** | None (leave Supabase keys empty) | Instant zero-setup evaluation using built-in `data/omnidesk.db`. Pre-seeded and synchronized with both demo businesses (`Hair Salon` & `Apex Sports Therapy`), 6 services, call transcripts, and confirmed bookings. Auto-generates and self-heals with **zero migration commands needed**. |
 
 ---
 

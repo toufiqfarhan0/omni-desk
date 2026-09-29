@@ -275,7 +275,7 @@ function initSqliteDb(db: any): void {
     db.prepare(`
       INSERT INTO businesses (
         id, owner_id, name, industry, tone, greeting, system_prompt, voice_id,
-        slot_minutes, open_hour, close_hour, operating_days, keyterms, created_at, updated_at
+        slot_minutes, open_hour, close_hour, operating_days, keyterms, assemblyai_agent_id, created_at, updated_at
       ) VALUES (
         'biz_demo_dental',
         'owner_demo',
@@ -287,6 +287,7 @@ function initSqliteDb(db: any): void {
         'alba',
         30, 9, 17, 'mon-fri',
         '["OmniDesk", "OmniDesk Hair Salon", "haircut", "styling", "balayage", "hair coloring", "blowout", "highlights", "scalp treatment"]',
+        'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794',
         datetime('now'), datetime('now')
       )
     `).run();
@@ -300,6 +301,51 @@ function initSqliteDb(db: any): void {
     insertService.run("biz_demo_dental", "balayage", "Artisan Balayage & Highlights", 120, 280, "Hand-painted dimensional highlights, toner formulation, deep conditioning mask, and style.");
     insertService.run("biz_demo_dental", "blowout", "Signature Blowout & Treatment", 45, 65, "Revitalizing scalp massage, clarifying shampoo, hydrating mask, and voluminous blowout styling.");
   }
+
+  // PRE-LOCK DEMO APEX SPORTS THERAPY BUSINESS
+  const existingApex = db.prepare("SELECT id FROM businesses WHERE id = ?").get("biz_1790171996683_44dsu");
+  if (!existingApex) {
+    db.prepare(`
+      INSERT INTO businesses (
+        id, owner_id, name, industry, tone, greeting, system_prompt, voice_id,
+        slot_minutes, open_hour, close_hour, operating_days, keyterms, assemblyai_agent_id, created_at, updated_at
+      ) VALUES (
+        'biz_1790171996683_44dsu',
+        'owner_demo',
+        'Apex Sports Therapy',
+        'Wellness and Physical Therapy',
+        'warm',
+        'Thanks for calling Apex Sports Therapy. Are you looking to book an appointment?',
+        'You are an autonomous voice receptionist for Apex Sports Therapy. You speak naturally, answer questions about our services, check real calendar slots using your tools, and book appointments for callers.',
+        'jane',
+        30, 9, 17, 'mon-fri',
+        '[]',
+        'agent_8a409193fbde43acb6db72541947dc7b',
+        datetime('now'), datetime('now')
+      )
+    `).run();
+
+    const insertApexService = db.prepare(`
+      INSERT OR IGNORE INTO services (business_id, key, label, minutes, price, description)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    insertApexService.run("biz_1790171996683_44dsu", "consultation", "Initial Consultation", 30, 95, "Comprehensive evaluation and intake.");
+    insertApexService.run("biz_1790171996683_44dsu", "standard-service", "Standard Service Appointment", 45, 150, "Full professional appointment.");
+  }
+
+  // SELF-HEALING: Ensure canonical demo agents are linked if null or empty
+  try {
+    db.prepare(`
+      UPDATE businesses 
+      SET assemblyai_agent_id = 'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794' 
+      WHERE id = 'biz_demo_dental' AND (assemblyai_agent_id IS NULL OR assemblyai_agent_id = '')
+    `).run();
+    db.prepare(`
+      UPDATE businesses 
+      SET assemblyai_agent_id = 'agent_8a409193fbde43acb6db72541947dc7b' 
+      WHERE id = 'biz_1790171996683_44dsu' AND (assemblyai_agent_id IS NULL OR assemblyai_agent_id = '')
+    `).run();
+  } catch {}
 }
 
 // -----------------------------------------------------------------------------

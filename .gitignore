@@ -14,6 +14,7 @@ venv/
 
 # Database & Runtime Data
 data/*.db
+!data/omnidesk.db
 
 # Node & Next.js Build Outputs
 node_modules/
@@ -27,7 +28,9 @@ package-lock.json
 /web/
 /legacy_app/
 /app/
-/scripts/
+/scripts/*
+!/scripts/sync-supabase-to-sqlite.mjs
+!/scripts/update-assemblyai-agents.mjs
 /agent.json
 /requirements.txt
 /run.py

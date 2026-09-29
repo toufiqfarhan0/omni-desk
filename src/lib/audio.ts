@@ -217,6 +217,7 @@ export class AssemblyAIVoiceClient {
       // WebSocket to AssemblyAI
       const wsUrl = new URL(WS_URL);
       wsUrl.searchParams.set("token", token);
+      wsUrl.searchParams.set("speech_model", "universal-3-6-pro");
       this.ws = new WebSocket(wsUrl.toString());
 
       this.captureNode.port.onmessage = ({ data }) => {

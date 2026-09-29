@@ -88,7 +88,7 @@ export default function LandingPage() {
           <div style={{ maxWidth: "820px", margin: "0 auto" }}>
             <div className="eyebrow-badge">
               <span className="live-dot" />
-              AssemblyAI Voice Agent API
+              AssemblyAI Universal-3.6 Pro Realtime
             </div>
             <h1 style={{ margin: "0 0 20px", fontSize: "52px", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.035em", color: "var(--text)" }}>
               The Voice Receptionist That Actually Books Appointments.

@@ -253,8 +253,8 @@ function QuickStartSection() {
         <div className="step-num-circle">1</div>
         <div className="step-content" style={{ flex: 1 }}>
           <p className="doc-p">Clone the repository and install dependencies:</p>
-          <div className="doc-code">{`git clone https://github.com/your-org/omnidesk.git
-cd omnidesk
+          <div className="doc-code">{`git clone https://github.com/toufiqfarhan0/omni-desk.git
+cd omni-desk
 pnpm install`}</div>
         </div>
       </div>
@@ -263,24 +263,30 @@ pnpm install`}</div>
       <div className="doc-step">
         <div className="step-num-circle">2</div>
         <div className="step-content" style={{ flex: 1 }}>
-          <p className="doc-p">Copy the example env file and fill in your keys:</p>
+          <p className="doc-p">Copy the example env file and fill in your AssemblyAI key:</p>
           <div className="doc-code">{`cp .env.example .env`}</div>
           <p className="doc-p">Minimum required for the voice agent to work:</p>
-          <div className="doc-code">{`# Required — AssemblyAI
-NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_key
-AGENT_ID=your_assemblyai_agent_id
+          <div className="doc-code">{`# [REQUIRED] AssemblyAI API Key
+NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# Optional — Supabase (for production persistence)
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_ANON_KEY=your_anon_key
+# [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
+AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
 
-# Optional — Gmail SMTP (for booking confirmation emails)
+# [OPTIONAL] Supabase (Leave blank for zero-setup local SQLite)
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+
+# [OPTIONAL] Free Gmail SMTP for Calendar Invites (.ics)
 SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_16_char_google_app_password
-
-# Optional — Force database mode
-DB_MODE=sqlite   # or: dual | supabase`}</div>
+SMTP_PASS=your_16_char_google_app_password`}</div>
         </div>
+      </div>
+
+      <div className="doc-callout callout-tip">
+        <div className="callout-title">Judges Zero-Migration Guarantee</div>
+        <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
+          <strong>No database migration command is required!</strong> OmniDesk bundles a pre-seeded, self-healing SQLite database (<code>data/omnidesk.db</code>) with both businesses, services, sample call transcripts, and confirmed bookings. If deleted, it automatically recreates the schema on first launch.
+        </p>
       </div>
 
       <h2 className="doc-h2">3. Run Locally</h2>
@@ -288,7 +294,7 @@ DB_MODE=sqlite   # or: dual | supabase`}</div>
         <div className="step-num-circle">3</div>
         <div className="step-content" style={{ flex: 1 }}>
           <div className="doc-code">{`pnpm dev`}</div>
-          <p className="doc-p">Open <span className="doc-inline-code">http://localhost:3000</span> in your browser. The demo account is pre-seeded automatically.</p>
+          <p className="doc-p">Open <span className="doc-inline-code">http://localhost:3000</span> in your browser. The demo account and salon receptionist are pre-seeded and active immediately.</p>
         </div>
       </div>
 
@@ -296,14 +302,14 @@ DB_MODE=sqlite   # or: dual | supabase`}</div>
       <div className="doc-step">
         <div className="step-num-circle">4</div>
         <div className="step-content" style={{ flex: 1 }}>
-          <p className="doc-p">On the landing page, click <strong>Sign In / Sign Up</strong>. You can create a real account with email + password, or click <strong>Enter as Demo Account</strong> to bypass auth.</p>
+          <p className="doc-p">On the landing page, click <strong>Open Owner Portal</strong> or <strong>Sign In</strong>. You can create a real account or click <strong>Enter as Demo Account</strong> to explore immediately with pre-loaded data.</p>
         </div>
       </div>
 
       <div className="doc-callout callout-info">
-        <div className="callout-title">AssemblyAI Agent Setup</div>
+        <div className="callout-title">AssemblyAI Agent ID</div>
         <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
-          To use the live voice widget, you need to create an AssemblyAI Voice Agent and set <span className="doc-inline-code">ASSEMBLYAI_AGENT_ID</span> in your <span className="doc-inline-code">.env</span>. See the <strong>Integrations</strong> section for details.
+          The pre-configured <span className="doc-inline-code">AGENT_ID</span> (<code>agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794</code>) is deployed and running on AssemblyAI's <strong>Universal-3.6 Pro Realtime</strong> engine. Calls connect immediately with zero tunnel setup.
         </p>
       </div>
     </div>
@@ -456,18 +462,19 @@ function IntegrationsSection() {
         </div>
       </div>
 
-      <h3 className="doc-h3">Universal-3.5 Pro Streaming & Ultra-Low Latency</h3>
+      <h3 className="doc-h3">Universal-3.6 Pro Streaming & Ultra-Low Latency</h3>
       <p className="doc-p">
-        OmniDesk runs on AssemblyAI&apos;s flagship <strong>Universal-3.5 Pro Realtime</strong> Speech-to-Text foundation model. Every agent deployed through OmniDesk automatically includes performance-tuned parameters:
+        OmniDesk runs on AssemblyAI&apos;s latest flagship <strong>Universal-3.6 Pro Realtime</strong> Speech-to-Text foundation model (32 languages, native code-switching, robust in noisy environments). Every agent deployed through OmniDesk automatically includes performance-tuned parameters:
       </p>
 
       <div className="doc-code">{`"input": {
-  "transcription_mode": "min_latency",       // Universal-3.5 Pro continuous stream, 0 buffer wait
+  "speech_model": "universal-3-6-pro",         // Flagship Universal-3.6 Pro Realtime STT
+  "transcription_mode": "min_latency",         // Continuous stream, 0 buffer wait
   "turn_detection": {
-    "vad_threshold": 0.5,                    // Voice activity detection threshold
-    "min_silence": 700,                      // 700ms silence ends user turn (prevents awkward pauses)
-    "max_silence": 2500,                     // Max pause cutoff window
-    "interrupt_response": true               // <48ms instant barge-in interruption
+    "vad_threshold": 0.5,                      // Voice activity detection threshold
+    "min_silence": 700,                        // 700ms silence ends user turn (prevents awkward pauses)
+    "max_silence": 2500,                       // Max pause cutoff window
+    "interrupt_response": true                 // <48ms instant barge-in interruption
   }
 }`}</div>
 

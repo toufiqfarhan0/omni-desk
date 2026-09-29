@@ -35,7 +35,14 @@ export async function GET(request: Request) {
       new URL(request.url).origin;
 
     if (biz?.assemblyai_agent_id?.trim()) {
-      agentId = biz.assemblyai_agent_id.trim();
+      const storedId = biz.assemblyai_agent_id.trim();
+      const exists = await verifyAgentExists(storedId);
+      if (exists) {
+        agentId = storedId;
+      } else {
+        // Stored agent ID doesn't belong to this account (e.g. judge key), auto-provision fresh agent
+        agentId = await getOrProvisionAgent(biz, publicBaseUrl);
+      }
     } else if (biz) {
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
@@ -46,7 +53,9 @@ export async function GET(request: Request) {
     }
 
     if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      if (await verifyAgentExists("agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794")) {
+        agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      }
     }
 
     if (!agentId) {
