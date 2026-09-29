@@ -287,7 +287,7 @@ function initSqliteDb(db: any): void {
         'alba',
         30, 9, 17, 'mon-fri',
         '["OmniDesk", "OmniDesk Hair Salon", "haircut", "styling", "balayage", "hair coloring", "blowout", "highlights", "scalp treatment"]',
-        'agent_5e74813381884bb8b82f881b6db66aaf',
+        'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794',
         datetime('now'), datetime('now')
       )
     `).run();
@@ -337,7 +337,7 @@ function initSqliteDb(db: any): void {
   try {
     db.prepare(`
       UPDATE businesses 
-      SET assemblyai_agent_id = 'agent_5e74813381884bb8b82f881b6db66aaf' 
+      SET assemblyai_agent_id = 'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794' 
       WHERE id = 'biz_demo_dental' AND (assemblyai_agent_id IS NULL OR assemblyai_agent_id = '')
     `).run();
     db.prepare(`

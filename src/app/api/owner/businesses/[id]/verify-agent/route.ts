@@ -29,7 +29,7 @@ export async function GET(
         ok: true,
         status: "active",
         is_live: true,
-        agent_id: "agent_5e74813381884bb8b82f881b6db66aaf",
+        agent_id: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794",
         message: "Agent is active, verified, and operational on AssemblyAI.",
       });
     }
@@ -98,7 +98,7 @@ export async function POST(
         ok: true,
         status: "active",
         is_live: true,
-        agent_id: "agent_5e74813381884bb8b82f881b6db66aaf",
+        agent_id: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794",
         business_id: "biz_demo_dental",
         message: "Agent is 100% active and healthy on AssemblyAI.",
       });

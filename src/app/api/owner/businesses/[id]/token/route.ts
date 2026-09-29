@@ -26,7 +26,7 @@ export async function GET(
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     }
     if (!agentId && id === "biz_demo_dental") {
-      agentId = "agent_5e74813381884bb8b82f881b6db66aaf";
+      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     }
     const token = await mintAgentToken(600);
 
