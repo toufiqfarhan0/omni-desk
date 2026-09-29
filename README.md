@@ -12,6 +12,7 @@
 
 ### Quick Links
 - [⚡ Judge it in 120s](#judge-it-in-120-seconds)
+- [📸 See it working](#see-it-working)
 - [📁 Judges Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing)
 - [Live Demos](#live-external-client-deployments)
 - [npm SDK](#embeddable-voice-widget--npm-package-omnidesk-voice)
@@ -34,6 +35,18 @@
 4. **Audit bookings & stream call recording** — switch to **Customer Bookings** to see Friday 10:00 AM locked into the calendar grid, then open **Call History** &rarr; **View Transcript** to stream the recorded `.ogg` call audio directly from AssemblyAI S3 or click **Download Audio**.
 
 No microphone? Watch the 60-second video walkthrough in the [Judges Google Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) (`omni-60's.mp4`), or inspect the pre-seeded appointments and call recordings directly in the [Dashboard](https://omni-desk-rho.vercel.app/dashboard), clearly labelled `SIMULATED`.
+
+---
+
+## See it working
+
+| Voice Receptionist & Live Tester | AI Agent Builder & Verification | Customer Bookings & Invites |
+| :---: | :---: | :---: |
+| <img src="public/screenshot-simulator.png" alt="Voice Receptionist & Live Tester" width="100%" /> | <img src="public/screenshot-dashboard.png" alt="AI Agent Builder & Verification" width="100%" /> | <img src="public/screenshot-bookings.png" alt="Customer Bookings CRM" width="100%" /> |
+
+| Call History & Transcripts | Interactive Architecture Showcase | Web Embed & Widget Snippets |
+| :---: | :---: | :---: |
+| <img src="public/screenshot-conversations.png" alt="Call History & Transcripts" width="100%" /> | <img src="public/screenshot-demo.png" alt="Interactive Architecture Showcase" width="100%" /> | <img src="public/screenshot-simulator.png" alt="Web Embed & Widget Snippets" width="100%" /> |
 
 ---
 
@@ -615,5 +628,3 @@ pnpm build
 Copyright (c) 2026 [toufiqfarhan0](https://github.com/toufiqfarhan0)
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full details.
-
-> Submissions must be original and MIT-compliant per [lablab.ai participation terms](https://lablab.ai/terms-of-use#16-participation-terms).
