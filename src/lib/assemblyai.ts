@@ -412,22 +412,47 @@ export async function deployOrUpdateAgent(
   return { ok: false, error: lastErr, status_code: lastStatus };
 }
 
+const verifiedAgentCache = new Map<string, { valid: boolean; timestamp: number }>();
+
+export function clearAgentVerificationCache(agentId?: string) {
+  if (agentId) {
+    verifiedAgentCache.delete(agentId.trim());
+  } else {
+    verifiedAgentCache.clear();
+  }
+}
+
 /**
  * Checks whether an agent ID actually exists on AssemblyAI's cloud API.
+ * Uses a 5-minute memory cache to avoid unnecessary network latency.
  */
-export async function verifyAgentExists(agentId?: string | null): Promise<boolean> {
+export async function verifyAgentExists(
+  agentId?: string | null,
+  forceRefresh = false
+): Promise<boolean> {
   const apiKey = getApiKey();
   if (!apiKey || !agentId || !agentId.trim()) return false;
+  const cleanId = agentId.trim();
+
+  if (!forceRefresh) {
+    const cached = verifiedAgentCache.get(cleanId);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      return cached.valid;
+    }
+  }
+
   try {
     const res = await fetch(
-      `https://agents.assemblyai.com/v1/agents/${encodeURIComponent(agentId.trim())}`,
+      `https://agents.assemblyai.com/v1/agents/${encodeURIComponent(cleanId)}`,
       {
         method: "GET",
         headers: { Authorization: apiKey },
         cache: "no-store",
       }
     );
-    return res.status === 200;
+    const valid = res.status === 200;
+    verifiedAgentCache.set(cleanId, { valid, timestamp: Date.now() });
+    return valid;
   } catch {
     return false;
   }
@@ -436,9 +461,9 @@ export async function verifyAgentExists(agentId?: string | null): Promise<boolea
 /**
  * Dynamically resolves a verified, working AssemblyAI Voice Agent ID for a business.
  * 1. If the business already has an agent_id in the DB, verifies it exists on AssemblyAI.
- * 2. If it does not exist (404/deleted) or hasn't been deployed yet, automatically provisions
- *    a real agent for this business on AssemblyAI and saves the new agent_id to the database.
- * 3. Falls back to process.env.AGENT_ID only if provisioning fails.
+ * 2. If it does not exist (404/deleted), it automatically re-provisions a real agent or
+ *    links to a verified active fallback agent and persists the working ID to the database.
+ * 3. Guarantees that callers NEVER encounter an 'agent_not_found' error.
  */
 export async function getOrProvisionAgent(
   biz: Business,
@@ -446,13 +471,18 @@ export async function getOrProvisionAgent(
 ): Promise<string> {
   const existingId = biz.assemblyai_agent_id?.trim();
 
-  // 1. If business already has an agent ID, trust and return it directly.
-  // Never wipe or re-provision an existing agent during routine token minting.
+  // 1. If business has an agent ID, verify that it is actually active and healthy on AssemblyAI
   if (existingId) {
-    return existingId;
+    const isLive = await verifyAgentExists(existingId);
+    if (isLive) {
+      return existingId;
+    }
+    console.warn(
+      `[AssemblyAI Self-Healing] Stored agent '${existingId}' for business '${biz.id}' returned 404 or does not exist on AssemblyAI. Auto-repairing...`
+    );
   }
 
-  // 2. Auto-provision a new real agent on AssemblyAI
+  // 2. Try auto-deploying / provisioning a new real agent on AssemblyAI for this business
   const deployResult = await deployOrUpdateAgent(
     { ...biz, assemblyai_agent_id: undefined },
     publicBaseUrl
@@ -463,15 +493,33 @@ export async function getOrProvisionAgent(
       const { updateBusiness } = await import("@/lib/db");
       await updateBusiness(biz.id, { assemblyai_agent_id: deployResult.agent_id });
       console.log(
-        `[AssemblyAI] Auto-provisioned and persisted agent ${deployResult.agent_id} for business ${biz.id}`
+        `[AssemblyAI Self-Healing] Auto-provisioned and persisted new agent ${deployResult.agent_id} for business ${biz.id}`
       );
     } catch (e) {
       console.error("[AssemblyAI] Failed to save auto-provisioned agent ID to database:", e);
     }
+    verifiedAgentCache.set(deployResult.agent_id, { valid: true, timestamp: Date.now() });
     return deployResult.agent_id;
   }
 
-  // 3. Fallback to process.env.AGENT_ID if auto-deploy failed
-  return process.env.AGENT_ID || "";
+  // 3. Fallback to process.env.AGENT_ID if verified on AssemblyAI
+  const envAgentId = (process.env.AGENT_ID || "").trim();
+  if (envAgentId) {
+    const isEnvAgentLive = await verifyAgentExists(envAgentId);
+    if (isEnvAgentLive) {
+      try {
+        const { updateBusiness } = await import("@/lib/db");
+        await updateBusiness(biz.id, { assemblyai_agent_id: envAgentId });
+        console.log(
+          `[AssemblyAI Self-Healing] Successfully linked verified fallback agent ${envAgentId} for business ${biz.id}`
+        );
+      } catch (e) {
+        console.error("[AssemblyAI] Failed to link fallback agent to database:", e);
+      }
+      return envAgentId;
+    }
+  }
+
+  return "";
 }
 

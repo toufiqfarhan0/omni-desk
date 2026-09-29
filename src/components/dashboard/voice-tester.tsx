@@ -98,6 +98,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     try {
       setCallStatus("busy");
       emailCapturedRef.current = false;
+      hasSavedConversationRef.current = false;
       setShowEmailBar(false);
       startTimer();
 
@@ -224,41 +225,110 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     messagesRef.current = messages;
   }, [messages]);
 
+  const hasSavedConversationRef = useRef(false);
   const saveConversationRecord = async () => {
+    if (hasSavedConversationRef.current) return;
     const msgs = messagesRef.current;
     if (!msgs || msgs.length <= 1) return;
+    hasSavedConversationRef.current = true;
 
     let callerName: string | null = null;
     let callerEmail: string | null = null;
     let isBooked = false;
+    let confirmationCode: string | null = null;
 
+    const isValidPersonName = (val: string): boolean => {
+      if (!val || typeof val !== "string") return false;
+      const clean = val.trim();
+      if (clean.length < 2 || clean.length > 30) return false;
+      if (clean.includes("@") || /\d+:\d+|\b\d+\s*(?:am|pm)\b/i.test(clean)) return false;
+      const lower = clean.toLowerCase();
+      const forbidden = [
+        "initial consultation", "consultation", "standard service", "haircut", "styling",
+        "blowout", "balayage", "color", "full color", "treatment", "therapy",
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+        "today", "tomorrow", "morning", "afternoon", "evening",
+        "yes", "no", "okay", "ok", "yeah", "yep", "sure", "hello", "hi", "hey",
+        "thanks", "thank you", "please", "appointment", "booking", "schedule",
+        "oh thanks", "oh thank you", "good", "great", "fine", "demo caller"
+      ];
+      return !forbidden.some((b) => lower === b || lower.includes("consultation") || lower.includes("appointment"));
+    };
+
+    // 1. Detect booking confirmation code & email from conversation
     for (const m of msgs) {
       const lower = m.text.toLowerCase();
       if (
         lower.includes("confirmation code is") ||
         lower.includes("scheduled your") ||
         lower.includes("calendar invite") ||
-        lower.includes("booking code")
+        lower.includes("booking code") ||
+        lower.includes("all set")
       ) {
         isBooked = true;
+      }
+      if (!confirmationCode) {
+        const codeMatch = m.text.match(/(?:confirmation code is|reservation code is|code is|booking code is)\s*([A-Za-z0-9]{5,7})/i);
+        if (codeMatch) {
+          confirmationCode = codeMatch[1].toUpperCase();
+          isBooked = true;
+        }
       }
       if (!callerEmail) {
         const match = m.text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
         if (match) callerEmail = match[0];
       }
-      if (!callerName && m.who === "user" && !m.text.includes("@")) {
-        const clean = m.text
-          .replace(/^(my name is|this is|i am|it's|it is)\s+/i, "")
-          .replace(/[?.!,]/g, "")
-          .trim();
+    }
+
+    // 2. Context-aware name extraction: Check if agent explicitly asked for caller's name
+    for (let i = 0; i < msgs.length - 1; i++) {
+      const current = msgs[i];
+      const next = msgs[i + 1];
+      if (current.who === "agent" && next.who === "user") {
+        const agentQ = current.text.toLowerCase();
         if (
-          clean.length >= 2 &&
-          clean.length < 25 &&
-          !["yes", "no", "okay", "yeah", "sure", "hello", "hi", "thanks", "thank you"].includes(
-            clean.toLowerCase()
-          )
+          agentQ.includes("may i have your name") ||
+          agentQ.includes("may i have your full name") ||
+          agentQ.includes("what is your name") ||
+          agentQ.includes("what's your name") ||
+          agentQ.includes("can i have your name") ||
+          agentQ.includes("can i get your name") ||
+          agentQ.includes("who am i speaking with")
         ) {
-          callerName = clean;
+          const candidate = next.text
+            .replace(/^(my name is|this is|i am|it's|it is)\s+/i, "")
+            .replace(/[?.!,]/g, "")
+            .trim();
+          if (isValidPersonName(candidate)) {
+            callerName = candidate;
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: Check for explicit self-introduction ("My name is X")
+    if (!callerName) {
+      for (const m of msgs) {
+        if (m.who === "user") {
+          const match = m.text.match(/(?:my name is|this is|i am|call me|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+          if (match && isValidPersonName(match[1])) {
+            callerName = match[1].trim();
+            break;
+          }
+        }
+      }
+    }
+
+    // 4. Fallback: Agent repeated the name in confirmation ("All set, Ravi!" or "Thanks, Ravi.")
+    if (!callerName) {
+      for (const m of msgs) {
+        if (m.who === "agent") {
+          const match = m.text.match(/(?:thanks|thank you|all set|perfect|welcome)[,\s]+([A-Z][a-z]+)[!.,]/i);
+          if (match && isValidPersonName(match[1])) {
+            callerName = match[1].trim();
+            break;
+          }
         }
       }
     }
@@ -274,8 +344,9 @@ export function VoiceTester({ business }: VoiceTesterProps) {
         body: JSON.stringify({
           id: sessionIdRef.current || `conv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           business_id: business.id,
-          caller_name: callerName || "Demo Caller",
+          caller_name: callerName || null,
           caller_email: callerEmail || null,
+          confirmation_code: confirmationCode || null,
           started_at: new Date(Date.now() - elapsed * 1000).toISOString(),
           ended_at: new Date().toISOString(),
           duration_seconds: elapsed,
@@ -312,7 +383,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   };
 
   const handleReset = () => {
-    saveConversationRecord();
     handleEndCall();
     setShowEmailBar(false);
     setEmailError("");

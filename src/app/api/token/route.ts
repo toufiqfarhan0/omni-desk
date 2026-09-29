@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { mintAgentToken, getOrProvisionAgent } from "@/lib/assemblyai";
+import { mintAgentToken, getOrProvisionAgent, verifyAgentExists } from "@/lib/assemblyai";
 import { getBusiness } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -34,12 +34,13 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    if (biz?.assemblyai_agent_id?.trim()) {
-      agentId = biz.assemblyai_agent_id.trim();
-    } else if (biz) {
+    if (biz) {
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
-      agentId = process.env.AGENT_ID || "";
+      const envId = (process.env.AGENT_ID || "").trim();
+      if (envId && (await verifyAgentExists(envId))) {
+        agentId = envId;
+      }
     }
 
     if (!agentId) {

@@ -33,6 +33,9 @@ import {
   Layers,
   ArrowRight,
   RotateCw,
+  ShieldCheck,
+  Wrench,
+  AlertCircle,
 } from "lucide-react";
 
 interface AgentBuilderProps {
@@ -215,11 +218,84 @@ export function AgentBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isRefreshingAgentId, setIsRefreshingAgentId] = useState(false);
+  const [isVerifyingAgent, setIsVerifyingAgent] = useState(false);
+  const [agentLiveStatus, setAgentLiveStatus] = useState<
+    "unknown" | "checking" | "active" | "not_found" | "undeployed"
+  >("unknown");
+
+  const checkAgentHealth = async (agentId?: string) => {
+    if (!formData.id) return;
+    const target = agentId || formData.assemblyai_agent_id;
+    if (!target) {
+      setAgentLiveStatus("undeployed");
+      return;
+    }
+    setAgentLiveStatus("checking");
+    try {
+      const res = await fetch(`/api/owner/businesses/${formData.id}/verify-agent`);
+      const data = await res.json();
+      if (res.ok && data.is_live) {
+        setAgentLiveStatus("active");
+      } else {
+        setAgentLiveStatus("not_found");
+      }
+    } catch {
+      setAgentLiveStatus("unknown");
+    }
+  };
 
   useEffect(() => {
     setFormData(business);
     setServices(business.services || []);
+    if (business.assemblyai_agent_id) {
+      checkAgentHealth(business.assemblyai_agent_id);
+    } else {
+      setAgentLiveStatus("undeployed");
+    }
   }, [business]);
+
+  const handleVerifyAndFixAgent = async (forceReprovision = false) => {
+    if (!formData.id) return;
+    setIsVerifyingAgent(true);
+    setAgentLiveStatus("checking");
+    try {
+      const res = await fetch(`/api/owner/businesses/${formData.id}/verify-agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force_reprovision: forceReprovision }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        const workingAgentId = data.agent_id;
+        const updatedBiz = {
+          ...formData,
+          assemblyai_agent_id: workingAgentId,
+        };
+        setFormData(updatedBiz);
+        onUpdateBusiness({
+          ...business,
+          ...(data.business || {}),
+          assemblyai_agent_id: workingAgentId,
+        });
+        setAgentLiveStatus("active");
+        if (data.status === "repaired") {
+          toast.success(
+            `Agent repaired & live on AssemblyAI! ID: ${workingAgentId}`
+          );
+        } else {
+          toast.success("Agent verified: 100% active and healthy on AssemblyAI!");
+        }
+      } else {
+        setAgentLiveStatus("not_found");
+        toast.error(data.error || "Failed to verify or repair agent on AssemblyAI");
+      }
+    } catch (err: any) {
+      setAgentLiveStatus("not_found");
+      toast.error(err.message || "Failed to verify agent");
+    } finally {
+      setIsVerifyingAgent(false);
+    }
+  };
 
   // New service state
   const [newKey, setNewKey] = useState("");
@@ -477,7 +553,22 @@ export function AgentBuilder({
               <label style={{ ...cs.label, marginBottom: 0 }} htmlFor="agent-id-input">
                 AssemblyAI Voice Agent ID
               </label>
-              {formData.assemblyai_agent_id ? (
+              {agentLiveStatus === "active" ? (
+                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#16a34a", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
+                  Live on AssemblyAI (200 OK)
+                </span>
+              ) : agentLiveStatus === "not_found" ? (
+                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#dc2626", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />
+                  Agent Not Found on AssemblyAI (404)
+                </span>
+              ) : agentLiveStatus === "checking" ? (
+                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#ca8a04", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <RotateCw style={{ width: "11px", height: "11px", animation: "spin 1s linear infinite" }} />
+                  Verifying Status...
+                </span>
+              ) : formData.assemblyai_agent_id ? (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#16a34a", fontWeight: 600 }}>
                   Active Agent Configured
                 </span>
@@ -498,6 +589,7 @@ export function AgentBuilder({
                   cursor: "default",
                   userSelect: "all",
                   flex: 1,
+                  borderColor: agentLiveStatus === "not_found" ? "#fca5a5" : undefined,
                 }}
                 id="agent-id-input"
                 type="text"
@@ -505,6 +597,44 @@ export function AgentBuilder({
                 placeholder="Auto-generated on deployment — Click 'Save & Deploy' above"
                 value={formData.assemblyai_agent_id || ""}
               />
+              <button
+                type="button"
+                onClick={() => handleVerifyAndFixAgent(false)}
+                disabled={isVerifyingAgent}
+                title="Verify agent on AssemblyAI or automatically repair/re-provision if 404"
+                style={{
+                  padding: "8px 13px",
+                  borderRadius: "var(--radius)",
+                  border: agentLiveStatus === "not_found" ? "1px solid #ef4444" : "1px solid var(--border)",
+                  background: agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: isVerifyingAgent ? "wait" : "pointer",
+                  whiteSpace: "nowrap",
+                  color: agentLiveStatus === "not_found" ? "#b91c1c" : "var(--text)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  flexShrink: 0,
+                  opacity: isVerifyingAgent ? 0.7 : 1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {isVerifyingAgent ? (
+                  <RotateCw style={{ width: "13px", height: "13px", animation: "spin 1s linear infinite" }} />
+                ) : agentLiveStatus === "not_found" ? (
+                  <Wrench style={{ width: "13px", height: "13px", color: "#dc2626" }} />
+                ) : (
+                  <ShieldCheck style={{ width: "13px", height: "13px", color: "#16a34a" }} />
+                )}
+                <span>
+                  {isVerifyingAgent
+                    ? "Checking..."
+                    : agentLiveStatus === "not_found"
+                    ? "Auto-Fix Agent"
+                    : "Verify & Fix"}
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={handleRefreshAgentId}
@@ -563,7 +693,7 @@ export function AgentBuilder({
               )}
             </div>
             <p style={{ ...cs.hint, marginTop: "6px" }}>
-              <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong>, a dedicated agent ID is provisioned and saved to your database without modifying any environment variables.
+              <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong> or <strong>Verify & Fix</strong>, a dedicated agent ID is provisioned and verified on AssemblyAI and saved to your database.
             </p>
           </div>
 
@@ -701,6 +831,33 @@ export function AgentBuilder({
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => handleVerifyAndFixAgent(false)}
+                  disabled={isVerifyingAgent}
+                  title="Verify and auto-repair agent on AssemblyAI"
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    border: agentLiveStatus === "not_found" ? "1px solid #ef4444" : "1px solid var(--border)",
+                    background: agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
+                    color: agentLiveStatus === "not_found" ? "#dc2626" : "var(--text)",
+                    cursor: isVerifyingAgent ? "wait" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isVerifyingAgent ? (
+                    <RotateCw style={{ width: "11px", height: "11px", animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <ShieldCheck style={{ width: "11px", height: "11px", color: "#16a34a" }} />
+                  )}
+                  <span>{agentLiveStatus === "not_found" ? "Fix" : "Verify"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleRefreshAgentId}

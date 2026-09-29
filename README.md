@@ -10,17 +10,17 @@
 
 ---
 
-**Quick Links:**&nbsp;
-[⚡ Judge it in 120s](#judge-it-in-120-seconds) &nbsp;·&nbsp;
-[📁 Judges Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) &nbsp;·&nbsp;
-[Live Demos](#live-external-client-deployments) &nbsp;·&nbsp;
-[npm SDK](#embeddable-voice-widget--npm-package-omnidesk-voice) &nbsp;·&nbsp;
-[Architecture & Pipeline](#architecture--pipeline) &nbsp;·&nbsp;
-[Key Capabilities](#key-capabilities) &nbsp;·&nbsp;
-[Autonomous Tools](#step-3-server-side-autonomous-tool-execution--pre-loaded-knowledge) &nbsp;·&nbsp;
-[Widget Customizer](#1-react--nextjs-installation) &nbsp;·&nbsp;
-[Database Modes](#database-modes-cloud-vs-local) &nbsp;·&nbsp;
-[Quick Start](#quick-setup-guide)
+### Quick Links
+- [⚡ Judge it in 120s](#judge-it-in-120-seconds)
+- [📁 Judges Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing)
+- [Live Demos](#live-external-client-deployments)
+- [npm SDK](#embeddable-voice-widget--npm-package-omnidesk-voice)
+- [Architecture & Pipeline](#architecture--pipeline)
+- [Key Capabilities](#key-capabilities)
+- [Autonomous Tools](#step-3-server-side-autonomous-tool-execution--pre-loaded-knowledge)
+- [Widget Customizer](#1-react--nextjs-installation)
+- [Database Modes](#database-modes-cloud-vs-local)
+- [Quick Start](#quick-setup-guide)
 
 ---
 
