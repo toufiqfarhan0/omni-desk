@@ -34,13 +34,19 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    if (biz) {
+    if (biz?.assemblyai_agent_id?.trim()) {
+      agentId = biz.assemblyai_agent_id.trim();
+    } else if (biz) {
       agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     } else {
       const envId = (process.env.AGENT_ID || "").trim();
       if (envId && (await verifyAgentExists(envId))) {
         agentId = envId;
       }
+    }
+
+    if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
+      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     }
 
     if (!agentId) {

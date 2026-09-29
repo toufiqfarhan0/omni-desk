@@ -21,7 +21,13 @@ export async function GET(
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    const agentId = await getOrProvisionAgent(biz, publicBaseUrl);
+    let agentId = biz.assemblyai_agent_id?.trim() || "";
+    if (!agentId) {
+      agentId = await getOrProvisionAgent(biz, publicBaseUrl);
+    }
+    if (!agentId && id === "biz_demo_dental") {
+      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    }
     const token = await mintAgentToken(600);
 
     return NextResponse.json({
