@@ -51,6 +51,8 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const [emailError, setEmailError] = useState("");
   const [emailSuccess, setEmailSuccess] = useState("");
 
+  const [isThinking, setIsThinking] = useState(false);
+
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerTickRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
@@ -59,10 +61,10 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const sessionIdRef = useRef<string>("");
 
   useEffect(() => {
-    if (messages.length > 1) {
+    if (messages.length > 0 || isThinking) {
       feedBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isThinking]);
 
   const startTimer = () => {
     timerStartRef.current = Date.now();
@@ -120,16 +122,26 @@ export function VoiceTester({ business }: VoiceTesterProps) {
             setCallStatus("live");
           } else if (status === "idle") {
             setCallStatus("idle");
+            setIsThinking(false);
             stopTimer();
           } else if (status === "error") {
             setCallStatus("error");
+            setIsThinking(false);
             stopTimer();
           }
+        },
+        onThinkingChange: (thinking) => {
+          setIsThinking(thinking);
         },
         onSessionId: (sid) => {
           sessionIdRef.current = sid;
         },
         onTranscript: (event) => {
+          if (event.who === "user" && event.isFinal) {
+            setIsThinking(true);
+          } else if (event.who === "agent") {
+            setIsThinking(false);
+          }
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             // If the last message is from the same speaker and was not finalized, update it in place!
@@ -376,6 +388,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       voiceClientRef.current = null;
     }
     setCallStatus("idle");
+    setIsThinking(false);
     stopTimer();
     setShowEmailBar(false);
     setEmailError("");
@@ -384,6 +397,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
 
   const handleReset = () => {
     handleEndCall();
+    setIsThinking(false);
     setShowEmailBar(false);
     setEmailError("");
     setEmailSuccess("");
@@ -428,6 +442,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       if (voiceClientRef.current) {
         voiceClientRef.current.sendEmailInput(verifiedEmail);
       }
+      setIsThinking(true);
 
       emailCapturedRef.current = true;
       setEmailInput("");
@@ -590,12 +605,24 @@ export default function App() {
                     width: "6px",
                     height: "6px",
                     borderRadius: "50%",
-                    background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : (isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa"),
+                    background:
+                      callStatus === "live"
+                        ? isThinking
+                          ? "#f59e0b"
+                          : "#22c55e"
+                        : callStatus === "busy"
+                        ? "#eab308"
+                        : isDark
+                        ? "rgba(255,255,255,0.4)"
+                        : "#a1a1aa",
+                    animation: isThinking ? "omnidesk-pulse-amber 1.5s infinite" : "none",
                   }}
                 />
                 <span>
                   {callStatus === "live"
-                    ? "Live · Speaking"
+                    ? isThinking
+                      ? "Thinking · Checking tools..."
+                      : "Live · Speaking"
                     : callStatus === "busy"
                     ? "Connecting..."
                     : callStatus === "error"
@@ -796,6 +823,60 @@ export default function App() {
               </div>
             </div>
           ))}
+
+          {/* Animated Thinking Motion Bubble (While tool calling / generating reply) */}
+          {isThinking && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                maxWidth: "88%",
+                alignSelf: "flex-start",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                <div
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "50%",
+                    background: "#18181b",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "#ffffff",
+                    flexShrink: 0,
+                    marginTop: "2px",
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  </svg>
+                </div>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: "14px 14px 14px 2px",
+                    background: isDark ? "#18181b" : "#f4f4f5",
+                    color: isDark ? "#a1a1aa" : "#71717a",
+                    border: isDark ? "1px solid #27272a" : "none",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    minHeight: "38px",
+                  }}
+                  title="Agent is thinking and processing..."
+                >
+                  <span className="omnidesk-motion-dot omnidesk-dot-1" />
+                  <span className="omnidesk-motion-dot omnidesk-dot-2" />
+                  <span className="omnidesk-motion-dot omnidesk-dot-3" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={feedBottomRef} />
         </div>
 

@@ -2,6 +2,7 @@ import { CallStatus, TranscriptMessage } from "./types";
 
 export interface VoiceSessionCallbacks {
   onStatusChange?: (status: CallStatus) => void;
+  onThinkingChange?: (isThinking: boolean) => void;
   onTranscript?: (event: TranscriptMessage) => void;
   onToolEvent?: (event: { type: "call" | "result"; tool: string; args?: any; result?: any }) => void;
   onError?: (err: string) => void;
@@ -160,6 +161,14 @@ export class AssemblyAIVoiceClient {
   private agentLevel = 0;
   private animFrameId: number | null = null;
   private isMuted = false;
+  private isThinking = false;
+
+  private setThinking(val: boolean) {
+    if (this.isThinking !== val) {
+      this.isThinking = val;
+      this.callbacks.onThinkingChange?.(val);
+    }
+  }
 
   constructor(callbacks: VoiceSessionCallbacks) {
     this.callbacks = callbacks;
@@ -243,21 +252,25 @@ export class AssemblyAIVoiceClient {
             case "input.speech.started":
               this.playbackNode?.port.postMessage("stop");
               this.agentLevel = 0;
+              this.setThinking(false);
               break;
 
             case "transcript.user":
               if (msg.text) {
                 this.callbacks.onTranscript?.({ who: "user", text: msg.text });
+                this.setThinking(true);
               }
               break;
 
             case "transcript.agent":
+              this.setThinking(false);
               if (msg.text) {
                 this.callbacks.onTranscript?.({ who: "agent", text: msg.text });
               }
               break;
 
             case "reply.audio":
+              this.setThinking(false);
               if (msg.data && this.playbackNode) {
                 const raw = atob(msg.data);
                 const bytes = new Uint8Array(raw.length);
@@ -291,11 +304,13 @@ export class AssemblyAIVoiceClient {
               break;
 
             case "session.error":
+              this.setThinking(false);
               this.callbacks.onError?.(msg.message || msg.code || "Session error");
               this.callbacks.onStatusChange?.("error");
               break;
 
             case "session.ended":
+              this.setThinking(false);
               this.stop();
               break;
           }
@@ -335,6 +350,7 @@ export class AssemblyAIVoiceClient {
   sendUserMessage(text: string, instructions?: string): boolean {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
     try {
+      this.setThinking(true);
       this.ws.send(
         JSON.stringify({
           type: "conversation.message",
@@ -365,6 +381,7 @@ export class AssemblyAIVoiceClient {
   }
 
   stop() {
+    this.setThinking(false);
     this.isConnected = false;
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);

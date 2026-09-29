@@ -7,6 +7,7 @@ declare const VoiceWidget: typeof OmniDeskWidget;
 
 interface VoiceSessionCallbacks {
     onStatusChange?: (status: CallStatus) => void;
+    onThinkingChange?: (isThinking: boolean) => void;
     onTranscript?: (event: TranscriptMessage) => void;
     onToolEvent?: (event: {
         type: "call" | "result";
@@ -30,6 +31,8 @@ declare class AssemblyAIVoiceClient {
     private agentLevel;
     private animFrameId;
     private isMuted;
+    private isThinking;
+    private setThinking;
     constructor(callbacks: VoiceSessionCallbacks);
     start(token: string, agentId?: string, voice?: string): Promise<void>;
     setMuted(muted: boolean): void;

@@ -46,6 +46,8 @@ export default function DemoPage() {
   const [emailError, setEmailError] = useState("");
   const [emailSuccess, setEmailSuccess] = useState("");
 
+  const [isThinking, setIsThinking] = useState(false);
+
   // Auth modal
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -61,15 +63,16 @@ export default function DemoPage() {
   }, [templateKey]);
 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 || isThinking) {
       transcriptBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isThinking]);
 
   const handleReset = () => {
     if (callStatus !== "idle") {
       handleEndCall();
     }
+    setIsThinking(false);
     emailCapturedRef.current = false;
     setShowEmailBar(false);
     setEmailError("");
@@ -130,13 +133,23 @@ export default function DemoPage() {
             setCallStatus("live");
           } else if (status === "idle") {
             setCallStatus("idle");
+            setIsThinking(false);
             stopTimer();
           } else if (status === "error") {
             setCallStatus("error");
+            setIsThinking(false);
             stopTimer();
           }
         },
+        onThinkingChange: (thinking) => {
+          setIsThinking(thinking);
+        },
         onTranscript: (event) => {
+          if (event.who === "user" && event.isFinal) {
+            setIsThinking(true);
+          } else if (event.who === "agent") {
+            setIsThinking(false);
+          }
           setMessages((prev) => [
             ...prev,
             {
@@ -214,6 +227,7 @@ export default function DemoPage() {
       voiceClientRef.current = null;
     }
     setCallStatus("idle");
+    setIsThinking(false);
     stopTimer();
     setShowEmailBar(false);
     setEmailError("");
@@ -258,6 +272,7 @@ export default function DemoPage() {
       if (voiceClientRef.current) {
         voiceClientRef.current.sendEmailInput(verifiedEmail);
       }
+      setIsThinking(true);
 
       emailCapturedRef.current = true;
       setEmailInput("");
@@ -584,12 +599,22 @@ export default function DemoPage() {
                         width: "6px",
                         height: "6px",
                         borderRadius: "50%",
-                        background: callStatus === "live" ? "#22c55e" : callStatus === "busy" ? "#eab308" : "rgba(255,255,255,0.4)",
+                        background:
+                          callStatus === "live"
+                            ? isThinking
+                              ? "#f59e0b"
+                              : "#22c55e"
+                            : callStatus === "busy"
+                            ? "#eab308"
+                            : "rgba(255,255,255,0.4)",
+                        animation: isThinking ? "omnidesk-pulse-amber 1.5s infinite" : "none",
                       }}
                     />
                     <span>
                       {callStatus === "live"
-                        ? "Live · Speaking"
+                        ? isThinking
+                          ? "Thinking · Checking tools..."
+                          : "Live · Speaking"
                         : callStatus === "busy"
                         ? "Connecting..."
                         : callStatus === "error"
@@ -764,6 +789,61 @@ export default function DemoPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Animated Thinking Motion Bubble (While tool calling / generating reply) */}
+              {isThinking && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    maxWidth: "88%",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "50%",
+                        background: "#18181b",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#ffffff",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      </svg>
+                    </div>
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: "14px 14px 14px 2px",
+                        fontSize: "13.5px",
+                        lineHeight: "1.45",
+                        background: "#f4f4f5",
+                        color: "#71717a",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        minHeight: "38px",
+                      }}
+                      title="Agent is thinking and processing..."
+                    >
+                      <span className="omnidesk-motion-dot omnidesk-dot-1" />
+                      <span className="omnidesk-motion-dot omnidesk-dot-2" />
+                      <span className="omnidesk-motion-dot omnidesk-dot-3" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={transcriptBottomRef} />
             </div>
 

@@ -106,8 +106,6 @@ client.sendEmailInput("customer@gmail.com");
 // Later: Stop call
 client.stop();
 ```
-client.stop();
-```
 
 ---
 

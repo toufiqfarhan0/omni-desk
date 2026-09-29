@@ -105,6 +105,8 @@ export function VoiceWidget({
   const [emailError, setEmailError] = useState("");
   const [emailSuccess, setEmailSuccess] = useState("");
 
+  const [isThinking, setIsThinking] = useState(false);
+
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const callStartTimeRef = useRef<number>(0);
@@ -128,7 +130,7 @@ export function VoiceWidget({
   // Auto-scroll transcript container
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [transcripts]);
+  }, [transcripts, isThinking]);
 
   const startTimer = useCallback(() => {
     timerStartRef.current = Date.now();
@@ -174,15 +176,27 @@ export function VoiceWidget({
             callStartTimeRef.current = Date.now();
             onCallStart?.();
           } else if (status === "idle") {
+            setIsThinking(false);
             stopTimer();
             if (callStartTimeRef.current > 0) {
               const dur = Math.round((Date.now() - callStartTimeRef.current) / 1000);
               callStartTimeRef.current = 0;
               onCallEnd?.(dur);
             }
+          } else if (status === "error") {
+            setIsThinking(false);
+            stopTimer();
           }
         },
+        onThinkingChange: (thinking) => {
+          setIsThinking(thinking);
+        },
         onTranscript: (ev) => {
+          if (ev.who === "user" && ev.isFinal) {
+            setIsThinking(true);
+          } else if (ev.who === "agent") {
+            setIsThinking(false);
+          }
           setTranscripts((prev) => [...prev, { who: ev.who, text: ev.text }]);
           onTranscript?.(ev);
           if (ev.who === "user") {
@@ -258,6 +272,7 @@ export function VoiceWidget({
       voiceClientRef.current = null;
     }
     setCallStatus("idle");
+    setIsThinking(false);
     setUserLevel(0);
     setAgentLevel(0);
     stopTimer();
@@ -275,6 +290,7 @@ export function VoiceWidget({
     if (callStatus === "connected" || callStatus === "connecting") {
       handleEndCall();
     }
+    setIsThinking(false);
     setShowEmailBar(false);
     setEmailError("");
     setEmailSuccess("");
@@ -314,6 +330,7 @@ export function VoiceWidget({
         if (voiceClientRef.current) {
           voiceClientRef.current.sendEmailInput(verifiedEmail);
         }
+        setIsThinking(true);
 
         emailCapturedRef.current = true;
         setEmailInput("");
@@ -435,6 +452,29 @@ export function VoiceWidget({
               transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
+            <style>{`
+              @keyframes omnidesk-typing-dot {
+                0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.35; }
+                40% { transform: translateY(-6px) scale(1.15); opacity: 1; }
+              }
+              @keyframes omnidesk-pulse-amber {
+                0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+                70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+              }
+              .omnidesk-motion-dot {
+                display: inline-block;
+                width: 6.5px;
+                height: 6.5px;
+                border-radius: 50%;
+                background-color: currentColor;
+                animation: omnidesk-typing-dot 1.25s infinite ease-in-out both;
+                will-change: transform, opacity;
+              }
+              .omnidesk-dot-1 { animation-delay: 0s; }
+              .omnidesk-dot-2 { animation-delay: 0.18s; }
+              .omnidesk-dot-3 { animation-delay: 0.36s; }
+            `}</style>
             {/* Topbar: Dark Background with 3-dots, mic circle, title, status, expand and close */}
             <div
               style={{
@@ -499,12 +539,22 @@ export function VoiceWidget({
                         width: "6px",
                         height: "6px",
                         borderRadius: "50%",
-                        background: isCallActive ? "#22c55e" : callStatus === "connecting" ? "#eab308" : "rgba(255,255,255,0.4)",
+                        background:
+                          isCallActive
+                            ? isThinking
+                              ? "#f59e0b"
+                              : "#22c55e"
+                            : callStatus === "connecting"
+                            ? "#eab308"
+                            : "rgba(255,255,255,0.4)",
+                        animation: isThinking ? "omnidesk-pulse-amber 1.5s infinite" : "none",
                       }}
                     />
                     <span>
                       {isCallActive
-                        ? "Live · Speaking"
+                        ? isThinking
+                          ? "Thinking · Checking tools..."
+                          : "Live · Speaking"
                         : callStatus === "connecting"
                         ? "Connecting..."
                         : callStatus === "error"
@@ -685,6 +735,61 @@ export function VoiceWidget({
                   </div>
                 );
               })}
+
+              {/* Animated Thinking Motion Bubble (While tool calling / generating reply) */}
+              {isThinking && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    maxWidth: "88%",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        borderRadius: "50%",
+                        background: "#18181b",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#ffffff",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      </svg>
+                    </div>
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: "14px 14px 14px 2px",
+                        fontSize: "13px",
+                        lineHeight: "1.45",
+                        background: "#f4f4f5",
+                        color: "#71717a",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        minHeight: "38px",
+                      }}
+                      title="Agent is thinking and processing..."
+                    >
+                      <span className="omnidesk-motion-dot omnidesk-dot-1" />
+                      <span className="omnidesk-motion-dot omnidesk-dot-2" />
+                      <span className="omnidesk-motion-dot omnidesk-dot-3" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={scrollRef} />
             </div>
 
