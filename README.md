@@ -409,8 +409,8 @@ Normally, testing cloud webhooks locally requires running third-party tunneling 
 
 ## How to Test as an Evaluator
 
-### 1. Test the Hair Salon Voice Receptionist (`/demo/salon`)
-1. Open [https://omni-desk-rho.vercel.app/demo/salon](https://omni-desk-rho.vercel.app/demo/salon) (or [http://localhost:3000/demo/salon](http://localhost:3000/demo/salon)).
+### 1. Test the Hair Salon Voice Receptionist (`/demo`)
+1. Open [https://omni-desk-rho.vercel.app/demo](https://omni-desk-rho.vercel.app/demo) (or [http://localhost:3000/demo](http://localhost:3000/demo)).
 2. Click **"Start Voice Call"** and grant microphone access.
 3. Converse naturally with the AI receptionist:
    - *"Hi, what hair services do you offer and what are your prices?"* &rarr; Calls `get_services_and_pricing`.
