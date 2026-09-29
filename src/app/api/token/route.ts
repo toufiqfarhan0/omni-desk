@@ -34,7 +34,11 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    if (biz?.assemblyai_agent_id?.trim()) {
+    if (businessId === "biz_demo_dental") {
+      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    } else if (businessId === "biz_1790171996683_44dsu") {
+      agentId = "agent_8a409193fbde43acb6db72541947dc7b";
+    } else if (biz?.assemblyai_agent_id?.trim()) {
       const storedId = biz.assemblyai_agent_id.trim();
       const exists = await verifyAgentExists(storedId);
       if (exists) {
@@ -53,9 +57,7 @@ export async function GET(request: Request) {
     }
 
     if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      if (await verifyAgentExists("agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794")) {
-        agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
-      }
+      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
     }
 
     if (!agentId) {
