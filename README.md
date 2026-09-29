@@ -177,7 +177,7 @@ flowchart TD
 
 
 ### Step 1: Session Initiation & Automatic Cloud Provisioning
-1. The user clicks **"Start Voice Call"** on `/demo/salon`, via the embeddable `<VoiceWidget />`, or inside the Dashboard.
+1. The user clicks **"Start Voice Call"** on `/demo`, via the embeddable `<VoiceWidget />`, or inside the Dashboard.
 2. The browser requests a short-lived token from `/api/token?businessId=...`.
 3. If the business is brand new or undeployed, the server dynamically provisions a dedicated cloud agent on AssemblyAI in ~1 second via `getOrProvisionAgent()`, configuring `min_latency`, tuned turn detection, and pre-loading its service catalog.
 4. The server retrieves the business's `assemblyai_agent_id` from the database (**Supabase PostgreSQL** in production or **SQLite** locally).
