@@ -1,6 +1,7 @@
 # OmniDesk — Autonomous Voice Receptionist & Scheduling Platform
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-omni--desk--rho.vercel.app-blue?style=flat&logo=vercel)](https://omni-desk-rho.vercel.app)
+[![Judges Video & Folder](https://img.shields.io/badge/Judges%20Drive-60s%20Video%20Demo-FF6D00?style=flat&logo=googledrive)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing)
 [![npm version](https://img.shields.io/npm/v/omnidesk-voice.svg?color=blue)](https://www.npmjs.com/package/omnidesk-voice)
 [![AssemblyAI](https://img.shields.io/badge/Powered%20by-AssemblyAI%20Voice%20Agents-blueviolet?style=flat)](https://www.assemblyai.com)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=flat&logo=next.js)](https://nextjs.org)
@@ -10,6 +11,8 @@
 ---
 
 **Quick Links:**&nbsp;
+[⚡ Judge it in 120s](#judge-it-in-120-seconds) &nbsp;·&nbsp;
+[📁 Judges Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) &nbsp;·&nbsp;
 [Live Demos](#live-external-client-deployments) &nbsp;·&nbsp;
 [npm SDK](#embeddable-voice-widget--npm-package-omnidesk-voice) &nbsp;·&nbsp;
 [Architecture & Pipeline](#architecture--pipeline) &nbsp;·&nbsp;
@@ -19,12 +22,24 @@
 [Database Modes](#database-modes-cloud-vs-local) &nbsp;·&nbsp;
 [Quick Start](#quick-setup-guide)
 
+---
+
+## Judge it in 120 seconds
+
+> 📁 **Judges Evaluation Folder & 60s Video Walkthrough**: [Google Drive (`omni-desk-60's`)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) — Direct link to the walkthrough video (`omni-60's.mp4`) matching the exact step-by-step flow below.
+
+1. **Create an agent in 60s** — [open the dashboard](https://omni-desk-rho.vercel.app/dashboard), click **+ New Business**, name it **Apex Sports Therapy**, select **Wellness & Physical Therapy**, set clinic hours to 8 AM – 6 PM, and configure your services (*Initial Assessment* for $95, *Deep Tissue Recovery* for $150). Click **Create Workflow** — OmniDesk instantly compiles the entire service catalog into the agent's memory.
+2. **Deploy to AssemblyAI in 1 click** — on the **AI Agent Builder**, select the warm **Alba** voice model, customize your greeting, and click **Deploy Voice Agent**. Watch the status badge switch to **Deployed & Ready** — a dedicated cloud voice agent is live on AssemblyAI in just 1 second.
+3. **Test live voice & zero dead-air booking** — switch to the **Live Voice Tester** tab, click **Start Voice Call**, allow the mic, and ask: *"How much is the initial assessment, and can I book this Friday at 10 AM?"*. Watch the dual emerald **dBFS meters** react in real time with **sub-300ms** voice latency and **sub-48ms** barge-in, listen to the agent quote pricing instantly from memory without HTTP delay, and hear the 6-character confirmation code.
+4. **Audit bookings & stream call recording** — switch to **Customer Bookings** to see Friday 10:00 AM locked into the calendar grid, then open **Call History** &rarr; **View Transcript** to stream the recorded `.ogg` call audio directly from AssemblyAI S3 or click **Download Audio**.
+
+No microphone? Watch the 60-second video walkthrough in the [Judges Google Drive Folder](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) (`omni-60's.mp4`), or inspect the pre-seeded appointments and call recordings directly in the [Dashboard](https://omni-desk-rho.vercel.app/dashboard), clearly labelled `SIMULATED`.
 
 ---
 
 OmniDesk is an autonomous, full-stack voice receptionist and appointment scheduling platform powered by the **AssemblyAI Voice Agent API**. It pairs real-time bidirectional 16kHz Web Audio streaming with deterministic server-side webhook tools to execute live calendar checks, appointment bookings, spoken email deliverability validation, and automated RFC 5545 calendar invite dispatch.
 
-
+- **Judges Drive Folder & 60s Video**: [Google Drive (`omni-desk-60's`)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) — Video walkthrough (`omni-60's.mp4`) & judge evaluation assets
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
 - **npm Package**: [`omnidesk-voice@0.1.4`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
 - **Live Script Embed Demo**: [https://salon-demo-script.vercel.app](https://salon-demo-script.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script))
@@ -408,6 +423,8 @@ Normally, testing cloud webhooks locally requires running third-party tunneling 
 ---
 
 ## How to Test as an Evaluator
+
+> 📁 **Judges Evaluation Folder & 60s Video Walkthrough**: [Google Drive (`omni-desk-60's`)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) — direct link to the 60-second video demo (`omni-60's.mp4`) and project walkthrough assets.
 
 ### 1. Test the Hair Salon Voice Receptionist (`/demo`)
 1. Open [https://omni-desk-rho.vercel.app/demo](https://omni-desk-rho.vercel.app/demo) (or [http://localhost:3000/demo](http://localhost:3000/demo)).
