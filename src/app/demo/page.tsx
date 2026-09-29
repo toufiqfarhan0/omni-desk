@@ -30,6 +30,7 @@ interface MessageBubble {
   id: string;
   who: "user" | "agent";
   text: string;
+  isFinal?: boolean;
 }
 
 export default function DemoPage() {
@@ -52,7 +53,7 @@ export default function DemoPage() {
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
-  const transcriptBottomRef = useRef<HTMLDivElement | null>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const emailCapturedRef = useRef<boolean>(false);
 
   const activeTemplate = TEMPLATES[templateKey];
@@ -63,8 +64,8 @@ export default function DemoPage() {
   }, [templateKey]);
 
   useEffect(() => {
-    if (messages.length > 0 || isThinking) {
-      transcriptBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (transcriptContainerRef.current) {
+      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
 
@@ -150,14 +151,23 @@ export default function DemoPage() {
           } else if (event.who === "agent") {
             setIsThinking(false);
           }
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `${Date.now()}-${Math.random()}`,
-              who: event.who,
-              text: event.text,
-            },
-          ]);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.who === event.who && !last.isFinal) {
+              const updated = [...prev];
+              updated[updated.length - 1] = { ...last, text: event.text, isFinal: event.isFinal ?? false };
+              return updated;
+            }
+            return [
+              ...prev,
+              {
+                id: `${Date.now()}-${Math.random()}`,
+                who: event.who,
+                text: event.text,
+                isFinal: event.isFinal ?? false,
+              },
+            ];
+          });
           if (event.who === "user") {
             if (event.text.includes("@") || (event.text.toLowerCase().includes(" at ") && event.text.toLowerCase().includes(" dot "))) {
               emailCapturedRef.current = true;
@@ -693,7 +703,7 @@ export default function DemoPage() {
             {/* Widget Conversation Feed */}
             <div
               style={{
-                flex: 1,
+              flex: 1,
                 minHeight: 0,
                 overflowY: "auto",
                 padding: "18px 16px",
@@ -702,6 +712,7 @@ export default function DemoPage() {
                 gap: "14px",
                 background: "#ffffff",
               }}
+              ref={transcriptContainerRef}
             >
               {/* Placeholder in Gray Background */}
               {messages.length === 0 && (
@@ -844,7 +855,7 @@ export default function DemoPage() {
                 </div>
               )}
 
-              <div ref={transcriptBottomRef} />
+
             </div>
 
             {/* Live email entry bar */}
