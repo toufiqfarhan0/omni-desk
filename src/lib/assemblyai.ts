@@ -437,7 +437,7 @@ export async function verifyAgentExists(
 
   // Known verified active production agents
   if (
-    cleanId === "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" ||
+    cleanId === "agent_5e74813381884bb8b82f881b6db66aaf" ||
     cleanId === "agent_8a409193fbde43acb6db72541947dc7b"
   ) {
     return true;
@@ -483,9 +483,9 @@ export async function getOrProvisionAgent(
   if (biz.id === "biz_demo_dental") {
     try {
       const { updateBusiness } = await import("@/lib/db");
-      await updateBusiness("biz_demo_dental", { assemblyai_agent_id: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" });
+      await updateBusiness("biz_demo_dental", { assemblyai_agent_id: "agent_5e74813381884bb8b82f881b6db66aaf" });
     } catch {}
-    return "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    return "agent_5e74813381884bb8b82f881b6db66aaf";
   }
 
   // Guaranteed active agent for Apex Sports Therapy business

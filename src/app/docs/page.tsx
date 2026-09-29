@@ -270,7 +270,7 @@ pnpm install`}</div>
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
 # [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
-AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
+AGENT_ID=agent_5e74813381884bb8b82f881b6db66aaf
 
 # [OPTIONAL] Supabase (Leave blank for zero-setup local SQLite)
 SUPABASE_URL=
@@ -309,7 +309,7 @@ SMTP_PASS=your_16_char_google_app_password`}</div>
       <div className="doc-callout callout-info">
         <div className="callout-title">AssemblyAI Agent ID</div>
         <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
-          The pre-configured <span className="doc-inline-code">AGENT_ID</span> (<code>agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794</code>) is deployed and running on AssemblyAI's <strong>Universal-3.6 Pro Realtime</strong> engine. Calls connect immediately with zero tunnel setup.
+          The pre-configured <span className="doc-inline-code">AGENT_ID</span> (<code>agent_5e74813381884bb8b82f881b6db66aaf</code>) is deployed and running on AssemblyAI's <strong>Universal-3.6 Pro Realtime</strong> engine. Calls connect immediately with zero tunnel setup.
         </p>
       </div>
     </div>

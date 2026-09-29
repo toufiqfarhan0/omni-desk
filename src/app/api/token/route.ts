@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       new URL(request.url).origin;
 
     if (businessId === "biz_demo_dental") {
-      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      agentId = "agent_5e74813381884bb8b82f881b6db66aaf";
     } else if (businessId === "biz_1790171996683_44dsu") {
       agentId = "agent_8a409193fbde43acb6db72541947dc7b";
     } else if (biz?.assemblyai_agent_id?.trim()) {
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     }
 
     if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      agentId = "agent_5e74813381884bb8b82f881b6db66aaf";
     }
 
     if (!agentId) {
