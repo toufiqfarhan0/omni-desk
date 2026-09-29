@@ -217,7 +217,6 @@ export function AgentBuilder({
   const [services, setServices] = useState<Service[]>(business.services || []);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [isRefreshingAgentId, setIsRefreshingAgentId] = useState(false);
   const [isVerifyingAgent, setIsVerifyingAgent] = useState(false);
   const [agentLiveStatus, setAgentLiveStatus] = useState<
     "unknown" | "checking" | "active" | "not_found" | "undeployed"
@@ -254,7 +253,7 @@ export function AgentBuilder({
     }
   }, [business]);
 
-  const handleVerifyAndFixAgent = async (forceReprovision = false) => {
+  const handleVerifyAndSyncAgent = async (forceReprovision = false) => {
     if (!formData.id) return;
     setIsVerifyingAgent(true);
     setAgentLiveStatus("checking");
@@ -269,6 +268,7 @@ export function AgentBuilder({
         const workingAgentId = data.agent_id;
         const updatedBiz = {
           ...formData,
+          ...(data.business || {}),
           assemblyai_agent_id: workingAgentId,
         };
         setFormData(updatedBiz);
@@ -280,10 +280,10 @@ export function AgentBuilder({
         setAgentLiveStatus("active");
         if (data.status === "repaired") {
           toast.success(
-            `Agent repaired & live on AssemblyAI! ID: ${workingAgentId}`
+            `Agent repaired & synced with database! ID: ${workingAgentId}`
           );
         } else {
-          toast.success("Agent verified: 100% active and healthy on AssemblyAI!");
+          toast.success("Agent verified: 100% active and in sync with database!");
         }
       } else {
         setAgentLiveStatus("not_found");
@@ -386,35 +386,6 @@ export function AgentBuilder({
       toast.error(err.message || "Deployment error");
     } finally {
       setIsDeploying(false);
-    }
-  };
-
-  const handleRefreshAgentId = async () => {
-    if (!formData.id) return;
-    setIsRefreshingAgentId(true);
-    try {
-      const res = await fetch(`/api/owner/businesses/${formData.id}`);
-      const data = await res.json();
-      if (res.ok && data.business) {
-        const latestAgentId = data.business.assemblyai_agent_id || "";
-        const updatedBiz = {
-          ...formData,
-          assemblyai_agent_id: latestAgentId,
-        };
-        setFormData(updatedBiz);
-        onUpdateBusiness({ ...business, ...data.business });
-        if (latestAgentId) {
-          toast.success(`Agent ID synced from database: ${latestAgentId}`);
-        } else {
-          toast.info("No agent ID found in database yet. Click 'Deploy to AssemblyAI' above.");
-        }
-      } else {
-        toast.error("Failed to fetch latest business status from database.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to refresh Agent ID");
-    } finally {
-      setIsRefreshingAgentId(false);
     }
   };
 
@@ -599,19 +570,24 @@ export function AgentBuilder({
               />
               <button
                 type="button"
-                onClick={() => handleVerifyAndFixAgent(false)}
+                onClick={() => handleVerifyAndSyncAgent(false)}
                 disabled={isVerifyingAgent}
-                title="Verify agent on AssemblyAI or automatically repair/re-provision if 404"
+                title="Verify agent on AssemblyAI, auto-repair if missing, and sync with database in one click"
                 style={{
-                  padding: "8px 13px",
+                  padding: "8px 14px",
                   borderRadius: "var(--radius)",
-                  border: agentLiveStatus === "not_found" ? "1px solid #ef4444" : "1px solid var(--border)",
-                  background: agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
+                  border:
+                    agentLiveStatus === "not_found"
+                      ? "1px solid #ef4444"
+                      : "1px solid var(--border)",
+                  background:
+                    agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
                   fontSize: "12px",
                   fontWeight: 600,
                   cursor: isVerifyingAgent ? "wait" : "pointer",
                   whiteSpace: "nowrap",
-                  color: agentLiveStatus === "not_found" ? "#b91c1c" : "var(--text)",
+                  color:
+                    agentLiveStatus === "not_found" ? "#b91c1c" : "var(--text)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
@@ -621,50 +597,29 @@ export function AgentBuilder({
                 }}
               >
                 {isVerifyingAgent ? (
-                  <RotateCw style={{ width: "13px", height: "13px", animation: "spin 1s linear infinite" }} />
+                  <RotateCw
+                    style={{
+                      width: "13px",
+                      height: "13px",
+                      animation: "spin 1s linear infinite",
+                    }}
+                  />
                 ) : agentLiveStatus === "not_found" ? (
-                  <Wrench style={{ width: "13px", height: "13px", color: "#dc2626" }} />
+                  <Wrench
+                    style={{ width: "13px", height: "13px", color: "#dc2626" }}
+                  />
                 ) : (
-                  <ShieldCheck style={{ width: "13px", height: "13px", color: "#16a34a" }} />
+                  <ShieldCheck
+                    style={{ width: "13px", height: "13px", color: "#16a34a" }}
+                  />
                 )}
                 <span>
                   {isVerifyingAgent
-                    ? "Checking..."
+                    ? "Verifying & Syncing..."
                     : agentLiveStatus === "not_found"
-                    ? "Auto-Fix Agent"
-                    : "Verify & Fix"}
+                    ? "Auto-Fix & Sync"
+                    : "Verify & Sync"}
                 </span>
-              </button>
-              <button
-                type="button"
-                onClick={handleRefreshAgentId}
-                disabled={isRefreshingAgentId}
-                title="Fetch latest Agent ID from database (Supabase / SQLite)"
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "var(--radius)",
-                  border: "1px solid var(--border)",
-                  background: "#ffffff",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: isRefreshingAgentId ? "wait" : "pointer",
-                  whiteSpace: "nowrap",
-                  color: "var(--text)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  flexShrink: 0,
-                  opacity: isRefreshingAgentId ? 0.7 : 1,
-                }}
-              >
-                <RotateCw
-                  style={{
-                    width: "13px",
-                    height: "13px",
-                    animation: isRefreshingAgentId ? "spin 1s linear infinite" : "none",
-                  }}
-                />
-                <span>Sync DB</span>
               </button>
               {Boolean(formData.assemblyai_agent_id) && (
                 <button
@@ -833,17 +788,22 @@ export function AgentBuilder({
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <button
                   type="button"
-                  onClick={() => handleVerifyAndFixAgent(false)}
+                  onClick={() => handleVerifyAndSyncAgent(false)}
                   disabled={isVerifyingAgent}
-                  title="Verify and auto-repair agent on AssemblyAI"
+                  title="Verify and sync agent on AssemblyAI and database in one click"
                   style={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    padding: "4px 8px",
+                    padding: "4px 9px",
                     borderRadius: "4px",
-                    border: agentLiveStatus === "not_found" ? "1px solid #ef4444" : "1px solid var(--border)",
-                    background: agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
-                    color: agentLiveStatus === "not_found" ? "#dc2626" : "var(--text)",
+                    border:
+                      agentLiveStatus === "not_found"
+                        ? "1px solid #ef4444"
+                        : "1px solid var(--border)",
+                    background:
+                      agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
+                    color:
+                      agentLiveStatus === "not_found" ? "#dc2626" : "var(--text)",
                     cursor: isVerifyingAgent ? "wait" : "pointer",
                     display: "inline-flex",
                     alignItems: "center",
@@ -852,21 +812,29 @@ export function AgentBuilder({
                   }}
                 >
                   {isVerifyingAgent ? (
-                    <RotateCw style={{ width: "11px", height: "11px", animation: "spin 1s linear infinite" }} />
+                    <RotateCw
+                      style={{
+                        width: "11px",
+                        height: "11px",
+                        animation: "spin 1s linear infinite",
+                      }}
+                    />
+                  ) : agentLiveStatus === "not_found" ? (
+                    <Wrench
+                      style={{ width: "11px", height: "11px", color: "#dc2626" }}
+                    />
                   ) : (
-                    <ShieldCheck style={{ width: "11px", height: "11px", color: "#16a34a" }} />
+                    <ShieldCheck
+                      style={{ width: "11px", height: "11px", color: "#16a34a" }}
+                    />
                   )}
-                  <span>{agentLiveStatus === "not_found" ? "Fix" : "Verify"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRefreshAgentId}
-                  disabled={isRefreshingAgentId}
-                  title="Fetch latest Agent ID from database"
-                  style={{ fontSize: "11px", fontWeight: 600, padding: "4px 8px", borderRadius: "4px", border: "1px solid var(--border)", background: "#ffffff", color: "var(--text)", cursor: isRefreshingAgentId ? "wait" : "pointer", display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}
-                >
-                  <RotateCw style={{ width: "11px", height: "11px", animation: isRefreshingAgentId ? "spin 1s linear infinite" : "none" }} />
-                  <span>Sync</span>
+                  <span>
+                    {isVerifyingAgent
+                      ? "Syncing..."
+                      : agentLiveStatus === "not_found"
+                      ? "Fix & Sync"
+                      : "Verify & Sync"}
+                  </span>
                 </button>
                 {Boolean(formData.assemblyai_agent_id) && (
                   <button
