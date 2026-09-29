@@ -56,13 +56,13 @@ export function VoiceTester({ business }: VoiceTesterProps) {
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
   const timerTickRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
-  const feedBottomRef = useRef<HTMLDivElement | null>(null);
+  const feedContainerRef = useRef<HTMLDivElement | null>(null);
   const emailCapturedRef = useRef<boolean>(false);
   const sessionIdRef = useRef<string>("");
 
   useEffect(() => {
-    if (messages.length > 0 || isThinking) {
-      feedBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (feedContainerRef.current) {
+      feedContainerRef.current.scrollTop = feedContainerRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
 
@@ -726,7 +726,7 @@ export default function App() {
         {/* Conversation Feed */}
         <div
           style={{
-            flex: 1,
+          flex: 1,
             minHeight: 0,
             overflowY: "auto",
             padding: "16px",
@@ -735,6 +735,7 @@ export default function App() {
             gap: "12px",
             background: isDark ? "#09090b" : "#ffffff",
           }}
+          ref={feedContainerRef}
         >
           {/* Placeholder in Gray Background */}
           {messages.length === 0 && (
@@ -877,7 +878,7 @@ export default function App() {
             </div>
           )}
 
-          <div ref={feedBottomRef} />
+
         </div>
 
         {/* Live email entry bar */}

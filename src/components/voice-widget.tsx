@@ -92,7 +92,7 @@ export function VoiceWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [callStatus, setCallStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
-  const [transcripts, setTranscripts] = useState<Array<{ who: "user" | "agent"; text: string }>>([]);
+  const [transcripts, setTranscripts] = useState<Array<{ who: "user" | "agent"; text: string; isFinal?: boolean }>>([]);
   const [userLevel, setUserLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
   const [callDuration, setCallDuration] = useState("0:00");
@@ -108,7 +108,7 @@ export function VoiceWidget({
   const [isThinking, setIsThinking] = useState(false);
 
   const voiceClientRef = useRef<AssemblyAIVoiceClient | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const callStartTimeRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
@@ -127,9 +127,11 @@ export function VoiceWidget({
     return true;
   }, [theme]);
 
-  // Auto-scroll transcript container
+  // Auto-scroll transcript container (scroll the container itself, NOT the page)
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (transcriptContainerRef.current) {
+      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
+    }
   }, [transcripts, isThinking]);
 
   const startTimer = useCallback(() => {
@@ -197,7 +199,16 @@ export function VoiceWidget({
           } else if (ev.who === "agent") {
             setIsThinking(false);
           }
-          setTranscripts((prev) => [...prev, { who: ev.who, text: ev.text }]);
+          setTranscripts((prev) => {
+            const last = prev[prev.length - 1];
+            // Update the last bubble in-place if same speaker and not yet finalized
+            if (last && last.who === ev.who && !last.isFinal) {
+              const updated = [...prev];
+              updated[updated.length - 1] = { ...last, text: ev.text, isFinal: ev.isFinal ?? false };
+              return updated;
+            }
+            return [...prev, { who: ev.who, text: ev.text, isFinal: ev.isFinal ?? false }];
+          });
           onTranscript?.(ev);
           if (ev.who === "user") {
             if (ev.text.includes("@") || (ev.text.toLowerCase().includes(" at ") && ev.text.toLowerCase().includes(" dot "))) {
@@ -635,7 +646,7 @@ export function VoiceWidget({
             {/* Conversation container — Crisp White Background */}
             <div
               style={{
-                flex: 1,
+            flex: 1,
                 minHeight: 0,
                 padding: "16px",
                 overflowY: "auto",
@@ -644,6 +655,7 @@ export function VoiceWidget({
                 gap: "12px",
                 background: "#ffffff",
               }}
+              ref={transcriptContainerRef}
             >
               {/* Placeholder in Gray Background */}
               {transcripts.length === 0 && (
@@ -790,7 +802,7 @@ export function VoiceWidget({
                 </div>
               )}
 
-              <div ref={scrollRef} />
+
             </div>
 
             {/* Live email entry bar */}
