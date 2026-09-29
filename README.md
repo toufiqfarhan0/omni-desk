@@ -383,7 +383,7 @@ SUPABASE_ANON_KEY=
 pnpm dev
 ```
 - **Landing Page**: [http://localhost:3000](http://localhost:3000)
-- **Hair Salon Showcase**: [http://localhost:3000/demo/salon](http://localhost:3000/demo/salon)
+- **Try Showcase**: [http://localhost:3000/demo](http://localhost:3000/demo)
 - **Owner Dashboard**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
 ---
