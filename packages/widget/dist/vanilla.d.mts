@@ -1,1 +1,1 @@
-export { i as initOmniDeskWidget } from './vanilla-CHgjx014.mjs';
+export { i as initOmniDeskWidget } from './vanilla-CBbmvgSw.mjs';

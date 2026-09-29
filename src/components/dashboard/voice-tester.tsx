@@ -131,7 +131,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
           }
         },
         onThinkingChange: (thinking) => {
-          setIsThinking(thinking);
+          if (thinking) setIsThinking(true);
         },
         onSessionId: (sid) => {
           sessionIdRef.current = sid;
@@ -139,7 +139,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
         onTranscript: (event) => {
           if (event.who === "user" && event.isFinal) {
             setIsThinking(true);
-          } else if (event.who === "agent") {
+          } else if (event.who === "agent" && event.text && event.text.trim().length > 0) {
             setIsThinking(false);
           }
           setMessages((prev) => {
@@ -172,10 +172,43 @@ export function VoiceTester({ business }: VoiceTesterProps) {
             }
           } else if (event.who === "agent") {
             const lower = event.text.toLowerCase();
+
+            // First: Check if agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email") && (
+                lower.includes("what") ||
+                lower.includes("have") ||
+                lower.includes("provide") ||
+                lower.includes("give") ||
+                lower.includes("tell") ||
+                lower.includes("share") ||
+                lower.includes("address")
+              ));
+
+            if (isAskingForEmail) {
+              emailCapturedRef.current = false;
+              setShowEmailBar(true);
+              return;
+            }
+
             // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
               lower.includes("verified your email") ||
-              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("thank you for your email") ||
+              lower.includes("thank you for providing your email") ||
               lower.includes("sent a calendar invite") ||
               lower.includes("sent your confirmation") ||
               lower.includes("confirmation code is") ||
@@ -190,25 +223,6 @@ export function VoiceTester({ business }: VoiceTesterProps) {
             if (emailCapturedRef.current) {
               setShowEmailBar(false);
               return;
-            }
-
-            // Only show bar if the agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
-
-            if (isAskingForEmail) {
-              setShowEmailBar(true);
             }
           }
         },

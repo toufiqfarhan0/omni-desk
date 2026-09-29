@@ -1,6 +1,6 @@
 import React from 'react';
-import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-CHgjx014.js';
-export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-CHgjx014.js';
+import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-CBbmvgSw.js';
+export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-CBbmvgSw.js';
 
 declare function OmniDeskWidget({ host, businessId, agentId: propAgentId, theme, position, label, accent, accentColor, businessName: propBusinessName, greeting: propGreeting, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
 declare const VoiceWidget: typeof OmniDeskWidget;

@@ -143,12 +143,12 @@ export default function DemoPage() {
           }
         },
         onThinkingChange: (thinking) => {
-          setIsThinking(thinking);
+          if (thinking) setIsThinking(true);
         },
         onTranscript: (event) => {
           if (event.who === "user" && event.isFinal) {
             setIsThinking(true);
-          } else if (event.who === "agent") {
+          } else if (event.who === "agent" && event.text && event.text.trim().length > 0) {
             setIsThinking(false);
           }
           setMessages((prev) => {
@@ -175,10 +175,43 @@ export default function DemoPage() {
             }
           } else if (event.who === "agent") {
             const lower = event.text.toLowerCase();
+
+            // First: Check if agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email") && (
+                lower.includes("what") ||
+                lower.includes("have") ||
+                lower.includes("provide") ||
+                lower.includes("give") ||
+                lower.includes("tell") ||
+                lower.includes("share") ||
+                lower.includes("address")
+              ));
+
+            if (isAskingForEmail) {
+              emailCapturedRef.current = false;
+              setShowEmailBar(true);
+              return;
+            }
+
             // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
               lower.includes("verified your email") ||
-              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("thank you for your email") ||
+              lower.includes("thank you for providing your email") ||
               lower.includes("sent a calendar invite") ||
               lower.includes("sent your confirmation") ||
               lower.includes("confirmation code is") ||
@@ -192,26 +225,6 @@ export default function DemoPage() {
             // If already captured, never re-show email bar
             if (emailCapturedRef.current) {
               setShowEmailBar(false);
-              return;
-            }
-
-            // Only show bar if the agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
-
-            if (isAskingForEmail) {
-              setShowEmailBar(true);
             }
           }
         },
@@ -560,12 +573,31 @@ export default function DemoPage() {
               transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
-            {/* Widget Topbar */}
+            <style>{`
+              @keyframes omnidesk-typing-dot {
+                0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.35; }
+                40% { transform: translateY(-6px) scale(1.15); opacity: 1; }
+              }
+              .omnidesk-motion-dot {
+                display: inline-block;
+                width: 6.5px;
+                height: 6.5px;
+                border-radius: 50%;
+                background-color: currentColor;
+                animation: omnidesk-typing-dot 1.25s infinite ease-in-out both;
+                will-change: transform, opacity;
+              }
+              .omnidesk-dot-1 { animation-delay: 0s; }
+              .omnidesk-dot-2 { animation-delay: 0.18s; }
+              .omnidesk-dot-3 { animation-delay: 0.36s; }
+            `}</style>
+            {/* Widget Topbar — Matching Live Voice Tester */}
             <div
               style={{
-                background: "#18181b",
-                color: "#ffffff",
-                padding: isExpanded ? "16px 24px" : "14px 18px",
+                background: "#ffffff",
+                color: "#09090b",
+                borderBottom: "1px solid #e4e4e7",
+                padding: "13px 18px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -575,35 +607,41 @@ export default function DemoPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                <div style={{ color: "rgba(255,255,255,0.7)", display: "grid", placeItems: "center" }}>
+                {/* 3 vertical dots icon */}
+                <div style={{ color: "#71717a", display: "grid", placeItems: "center", flexShrink: 0 }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="1" />
                     <circle cx="12" cy="5" r="1" />
                     <circle cx="12" cy="19" r="1" />
                   </svg>
                 </div>
+
+                {/* Circular mic icon badge */}
                 <div
                   style={{
                     width: "28px",
                     height: "28px",
                     borderRadius: "50%",
-                    background: "rgba(255,255,255,0.15)",
+                    background: "#f4f4f5",
                     display: "grid",
                     placeItems: "center",
                     flexShrink: 0,
+                    color: "#09090b",
                   }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                     <line x1="12" y1="19" x2="12" y2="22" />
                   </svg>
                 </div>
+
+                {/* Title & Status */}
                 <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                  <h3 style={{ margin: 0, fontSize: "13.5px", fontWeight: 600, color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#09090b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {activeTemplate.name}
-                  </h3>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "rgba(255,255,255,0.75)" }}>
+                  </div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#71717a" }}>
                     <span
                       style={{
                         width: "6px",
@@ -616,7 +654,7 @@ export default function DemoPage() {
                               : "#22c55e"
                             : callStatus === "busy"
                             ? "#eab308"
-                            : "rgba(255,255,255,0.4)",
+                            : "#a1a1aa",
                         animation: isThinking ? "omnidesk-pulse-amber 1.5s infinite" : "none",
                       }}
                     />
@@ -635,16 +673,17 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "rgba(255,255,255,0.85)" }}>
+              {/* Right controls */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
                   title={isExpanded ? "Exit Fullscreen" : "Open Full"}
                   style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: "#f4f4f5",
+                    border: "1px solid #e4e4e7",
                     borderRadius: "7px",
-                    color: "#ffffff",
+                    color: "#52525b",
                     width: "30px",
                     height: "30px",
                     cursor: "pointer",
@@ -652,11 +691,10 @@ export default function DemoPage() {
                     placeItems: "center",
                     transition: "all 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#e4e4e7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#f4f4f5")}
                 >
                   {isExpanded ? (
-                    /* Minimize / collapse icon (arrows pointing inward) */
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="4 14 10 14 10 20" />
                       <polyline points="20 10 14 10 14 4" />
@@ -664,7 +702,6 @@ export default function DemoPage() {
                       <line x1="3" y1="21" x2="10" y2="14" />
                     </svg>
                   ) : (
-                    /* Maximize / expand icon (arrows pointing outward - matching design) */
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 3 21 3 21 9" />
                       <polyline points="9 21 3 21 3 15" />
@@ -678,10 +715,10 @@ export default function DemoPage() {
                   onClick={handleReset}
                   title="Reset Conversation"
                   style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: "#f4f4f5",
+                    border: "1px solid #e4e4e7",
                     borderRadius: "7px",
-                    color: "#ffffff",
+                    color: "#52525b",
                     width: "30px",
                     height: "30px",
                     cursor: "pointer",
@@ -689,8 +726,8 @@ export default function DemoPage() {
                     placeItems: "center",
                     transition: "all 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#e4e4e7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#f4f4f5")}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -862,39 +899,19 @@ export default function DemoPage() {
             {showEmailBar && callStatus === "live" && (
               <div
                 style={{
-                  padding: "12px 18px",
+                  padding: "11px 16px",
                   background: "#f0fdf4",
                   borderTop: "1px solid #bbf7d0",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
+                  gap: "7px",
                   flexShrink: 0,
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      color: "#15803d",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: "7px",
-                        height: "7px",
-                        borderRadius: "50%",
-                        background: "#22c55e",
-                        display: "inline-block",
-                        boxShadow: "0 0 6px #22c55e",
-                      }}
-                    />
-                    Agent Requesting Email • Verified Mailbox Entry
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.04em", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                    Email Requested by Agent • Auto Verification
                   </span>
                   <button
                     type="button"
@@ -904,10 +921,9 @@ export default function DemoPage() {
                       border: "none",
                       color: "#15803d",
                       cursor: "pointer",
-                      fontSize: "13px",
+                      fontSize: "12px",
                       fontWeight: 700,
-                      padding: "2px 6px",
-                      borderRadius: "4px",
+                      padding: "1px 4px",
                     }}
                     title="Close"
                   >
@@ -930,11 +946,12 @@ export default function DemoPage() {
                     style={{
                       flex: 1,
                       fontFamily: "var(--font)",
-                      fontSize: "13px",
-                      padding: "9px 13px",
-                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      padding: "7px 11px",
+                      borderRadius: "7px",
                       border: emailError ? "1.5px solid #ef4444" : "1px solid #86efac",
                       background: "#ffffff",
+                      color: "#09090b",
                       outline: "none",
                     }}
                   />
@@ -945,15 +962,14 @@ export default function DemoPage() {
                       background: "#16a34a",
                       color: "#ffffff",
                       border: "none",
-                      padding: "9px 18px",
-                      borderRadius: "8px",
-                      fontSize: "12.5px",
+                      padding: "7px 14px",
+                      borderRadius: "7px",
+                      fontSize: "12px",
                       fontWeight: 600,
                       cursor: isVerifyingEmail ? "wait" : "pointer",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "6px",
-                      transition: "all 0.15s ease",
                       opacity: isVerifyingEmail ? 0.7 : 1,
                     }}
                   >
@@ -962,22 +978,22 @@ export default function DemoPage() {
                 </form>
 
                 {emailError && (
-                  <div style={{ fontSize: "11.5px", color: "#dc2626", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <div style={{ fontSize: "11px", color: "#ef4444", fontWeight: 500 }}>
                     {emailError}
                   </div>
                 )}
                 {emailSuccess && (
-                  <div style={{ fontSize: "11.5px", color: "#15803d", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span>✓</span> {emailSuccess}
+                  <div style={{ fontSize: "11px", color: "#15803d", fontWeight: 600 }}>
+                    ✓ {emailSuccess}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Voice Call Bar */}
+            {/* Bottom Call Bar */}
             <div
               style={{
-                padding: "14px 18px",
+                padding: "12px 16px",
                 borderTop: "1px solid #e4e4e7",
                 background: "#fafafa",
                 display: "flex",
@@ -986,46 +1002,62 @@ export default function DemoPage() {
                 flexShrink: 0,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <button
-                  type="button"
-                  onClick={handleToggleCall}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "9px 18px",
-                    background: callStatus === "live" ? "#dc2626" : "#000000",
-                    color: "#ffffff",
-                    borderRadius: "10px",
-                    border: "none",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                  <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
-                </button>
-              </div>
+              {/* Start Voice Call Button on Left */}
+              <button
+                type="button"
+                onClick={handleToggleCall}
+                disabled={callStatus === "busy"}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: callStatus === "live"
+                    ? "#dc2626"
+                    : callStatus === "busy"
+                    ? "#64748b"
+                    : "#18181b",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  boxShadow: callStatus === "live"
+                    ? "0 4px 14px rgba(220, 38, 38, 0.35)"
+                    : "0 4px 14px rgba(24, 24, 27, 0.25)",
+                  cursor: callStatus === "busy" ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+                <span>{callStatus === "live" ? "End Voice Call" : callStatus === "busy" ? "Connecting..." : "Start Voice Call"}</span>
+              </button>
 
+              {/* Right: Waveform visualizer bars when live + Duration badge */}
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 {callStatus === "live" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "14px" }}>
-                    <span style={{ width: "2.5px", height: "12px", background: "#000000", borderRadius: "1px" }} />
-                    <span style={{ width: "2.5px", height: "8px", background: "#000000", borderRadius: "1px" }} />
-                    <span style={{ width: "2.5px", height: "14px", background: "#000000", borderRadius: "1px" }} />
-                    <span style={{ width: "2.5px", height: "6px", background: "#000000", borderRadius: "1px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "2.5px", height: "14px" }}>
+                    {[12, 8, 14, 6, 10].map((h, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          width: "2.5px",
+                          height: `${h}px`,
+                          background: "#000000",
+                          borderRadius: "1px",
+                          transition: "height 0.12s ease",
+                        }}
+                      />
+                    ))}
                   </div>
                 )}
                 <span
                   style={{
-                    fontFamily: "var(--mono)",
+                    fontFamily: "var(--mono, monospace)",
                     fontSize: "12px",
                     fontWeight: 600,
                     padding: "3px 8px",

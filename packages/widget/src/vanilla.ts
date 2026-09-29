@@ -50,6 +50,10 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   let isExpanded = false;
   let userLevel = 0;
   let agentLevel = 0;
+  let emailCaptured = false;
+  let lastSpeaker: "user" | "agent" | null = null;
+  let lastBubbleInner: HTMLElement | null = null;
+  let lastMsgWasFinal = false;
 
   const isLeft = position === "bottom-left";
 
@@ -102,45 +106,69 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   // Topbar
   const header = document.createElement("div");
   header.style.cssText = `
-    background: #18181b; color: #ffffff; padding: 13px 18px;
+    background: ${isDark ? "#18181b" : "#ffffff"}; color: ${isDark ? "#ffffff" : "#09090b"};
+    border-bottom: 1px solid ${isDark ? "#27272a" : "#e4e4e7"};
+    padding: 13px 18px;
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; user-select: none; flex-shrink: 0;
   `;
   header.innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-      <div style="color: rgba(255,255,255,0.6); display: grid; place-items: center; flex-shrink: 0;">
+      <div style="color: ${isDark ? "rgba(255,255,255,0.6)" : "#71717a"}; display: grid; place-items: center; flex-shrink: 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
         </svg>
       </div>
-      <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; flex-shrink: 0; color: #ffffff;">
+      <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isDark ? "rgba(255,255,255,0.15)" : "#f4f4f5"}; display: grid; place-items: center; flex-shrink: 0; color: ${isDark ? "#ffffff" : "#09090b"};">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>
         </svg>
       </div>
       <div style="display: flex; flex-direction: column; min-width: 0;">
-        <div id="omnidesk-biz-title" style="font-size: 13.5px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+        <div id="omnidesk-biz-title" style="font-size: 13.5px; font-weight: 600; color: ${isDark ? "#ffffff" : "#09090b"}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
           ${propBusinessName || "OmniDesk Hair Salon & Studio"}
         </div>
-        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.75); white-space: nowrap;">
-          <span id="omnidesk-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); display: inline-block;"></span>
+        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: ${isDark ? "rgba(255,255,255,0.75)" : "#71717a"}; white-space: nowrap;">
+          <span id="omnidesk-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: ${isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa"}; display: inline-block;"></span>
           <span id="omnidesk-status-text">Idle · Ready</span>
         </div>
       </div>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <button id="omnidesk-expand-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; color: #ffffff; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Open Full">
+      <button id="omnidesk-expand-btn" style="background: ${isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5"}; border: 1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#e4e4e7"}; border-radius: 7px; color: ${isDark ? "#ffffff" : "#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Open Full">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
         </svg>
       </button>
-      <button id="omnidesk-close-btn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; color: #ffffff; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Close">
+      <button id="omnidesk-close-btn" style="background: ${isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5"}; border: 1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#e4e4e7"}; border-radius: 7px; color: ${isDark ? "#ffffff" : "#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Close">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     </div>
   `;
+
+  // Typing dots CSS
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    @keyframes omnidesk-typing-dot {
+      0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.35; }
+      40% { transform: translateY(-6px) scale(1.15); opacity: 1; }
+    }
+    .omnidesk-motion-dot {
+      display: inline-block;
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      background-color: currentColor;
+      animation: omnidesk-typing-dot 1.25s infinite ease-in-out both;
+      will-change: transform, opacity;
+    }
+    .omnidesk-dot-1 { animation-delay: 0s; }
+    .omnidesk-dot-2 { animation-delay: 0.18s; }
+    .omnidesk-dot-3 { animation-delay: 0.36s; }
+  `;
+  root.appendChild(styleEl);
 
   // Transcript Area (Pure White)
   const transcriptArea = document.createElement("div");
@@ -163,6 +191,49 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     <span>Start a call to talk to our receptionist</span>
   `;
   transcriptArea.appendChild(placeholderBanner);
+
+  // Animated Thinking Motion Bubble (While tool calling / generating reply)
+  const thinkingBubble = document.createElement("div");
+  thinkingBubble.id = "omnidesk-thinking-bubble";
+  thinkingBubble.style.cssText = `
+    display: none; flex-direction: column; gap: 4px; max-width: 88%; align-self: flex-start;
+  `;
+  thinkingBubble.innerHTML = `
+    <div style="display: flex; align-items: flex-start; gap: 8px;">
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: #18181b; display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        </svg>
+      </div>
+      <div style="padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; background: ${isDark ? "#18181b" : "#f4f4f5"}; color: ${isDark ? "#a1a1aa" : "#71717a"}; border: ${isDark ? "1px solid #27272a" : "none"}; boxShadow: 0 1px 2px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 5px; min-height: 38px;" title="Agent is thinking and processing...">
+        <span class="omnidesk-motion-dot omnidesk-dot-1"></span>
+        <span class="omnidesk-motion-dot omnidesk-dot-2"></span>
+        <span class="omnidesk-motion-dot omnidesk-dot-3"></span>
+      </div>
+    </div>
+  `;
+  transcriptArea.appendChild(thinkingBubble);
+
+  // Live email entry bar
+  const emailBar = document.createElement("div");
+  emailBar.id = "omnidesk-email-bar";
+  emailBar.style.cssText = `
+    padding: 11px 16px; background: #f0fdf4; border-top: 1px solid #bbf7d0;
+    display: none; flex-direction: column; gap: 7px; flex-shrink: 0;
+  `;
+  emailBar.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 6px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+        Email Requested by Agent • Auto Verification
+      </span>
+      <button id="omnidesk-email-close-btn" type="button" style="background: none; border: none; color: #15803d; cursor: pointer; font-size: 12px; font-weight: 700; padding: 1px 4px;">✕</button>
+    </div>
+    <form id="omnidesk-email-form" style="display: flex; gap: 8px; margin: 0;">
+      <input id="omnidesk-email-input" type="email" placeholder="Enter your real email (e.g. name@gmail.com)" required style="flex: 1; font-size: 12.5px; padding: 7px 11px; border-radius: 7px; border: 1px solid #86efac; background: #ffffff; color: #09090b; outline: none;" />
+      <button id="omnidesk-email-submit" type="submit" style="background: #16a34a; color: #ffffff; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;">Verify & Send</button>
+    </form>
+  `;
 
   // Bottom Call Bar matching Reference Image
   const footer = document.createElement("div");
@@ -207,6 +278,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
 
   modal.appendChild(header);
   modal.appendChild(transcriptArea);
+  modal.appendChild(emailBar);
   modal.appendChild(footer);
 
   root.appendChild(btnContainer);
@@ -279,7 +351,57 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     toggleExpand(!isExpanded);
   });
 
+  const emailForm = emailBar.querySelector("#omnidesk-email-form") as HTMLFormElement;
+  const emailInput = emailBar.querySelector("#omnidesk-email-input") as HTMLInputElement;
+  const emailCloseBtn = emailBar.querySelector("#omnidesk-email-close-btn") as HTMLButtonElement;
+
+  emailCloseBtn.addEventListener("click", () => {
+    emailBar.style.display = "none";
+  });
+
+  emailForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = emailInput.value.trim();
+    if (!val || !val.includes("@")) return;
+
+    if (client) {
+      client.sendEmailInput(val);
+    }
+    emailCaptured = true;
+    emailBar.style.display = "none";
+    emailInput.value = "";
+
+    placeholderBanner.style.display = "none";
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.style.cssText = `
+      display: flex; flex-direction: column; gap: 4px; max-width: 88%;
+      align-self: flex-end;
+    `;
+    const inner = document.createElement("div");
+    inner.style.cssText = `
+      padding: 10px 14px; border-radius: 14px 14px 2px 14px;
+      font-size: 13px; line-height: 1.45;
+      background: #18181b; color: #ffffff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    `;
+    inner.innerText = `My email is ${val}`;
+    bubbleContainer.appendChild(inner);
+    transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
+    thinkingBubble.style.display = "flex";
+    transcriptArea.scrollTop = transcriptArea.scrollHeight;
+    lastSpeaker = "user";
+    lastBubbleInner = inner;
+    lastMsgWasFinal = true;
+  });
+
   async function startCall() {
+    emailCaptured = false;
+    emailBar.style.display = "none";
+    thinkingBubble.style.display = "none";
+    lastSpeaker = null;
+    lastBubbleInner = null;
+    lastMsgWasFinal = false;
+
     const statusText = header.querySelector("#omnidesk-status-text") as HTMLElement;
     const statusDot = header.querySelector("#omnidesk-status-dot") as HTMLElement;
     const btnText = actionBtn.querySelector("#omnidesk-btn-text") as HTMLElement;
@@ -327,10 +449,12 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             onCallStart?.();
           } else if (status === "idle") {
             statusText.innerText = "Idle · Ready";
-            statusDot.style.background = "rgba(255,255,255,0.4)";
+            statusDot.style.background = isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa";
             btnText.innerText = "Start Voice Call";
             actionBtn.style.background = "#000000";
             actionBtn.disabled = false;
+            emailBar.style.display = "none";
+            thinkingBubble.style.display = "none";
             stopTimer();
             if (callStartTime > 0) {
               const dur = Math.round((Date.now() - callStartTime) / 1000);
@@ -339,26 +463,102 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             }
           }
         },
+        onThinkingChange: (thinking) => {
+          if (thinking) {
+            thinkingBubble.style.display = "flex";
+            transcriptArea.scrollTop = transcriptArea.scrollHeight;
+          }
+        },
         onTranscript: (msg: TranscriptMessage) => {
           placeholderBanner.style.display = "none";
-          const bubbleContainer = document.createElement("div");
-          const isUser = msg.who === "user";
-          bubbleContainer.style.cssText = `
-            display: flex; flex-direction: column; gap: 4px; max-width: 88%;
-            align-self: ${isUser ? "flex-end" : "flex-start"};
-          `;
 
-          const inner = document.createElement("div");
-          inner.style.cssText = `
-            padding: 10px 14px; border-radius: ${isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px"};
-            font-size: 13px; line-height: 1.45;
-            background: ${isUser ? "#18181b" : "#f4f4f5"};
-            color: ${isUser ? "#ffffff" : "#09090b"};
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-          `;
-          inner.innerText = msg.text;
-          bubbleContainer.appendChild(inner);
-          transcriptArea.appendChild(bubbleContainer);
+          if (msg.who === "user") {
+            if (msg.isFinal) {
+              thinkingBubble.style.display = "flex";
+            }
+            if (msg.text.includes("@") || (msg.text.toLowerCase().includes(" at ") && msg.text.toLowerCase().includes(" dot "))) {
+              emailCaptured = true;
+              emailBar.style.display = "none";
+            }
+          } else if (msg.who === "agent") {
+            if (msg.text && msg.text.trim().length > 0) {
+              thinkingBubble.style.display = "none";
+            }
+            const lower = msg.text.toLowerCase();
+
+            // First: Check if agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email") && (
+                lower.includes("what") ||
+                lower.includes("have") ||
+                lower.includes("provide") ||
+                lower.includes("give") ||
+                lower.includes("tell") ||
+                lower.includes("share") ||
+                lower.includes("address")
+              ));
+
+            if (isAskingForEmail) {
+              emailCaptured = false;
+              emailBar.style.display = "flex";
+              setTimeout(() => emailInput.focus(), 60);
+            } else if (
+              lower.includes("verified your email") ||
+              lower.includes("thank you for your email") ||
+              lower.includes("thank you for providing your email") ||
+              lower.includes("sent a calendar invite") ||
+              lower.includes("sent your confirmation") ||
+              lower.includes("confirmation code is") ||
+              lower.includes("i have sent")
+            ) {
+              emailCaptured = true;
+              emailBar.style.display = "none";
+            } else if (emailCaptured) {
+              emailBar.style.display = "none";
+            }
+          }
+
+          // Check if last bubble belongs to same speaker and is non-final
+          if (lastSpeaker === msg.who && lastBubbleInner && !lastMsgWasFinal) {
+            lastBubbleInner.innerText = msg.text;
+            lastMsgWasFinal = Boolean(msg.isFinal);
+          } else {
+            const bubbleContainer = document.createElement("div");
+            const isUser = msg.who === "user";
+            bubbleContainer.style.cssText = `
+              display: flex; flex-direction: column; gap: 4px; max-width: 88%;
+              align-self: ${isUser ? "flex-end" : "flex-start"};
+            `;
+
+            const inner = document.createElement("div");
+            inner.style.cssText = `
+              padding: 10px 14px; border-radius: ${isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px"};
+              font-size: 13px; line-height: 1.45;
+              background: ${isUser ? "#18181b" : "#f4f4f5"};
+              color: ${isUser ? "#ffffff" : "#09090b"};
+              box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            `;
+            inner.innerText = msg.text;
+            bubbleContainer.appendChild(inner);
+            transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
+
+            lastSpeaker = msg.who;
+            lastBubbleInner = inner;
+            lastMsgWasFinal = Boolean(msg.isFinal);
+          }
           transcriptArea.scrollTop = transcriptArea.scrollHeight;
           onTranscript?.(msg);
         },
@@ -372,6 +572,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
           btnText.innerText = "Start Voice Call";
           actionBtn.style.background = "#000000";
           actionBtn.disabled = false;
+          emailBar.style.display = "none";
+          thinkingBubble.style.display = "none";
           stopTimer();
         },
       });
@@ -384,6 +586,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       btnText.innerText = "Start Voice Call";
       actionBtn.style.background = "#000000";
       actionBtn.disabled = false;
+      emailBar.style.display = "none";
+      thinkingBubble.style.display = "none";
       stopTimer();
     }
   }
@@ -394,6 +598,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       client = null;
     }
     callStatus = "idle";
+    emailBar.style.display = "none";
+    thinkingBubble.style.display = "none";
     stopTimer();
   }
 

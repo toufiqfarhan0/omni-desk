@@ -120,11 +120,11 @@ export function VoiceWidget({
   }, [accent, accentColor]);
 
   const isDark = useMemo(() => {
-    if (theme === "light") return false;
+    if (theme === "dark") return true;
     if (theme === "auto" && typeof window !== "undefined") {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
-    return true;
+    return false;
   }, [theme]);
 
   // Auto-scroll transcript container (scroll the container itself, NOT the page)
@@ -191,12 +191,12 @@ export function VoiceWidget({
           }
         },
         onThinkingChange: (thinking) => {
-          setIsThinking(thinking);
+          if (thinking) setIsThinking(true);
         },
         onTranscript: (ev) => {
           if (ev.who === "user" && ev.isFinal) {
             setIsThinking(true);
-          } else if (ev.who === "agent") {
+          } else if (ev.who === "agent" && ev.text && ev.text.trim().length > 0) {
             setIsThinking(false);
           }
           setTranscripts((prev) => {
@@ -217,10 +217,43 @@ export function VoiceWidget({
             }
           } else if (ev.who === "agent") {
             const lower = ev.text.toLowerCase();
+
+            // First: Check if agent is actively asking for caller's email
+            const isAskingForEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar invite") ||
+              lower.includes("where should i send your calendar invite") ||
+              (lower.includes("email") && (
+                lower.includes("what") ||
+                lower.includes("have") ||
+                lower.includes("provide") ||
+                lower.includes("give") ||
+                lower.includes("tell") ||
+                lower.includes("share") ||
+                lower.includes("address")
+              ));
+
+            if (isAskingForEmail) {
+              emailCapturedRef.current = false;
+              setShowEmailBar(true);
+              return;
+            }
+
             // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
             if (
               lower.includes("verified your email") ||
-              (lower.includes("thank you") && lower.includes("email")) ||
+              lower.includes("thank you for your email") ||
+              lower.includes("thank you for providing your email") ||
               lower.includes("sent a calendar invite") ||
               lower.includes("sent your confirmation") ||
               lower.includes("confirmation code is") ||
@@ -234,26 +267,6 @@ export function VoiceWidget({
             // If already captured, never re-show email bar
             if (emailCapturedRef.current) {
               setShowEmailBar(false);
-              return;
-            }
-
-            // Only show bar if the agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email address") && (lower.includes("what") || lower.includes("have") || lower.includes("provide") || lower.includes("give") || lower.includes("tell")));
-
-            if (isAskingForEmail) {
-              setShowEmailBar(true);
             }
           }
         },
@@ -486,11 +499,12 @@ export function VoiceWidget({
               .omnidesk-dot-2 { animation-delay: 0.18s; }
               .omnidesk-dot-3 { animation-delay: 0.36s; }
             `}</style>
-            {/* Topbar: Dark Background with 3-dots, mic circle, title, status, expand and close */}
+            {/* Topbar: Matching Live Voice Tester */}
             <div
               style={{
-                background: "#18181b",
-                color: "#ffffff",
+                background: isDark ? "#18181b" : "#ffffff",
+                color: isDark ? "#ffffff" : "#09090b",
+                borderBottom: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
                 padding: isExpanded ? "16px 22px" : "13px 18px",
                 display: "flex",
                 alignItems: "center",
@@ -502,7 +516,7 @@ export function VoiceWidget({
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                 {/* 3 vertical dots icon */}
-                <div style={{ color: "rgba(255,255,255,0.6)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <div style={{ color: isDark ? "rgba(255,255,255,0.6)" : "#71717a", display: "grid", placeItems: "center", flexShrink: 0 }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="1" />
                     <circle cx="12" cy="5" r="1" />
@@ -516,11 +530,11 @@ export function VoiceWidget({
                     width: "28px",
                     height: "28px",
                     borderRadius: "50%",
-                    background: "rgba(255,255,255,0.15)",
+                    background: isDark ? "rgba(255,255,255,0.15)" : "#f4f4f5",
                     display: "grid",
                     placeItems: "center",
                     flexShrink: 0,
-                    color: "#ffffff",
+                    color: isDark ? "#ffffff" : "#09090b",
                   }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -536,7 +550,7 @@ export function VoiceWidget({
                     style={{
                       fontSize: "13.5px",
                       fontWeight: 600,
-                      color: "#ffffff",
+                      color: isDark ? "#ffffff" : "#09090b",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -544,7 +558,7 @@ export function VoiceWidget({
                   >
                     {businessName}
                   </div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "rgba(255,255,255,0.75)" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: isDark ? "rgba(255,255,255,0.75)" : "#71717a" }}>
                     <span
                       style={{
                         width: "6px",
@@ -557,7 +571,9 @@ export function VoiceWidget({
                               : "#22c55e"
                             : callStatus === "connecting"
                             ? "#eab308"
-                            : "rgba(255,255,255,0.4)",
+                            : isDark
+                            ? "rgba(255,255,255,0.4)"
+                            : "#a1a1aa",
                         animation: isThinking ? "omnidesk-pulse-amber 1.5s infinite" : "none",
                       }}
                     />
@@ -583,10 +599,10 @@ export function VoiceWidget({
                   onClick={() => setIsExpanded(!isExpanded)}
                   title={isExpanded ? "Exit Fullscreen" : "Open Full"}
                   style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5",
+                    border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
                     borderRadius: "7px",
-                    color: "#ffffff",
+                    color: isDark ? "#ffffff" : "#52525b",
                     width: "30px",
                     height: "30px",
                     cursor: "pointer",
@@ -594,8 +610,8 @@ export function VoiceWidget({
                     placeItems: "center",
                     transition: "all 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.2)" : "#e4e4e7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5")}
                 >
                   {isExpanded ? (
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -621,10 +637,10 @@ export function VoiceWidget({
                   }}
                   title="Close Widget"
                   style={{
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5",
+                    border: isDark ? "1px solid rgba(255,255,255,0.15)" : "1px solid #e4e4e7",
                     borderRadius: "7px",
-                    color: "#ffffff",
+                    color: isDark ? "#ffffff" : "#52525b",
                     width: "30px",
                     height: "30px",
                     cursor: "pointer",
@@ -632,8 +648,8 @@ export function VoiceWidget({
                     placeItems: "center",
                     transition: "all 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.2)" : "#e4e4e7")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.1)" : "#f4f4f5")}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -840,7 +856,7 @@ export function VoiceWidget({
                         display: "inline-block",
                       }}
                     />
-                    Agent Requesting Email • Verified Mailbox Entry
+                    Email Requested by Agent • Auto Verification
                   </span>
                   <button
                     type="button"

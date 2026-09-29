@@ -4,6 +4,7 @@ export interface TranscriptMessage {
   who: "user" | "agent";
   text: string;
   time?: string;
+  isFinal?: boolean;
 }
 
 export interface VoiceSessionTokenResponse {

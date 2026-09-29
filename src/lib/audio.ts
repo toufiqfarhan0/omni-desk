@@ -311,14 +311,13 @@ export class AssemblyAIVoiceClient {
               break;
 
             case "reply.started":
-              this.setThinking(false);
               currentAgentText = "";
               currentAgentItemId = msg.reply_id || msg.item_id || `agent_${Date.now()}`;
               break;
 
             case "transcript.agent.delta":
-              this.setThinking(false);
               if (msg.delta) {
+                this.setThinking(false);
                 if (currentAgentText && !currentAgentText.endsWith(" ") && !/^[.,!?;:%)]/.test(msg.delta)) {
                   currentAgentText += " " + msg.delta;
                 } else {
@@ -334,8 +333,8 @@ export class AssemblyAIVoiceClient {
               break;
 
             case "transcript.agent":
-              this.setThinking(false);
               if (msg.text) {
+                this.setThinking(false);
                 currentAgentText = msg.text;
                 this.callbacks.onTranscript?.({
                   who: "agent",
@@ -347,7 +346,7 @@ export class AssemblyAIVoiceClient {
               break;
 
             case "reply.audio":
-              this.setThinking(false);
+              // Stream audio without prematurely extinguishing motion dots before text transcript arrives
               if (msg.data && this.playbackNode) {
                 const raw = atob(msg.data);
                 const bytes = new Uint8Array(raw.length);

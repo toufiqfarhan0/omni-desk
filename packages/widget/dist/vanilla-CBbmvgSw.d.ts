@@ -3,6 +3,7 @@ interface TranscriptMessage {
     who: "user" | "agent";
     text: string;
     time?: string;
+    isFinal?: boolean;
 }
 interface VoiceSessionTokenResponse {
     token: string;

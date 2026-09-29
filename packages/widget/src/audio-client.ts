@@ -240,6 +240,9 @@ export class AssemblyAIVoiceClient {
         }
       };
 
+      let currentAgentText = "";
+      let currentUserText = "";
+
       this.ws.onmessage = ({ data }) => {
         try {
           const msg = JSON.parse(data);
@@ -252,25 +255,51 @@ export class AssemblyAIVoiceClient {
             case "input.speech.started":
               this.playbackNode?.port.postMessage("stop");
               this.agentLevel = 0;
+              currentUserText = "";
               this.setThinking(false);
+              break;
+
+            case "transcript.user.delta":
+              if (msg.text) {
+                currentUserText = msg.text;
+                this.callbacks.onTranscript?.({ who: "user", text: msg.text, isFinal: false });
+              }
               break;
 
             case "transcript.user":
               if (msg.text) {
-                this.callbacks.onTranscript?.({ who: "user", text: msg.text });
+                currentUserText = msg.text;
+                this.callbacks.onTranscript?.({ who: "user", text: msg.text, isFinal: true });
                 this.setThinking(true);
               }
               break;
 
+            case "reply.started":
+              currentAgentText = "";
+              break;
+
+            case "transcript.agent.delta":
+              if (msg.delta) {
+                this.setThinking(false);
+                if (currentAgentText && !currentAgentText.endsWith(" ") && !/^[.,!?;:%)]/.test(msg.delta)) {
+                  currentAgentText += " " + msg.delta;
+                } else {
+                  currentAgentText += msg.delta;
+                }
+                this.callbacks.onTranscript?.({ who: "agent", text: currentAgentText, isFinal: false });
+              }
+              break;
+
             case "transcript.agent":
-              this.setThinking(false);
               if (msg.text) {
-                this.callbacks.onTranscript?.({ who: "agent", text: msg.text });
+                this.setThinking(false);
+                currentAgentText = msg.text;
+                this.callbacks.onTranscript?.({ who: "agent", text: msg.text, isFinal: true });
               }
               break;
 
             case "reply.audio":
-              this.setThinking(false);
+              // Audio streaming to speaker; keep motion thinking dots until agent text is delivered
               if (msg.data && this.playbackNode) {
                 const raw = atob(msg.data);
                 const bytes = new Uint8Array(raw.length);
