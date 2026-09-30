@@ -406,13 +406,16 @@ export class AssemblyAIVoiceClient {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
     try {
       this.setThinking(true);
-      // Send as a single conversation message — do NOT also send reply.create
-      // as that causes the agent to reply twice (double voice + double bubble).
       this.ws.send(
         JSON.stringify({
           type: "conversation.message",
           role: "user",
           content: `My email address is ${email}`,
+        })
+      );
+      this.ws.send(
+        JSON.stringify({
+          type: "reply.create",
         })
       );
       return true;
