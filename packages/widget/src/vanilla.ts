@@ -410,11 +410,28 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     awaitingEmailConfirm = true;
     emailBar.style.display = "none";
     emailInput.value = "";
-    // NOTE: Do NOT manually add a bubble here.
-    // sendEmailInput sends a conversation.message which triggers transcript.user
-    // from the server, and the onTranscript handler already creates the bubble.
+
+    placeholderBanner.style.display = "none";
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.style.cssText = `
+      display: flex; flex-direction: column; gap: 4px; max-width: 88%;
+      align-self: flex-end;
+    `;
+    const inner = document.createElement("div");
+    inner.style.cssText = `
+      padding: 10px 14px; border-radius: 14px 14px 2px 14px;
+      font-size: 13px; line-height: 1.45;
+      background: ${activeAccent}; color: #ffffff;
+      box-shadow: 0 2px 8px ${activeAccent}35;
+    `;
+    inner.innerText = `My email is ${val}`;
+    bubbleContainer.appendChild(inner);
+    transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
     thinkingBubble.style.display = "flex";
     transcriptArea.scrollTop = transcriptArea.scrollHeight;
+    lastSpeaker = "user";
+    lastBubbleInner = inner;
+    lastMsgWasFinal = true;
   });
 
   async function startCall() {

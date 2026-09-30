@@ -433,10 +433,23 @@ export class AssemblyAIVoiceClient {
   }
 
   sendEmailInput(email: string): boolean {
-    return this.sendUserMessage(
-      `My email address is ${email}`,
-      `The caller entered their email address: ${email}. Call verify_customer_email to validate it, then ask the caller: "I have verified your email as ${email}. Can you please confirm with yes or no?" Do not book until they confirm with yes. If they say no, ask for their email again.`
-    );
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    try {
+      this.setThinking(true);
+      // Only send conversation.message — do NOT also send reply.create.
+      // Sending both triggers the agent to reply TWICE (double voice + double message).
+      this.ws.send(
+        JSON.stringify({
+          type: "conversation.message",
+          role: "user",
+          content: `My email address is ${email}`,
+        })
+      );
+      return true;
+    } catch (e) {
+      console.error("Failed to send email to agent:", e);
+      return false;
+    }
   }
 
   stop() {

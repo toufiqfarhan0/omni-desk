@@ -331,9 +331,9 @@ export function OmniDeskWidget({
       const trimmed = emailInput.trim();
       if (!trimmed) return;
 
-      // Send email to the agent. The agent will call verify_customer_email tool.
-      // conversation.message echoes back as transcript.user, so the bubble appears automatically.
-      // Do NOT manually add a transcript bubble here — that would cause duplicates.
+      // Add user bubble immediately so the message shows right away
+      setTranscripts((prev) => [...prev, { who: "user", text: `My email is ${trimmed}`, isFinal: true }]);
+
       if (clientRef.current) {
         clientRef.current.sendEmailInput(trimmed);
       }
