@@ -568,7 +568,7 @@ export default function DemoPage() {
                   Lumière Studio
                 </h3>
                 <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 16px" }}>
-                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice</code> from npm with typed props and direct AssemblyAI streaming.
+                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice@0.1.15</code> from npm with typed props and direct AssemblyAI streaming.
                 </p>
               </div>
 

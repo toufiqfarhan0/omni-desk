@@ -65,9 +65,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 ### 2. Vanilla JS / Static HTML / Shopify / Webflow
 
+#### Option A: Standalone Universal Script Tag (Zero Build Tools)
+
+Add before `</body>`:
+
+```html
+<script 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.15/dist/widget.global.global.js" 
+  data-host="https://omni-desk-rho.vercel.app"
+  data-business-id="biz_demo_dental"
+  data-position="bottom-right"
+  data-theme="dark"
+  data-label="Talk to Receptionist"
+  defer>
+</script>
+```
+
+#### Option B: Dynamic ESM Module
+
 ```html
 <script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.15";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",

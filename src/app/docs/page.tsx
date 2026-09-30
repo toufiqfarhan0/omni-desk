@@ -7,6 +7,7 @@ import { BrandLogo } from "@/components/brand-logo";
 type DocSection =
   | "overview"
   | "quickstart"
+  | "widget"
   | "architecture"
   | "api-reference"
   | "integrations"
@@ -18,6 +19,7 @@ type DocSection =
 const NAV_ITEMS: { id: DocSection; label: string; icon: string }[] = [
   { id: "overview", label: "Overview", icon: "" },
   { id: "quickstart", label: "Quick Start", icon: "" },
+  { id: "widget", label: "Voice Widget & SDK", icon: "" },
   { id: "architecture", label: "Architecture", icon: "" },
   { id: "api-reference", label: "API Reference", icon: "" },
   { id: "integrations", label: "Integrations", icon: "" },
@@ -102,7 +104,10 @@ export default function DocsPage() {
             <a href="https://salon-demo-react.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
               React Demo (Lumière) ↗
             </a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
+            <a href="https://www.npmjs.com/package/omnidesk-voice" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
+              npm: omnidesk-voice@0.1.15 ↗
+            </a>
+            <a href="https://github.com/toufiqfarhan0/omni-desk" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
               GitHub Repo ↗
             </a>
           </div>
@@ -112,6 +117,7 @@ export default function DocsPage() {
         <main style={{ padding: "40px 48px 80px", maxWidth: "860px" }}>
           {activeSection === "overview" && <OverviewSection />}
           {activeSection === "quickstart" && <QuickStartSection />}
+          {activeSection === "widget" && <WidgetSection />}
           {activeSection === "architecture" && <ArchitectureSection />}
           {activeSection === "api-reference" && <ApiReferenceSection />}
           {activeSection === "integrations" && <IntegrationsSection />}
@@ -216,7 +222,7 @@ function OverviewSection() {
           },
           {
             name: "Lumière Studio (React 19 / Vite)",
-            desc: "Full React app consuming omnidesk-voice@0.1.10 from npm with full TypeScript support and custom widget accent styling.",
+            desc: "Full React app consuming omnidesk-voice@0.1.15 from npm with full TypeScript support and custom widget accent styling.",
             url: "https://salon-demo-react.vercel.app/",
             color: "#18181b",
             label: "Open React Demo",
@@ -310,6 +316,151 @@ SMTP_PASS=your_16_char_google_app_password`}</div>
         <div className="callout-title">AssemblyAI Agent ID</div>
         <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
           The pre-configured <span className="doc-inline-code">AGENT_ID</span> (<code>agent_5e74813381884bb8b82f881b6db66aaf</code>) is deployed and running on AssemblyAI's <strong>Universal-3.6 Pro Realtime</strong> engine. Calls connect immediately with zero tunnel setup.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function WidgetSection() {
+  return (
+    <div>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: 600, color: "#2563eb", marginBottom: "16px" }}>
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
+        npm package · omnidesk-voice@0.1.15
+      </div>
+      <h1 className="doc-h1">Voice Widget & npm SDK</h1>
+      <p className="doc-lead">
+        Embed a conversational AI voice receptionist into any React, Next.js, or HTML website in under 2 minutes. The <code>omnidesk-voice</code> package bundles a 24kHz Web Audio streaming client, dual dBFS audio visualizers, full-screen expandable dialogs, and anti-hallucination verified email capture.
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px", marginBottom: "36px" }}>
+        {[
+          { title: "React 19 & Next.js", desc: "Native JSX component with typed props, accent styling, and call event hooks.", color: "#3b82f6" },
+          { title: "Universal <script>", desc: "One-line CDN embed for WordPress, Webflow, Shopify, or plain HTML.", color: "#10b981" },
+          { title: "Headless Audio SDK", desc: "Raw AssemblyAIVoiceClient class for complete freedom to build custom voice UIs.", color: "#8b5cf6" },
+        ].map((c) => (
+          <div key={c.title} style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "12px", padding: "20px", borderTop: `3px solid ${c.color}` }}>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>{c.title}</div>
+            <div style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5 }}>{c.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="doc-h2">1. React / Next.js Component</h2>
+      <p className="doc-p">Install the package from npm:</p>
+      <div className="doc-code">{`npm install omnidesk-voice
+# or: pnpm add omnidesk-voice`}</div>
+
+      <p className="doc-p">Drop the component into your root layout or application root:</p>
+      <div className="doc-code">{`import { OmniDeskWidget } from "omnidesk-voice";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+
+        {/* Floating AI Voice Receptionist Widget */}
+        <OmniDeskWidget
+          host="https://omni-desk-rho.vercel.app"
+          businessId="biz_demo_dental"
+          theme="dark"
+          position="bottom-right"
+          label="Talk to Receptionist"
+          accentColor="#10b981"
+          onCallStart={() => console.log("Call connected")}
+          onCallEnd={(duration) => console.log(\`Call completed (\${duration}s)\`)}
+        />
+      </body>
+    </html>
+  );
+}`}</div>
+
+      <h2 className="doc-h2">2. Zero-Install Vanilla HTML / CDN</h2>
+      <p className="doc-p">For WordPress, Shopify, Webflow, or static websites, add the universal CDN script tag directly before the closing <code>&lt;/body&gt;</code> tag:</p>
+      <div className="doc-code">{`<script 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.15/dist/widget.global.global.js" 
+  data-host="https://omni-desk-rho.vercel.app"
+  data-business-id="biz_demo_dental"
+  data-position="bottom-right"
+  data-theme="dark"
+  data-label="Talk to Receptionist"
+  defer>
+</script>`}</div>
+
+      <p className="doc-p">Or initialize via modern ESM dynamic import:</p>
+      <div className="doc-code">{`<script type="module">
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.15";
+
+  initOmniDeskWidget({
+    host: "https://omni-desk-rho.vercel.app",
+    businessId: "biz_demo_dental",
+    theme: "dark",
+    position: "bottom-right",
+    label: "Talk to Receptionist"
+  });
+</script>`}</div>
+
+      <h2 className="doc-h2">3. Headless Audio Client SDK</h2>
+      <p className="doc-p">If you want to design your own custom voice interface or integrate with mobile web audio:</p>
+      <div className="doc-code">{`import { AssemblyAIVoiceClient } from "omnidesk-voice";
+
+const client = new AssemblyAIVoiceClient({
+  onTranscript: ({ who, text }) => console.log(\`\${who}: \${text}\`),
+  onAudioLevel: (userLevel, agentLevel) => updateWaveforms(userLevel, agentLevel),
+  onStatusChange: (status) => console.log("Call status:", status),
+  onToolEvent: (event) => console.log("Tool event:", event.tool, event.args),
+});
+
+// Request ephemeral session token from your OmniDesk server
+const res = await fetch("/api/token?businessId=biz_demo_dental");
+const { token, agent_id, voice } = await res.json();
+
+// Start 24kHz bidirectional WebSocket audio stream
+await client.start(token, agent_id, voice);
+
+// Send verified email input programmatically:
+client.sendEmailInput("alex.smith@example.com");
+
+// End voice call
+client.stop();`}</div>
+
+      <h2 className="doc-h2">Component Props Reference</h2>
+      <table className="doc-table">
+        <thead>
+          <tr><th>Prop</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          {[
+            ["host", "string", "Required", "Base URL of your deployed OmniDesk server (e.g. https://omni-desk-rho.vercel.app)."],
+            ["businessId", "string", "'biz_demo_dental'", "Unique identifier for the tenant practice or business."],
+            ["theme", "'dark' | 'light' | 'auto'", "'dark'", "Color palette of the floating launcher and voice modal."],
+            ["position", "'bottom-right' | 'bottom-left'", "'bottom-right'", "Corner placement of the trigger button."],
+            ["label", "string", "'Talk to Receptionist'", "Button CTA text displayed when caller hovers or rests."],
+            ["accentColor", "string", "'#10b981'", "Primary theme accent for waveforms, user bubbles, and CTAs."],
+            ["onCallStart", "() => void", "undefined", "Callback triggered when bidirectional voice streaming commences."],
+            ["onCallEnd", "(durationSeconds: number) => void", "undefined", "Callback invoked when call concludes, reporting call duration."],
+            ["onTranscript", "(msg: { who: string; text: string }) => void", "undefined", "Real-time speech transcript updates as turns arrive."],
+          ].map(([p, t, d, desc]) => (
+            <tr key={p}>
+              <td><code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 700 }}>{p}</code></td>
+              <td><code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11.5px", color: "#6366f1" }}>{t}</code></td>
+              <td style={{ color: "#71717a" }}>{d}</td>
+              <td>{desc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 className="doc-h2">Anti-Hallucination Email Verification</h2>
+      <p className="doc-p">
+        Spoken email addresses often suffer from acoustic ambiguity and phonetic STT misspellings (e.g. <em>&quot;dot com&quot;</em> vs <em>&quot;.com&quot;</em>, homophones in names). OmniDesk solves this with an interactive <strong>Verified Mailbox Entry</strong> bar:
+      </p>
+      <div className="doc-callout callout-tip">
+        <div className="callout-title">Interactive Verification Bar</div>
+        <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
+          When the voice receptionist reaches the booking confirmation step and asks for an email address, the widget automatically animates an input field into view. The caller can type their email with live MX validation, or simply speak it. Once validated, the bar gracefully slides away and the agent immediately speaks the confirmation code.
         </p>
       </div>
     </div>
