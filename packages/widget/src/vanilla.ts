@@ -556,83 +556,97 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             }
             const lower = msg.text.toLowerCase();
 
-            // Only evaluate email-bar state on the FINAL agent message
-            // (not on every streaming delta, which would clear it prematurely)
-            if (msg.isFinal) {
-              // 1. If booking is finalized, permanently lock and hide bar
-              const isBookingFinalized =
-                lower.includes("confirmation code is") ||
-                lower.includes("booking is confirmed") ||
-                lower.includes("scheduled your appointment") ||
-                lower.includes("all set, your appointment") ||
-                (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
-                (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
+            // Check booking/confirm on every message (partial + final)
+            const isBookingFinalized =
+              lower.includes("confirmation code is") ||
+              lower.includes("booking is confirmed") ||
+              lower.includes("scheduled your appointment") ||
+              lower.includes("all set, your appointment") ||
+              (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
+              (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
 
-              if (isBookingFinalized) {
-                bookingFinalized = true;
-                awaitingEmailConfirm = false;
+            if (isBookingFinalized) {
+              bookingFinalized = true;
+              awaitingEmailConfirm = false;
+              emailBar.style.display = "none";
+              return;
+            }
+
+            if (bookingFinalized) {
+              emailBar.style.display = "none";
+              return;
+            }
+
+            const isAskingYesNo =
+              lower.includes("confirm with yes or no") ||
+              lower.includes("yes or no") ||
+              lower.includes("is that correct") ||
+              lower.includes("is that right");
+
+            if (isAskingYesNo) {
+              awaitingEmailConfirm = true;
+              emailBar.style.display = "none";
+              return;
+            }
+
+            // SHOW on any streaming text match — don't wait for isFinal.
+            // HIDE only on the complete final message.
+            const isAgentAskingEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("whats your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("can you provide your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("share your email") ||
+              lower.includes("need your email") ||
+              lower.includes("what email") ||
+              lower.includes("which email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar") ||
+              lower.includes("where should i send your calendar") ||
+              (lower.includes("email") && (
+                lower.includes("what is") ||
+                lower.includes("what's") ||
+                lower.includes("whats") ||
+                lower.includes("may i have") ||
+                lower.includes("can i have") ||
+                lower.includes("could i have") ||
+                lower.includes("may i get") ||
+                lower.includes("could i get") ||
+                lower.includes("can you provide") ||
+                lower.includes("could you provide") ||
+                lower.includes("provide") ||
+                lower.includes("give me") ||
+                lower.includes("tell me") ||
+                lower.includes("share") ||
+                lower.includes("best email") ||
+                lower.includes("your email") ||
+                lower.includes("send your calendar invite") ||
+                lower.includes("send your confirmation") ||
+                lower.includes("send a calendar invite") ||
+                lower.includes("send the calendar invite") ||
+                lower.includes("send the confirmation") ||
+                lower.includes("send a confirmation") ||
+                lower.includes("so i can send") ||
+                lower.includes("to send your")
+              ));
+
+            if (isAgentAskingEmail) {
+              awaitingEmailConfirm = false;
+              emailBar.style.display = "flex";
+              setTimeout(() => emailInput.focus(), 60);
+            } else if (msg.isFinal) {
+              // Only hide on the complete final message — never on a partial delta
+              if (!bookingFinalized && !awaitingEmailConfirm) {
                 emailBar.style.display = "none";
-                return;
-              }
-
-              if (bookingFinalized) {
-                emailBar.style.display = "none";
-                return;
-              }
-
-              // 2. If agent is asking the caller to confirm with yes or no
-              const isAskingYesNo =
-                lower.includes("confirm with yes or no") ||
-                lower.includes("yes or no") ||
-                lower.includes("is that correct") ||
-                lower.includes("is that right");
-
-              if (isAskingYesNo) {
-                awaitingEmailConfirm = true;
-                emailBar.style.display = "none";
-                return;
-              }
-
-              // 3. Strictly show input ONLY when agent is asking for caller's email
-              const isAgentAskingEmail =
-                lower.includes("what is your email") ||
-                lower.includes("what's your email") ||
-                lower.includes("may i have your email") ||
-                lower.includes("can i have your email") ||
-                lower.includes("could i get your email") ||
-                lower.includes("could you provide your email") ||
-                lower.includes("provide your email") ||
-                lower.includes("enter your email") ||
-                lower.includes("spell your email") ||
-                lower.includes("share your email") ||
-                lower.includes("need your email") ||
-                lower.includes("what email") ||
-                lower.includes("which email") ||
-                lower.includes("where can i send your confirmation") ||
-                lower.includes("where should i send your confirmation") ||
-                lower.includes("where can i send your calendar") ||
-                lower.includes("where should i send your calendar") ||
-                (lower.includes("email") && (
-                  lower.includes("what is") ||
-                  lower.includes("what's") ||
-                  lower.includes("may i have") ||
-                  lower.includes("can i have") ||
-                  lower.includes("provide") ||
-                  lower.includes("give me") ||
-                  lower.includes("tell me") ||
-                  lower.includes("send your calendar invite") ||
-                  lower.includes("send your confirmation")
-                ));
-
-              if (isAgentAskingEmail) {
-                awaitingEmailConfirm = false;
-                emailBar.style.display = "flex";
-                setTimeout(() => emailInput.focus(), 60);
-              } else {
-                // Only hide bar if booking not finalized and not awaiting confirm
-                if (!bookingFinalized && !awaitingEmailConfirm) {
-                  emailBar.style.display = "none";
-                }
               }
             }
           }

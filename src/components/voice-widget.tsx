@@ -280,13 +280,18 @@ export function VoiceWidget({
             }
 
             // 3. Strictly show input ONLY when agent is asking for caller's email
+            // SHOW on any streaming text match — don't wait for isFinal.
+            // HIDE only on the complete final message.
             const isAgentAskingEmail =
               lower.includes("what is your email") ||
               lower.includes("what's your email") ||
+              lower.includes("whats your email") ||
               lower.includes("may i have your email") ||
               lower.includes("can i have your email") ||
+              lower.includes("could i have your email") ||
               lower.includes("could i get your email") ||
               lower.includes("could you provide your email") ||
+              lower.includes("can you provide your email") ||
               lower.includes("provide your email") ||
               lower.includes("enter your email") ||
               lower.includes("spell your email") ||
@@ -301,20 +306,38 @@ export function VoiceWidget({
               (lower.includes("email") && (
                 lower.includes("what is") ||
                 lower.includes("what's") ||
+                lower.includes("whats") ||
                 lower.includes("may i have") ||
                 lower.includes("can i have") ||
+                lower.includes("could i have") ||
+                lower.includes("may i get") ||
+                lower.includes("could i get") ||
+                lower.includes("can you provide") ||
+                lower.includes("could you provide") ||
                 lower.includes("provide") ||
                 lower.includes("give me") ||
                 lower.includes("tell me") ||
+                lower.includes("share") ||
+                lower.includes("best email") ||
+                lower.includes("your email") ||
                 lower.includes("send your calendar invite") ||
-                lower.includes("send your confirmation")
+                lower.includes("send your confirmation") ||
+                lower.includes("send a calendar invite") ||
+                lower.includes("send the calendar invite") ||
+                lower.includes("send the confirmation") ||
+                lower.includes("send a confirmation") ||
+                lower.includes("so i can send") ||
+                lower.includes("to send your")
               ));
 
             if (isAgentAskingEmail) {
               awaitingEmailConfirmRef.current = false;
               setShowEmailBar(true);
-            } else {
-              setShowEmailBar(false);
+            } else if (ev.isFinal) {
+              // Only hide on the complete final message — never on a partial delta
+              if (!bookingFinalizedRef.current && !awaitingEmailConfirmRef.current) {
+                setShowEmailBar(false);
+              }
             }
           }
         },

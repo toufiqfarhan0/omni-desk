@@ -207,82 +207,97 @@ export function OmniDeskWidget({
           } else if (msg.who === "agent") {
             const lower = msg.text.toLowerCase();
 
-            // Only evaluate email-bar state on the FINAL agent message
-            // (not on every streaming delta, which would clear it prematurely)
-            if (msg.isFinal) {
-              // 1. If booking is finalized, permanently lock and hide bar
-              const isBookingFinalized =
-                lower.includes("confirmation code is") ||
-                lower.includes("booking is confirmed") ||
-                lower.includes("scheduled your appointment") ||
-                lower.includes("all set, your appointment") ||
-                (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
-                (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
+            // Check booking/confirm states on every message (partial + final)
+            // so we always hide immediately when needed.
+            const isBookingFinalized =
+              lower.includes("confirmation code is") ||
+              lower.includes("booking is confirmed") ||
+              lower.includes("scheduled your appointment") ||
+              lower.includes("all set, your appointment") ||
+              (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
+              (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
 
-              if (isBookingFinalized) {
-                bookingFinalizedRef.current = true;
-                awaitingEmailConfirmRef.current = false;
+            if (isBookingFinalized) {
+              bookingFinalizedRef.current = true;
+              awaitingEmailConfirmRef.current = false;
+              setShowEmailBar(false);
+              return;
+            }
+
+            if (bookingFinalizedRef.current) {
+              setShowEmailBar(false);
+              return;
+            }
+
+            const isAskingYesNo =
+              lower.includes("confirm with yes or no") ||
+              lower.includes("yes or no") ||
+              lower.includes("is that correct") ||
+              lower.includes("is that right");
+
+            if (isAskingYesNo) {
+              awaitingEmailConfirmRef.current = true;
+              setShowEmailBar(false);
+              return;
+            }
+
+            // SHOW on any streaming text that matches — don't wait for isFinal.
+            // HIDE only on the final message so we never prematurely clear it.
+            const isAgentAskingEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("whats your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("can you provide your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("share your email") ||
+              lower.includes("need your email") ||
+              lower.includes("what email") ||
+              lower.includes("which email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar") ||
+              lower.includes("where should i send your calendar") ||
+              (lower.includes("email") && (
+                lower.includes("what is") ||
+                lower.includes("what's") ||
+                lower.includes("whats") ||
+                lower.includes("may i have") ||
+                lower.includes("can i have") ||
+                lower.includes("could i have") ||
+                lower.includes("may i get") ||
+                lower.includes("could i get") ||
+                lower.includes("can you provide") ||
+                lower.includes("could you provide") ||
+                lower.includes("provide") ||
+                lower.includes("give me") ||
+                lower.includes("tell me") ||
+                lower.includes("share") ||
+                lower.includes("best email") ||
+                lower.includes("your email") ||
+                lower.includes("send your calendar invite") ||
+                lower.includes("send your confirmation") ||
+                lower.includes("send a calendar invite") ||
+                lower.includes("send the calendar invite") ||
+                lower.includes("send the confirmation") ||
+                lower.includes("send a confirmation") ||
+                lower.includes("so i can send") ||
+                lower.includes("to send your")
+              ));
+
+            if (isAgentAskingEmail) {
+              awaitingEmailConfirmRef.current = false;
+              setShowEmailBar(true);
+            } else if (msg.isFinal) {
+              // Only hide on the complete final message — never on a partial delta
+              if (!bookingFinalizedRef.current && !awaitingEmailConfirmRef.current) {
                 setShowEmailBar(false);
-                return;
-              }
-
-              if (bookingFinalizedRef.current) {
-                setShowEmailBar(false);
-                return;
-              }
-
-              // 2. If agent is asking caller to confirm with yes or no
-              const isAskingYesNo =
-                lower.includes("confirm with yes or no") ||
-                lower.includes("yes or no") ||
-                lower.includes("is that correct") ||
-                lower.includes("is that right");
-
-              if (isAskingYesNo) {
-                awaitingEmailConfirmRef.current = true;
-                setShowEmailBar(false);
-                return;
-              }
-
-              // 3. Strictly show input ONLY when agent is asking for caller's email
-              const isAgentAskingEmail =
-                lower.includes("what is your email") ||
-                lower.includes("what's your email") ||
-                lower.includes("may i have your email") ||
-                lower.includes("can i have your email") ||
-                lower.includes("could i get your email") ||
-                lower.includes("could you provide your email") ||
-                lower.includes("provide your email") ||
-                lower.includes("enter your email") ||
-                lower.includes("spell your email") ||
-                lower.includes("share your email") ||
-                lower.includes("need your email") ||
-                lower.includes("what email") ||
-                lower.includes("which email") ||
-                lower.includes("where can i send your confirmation") ||
-                lower.includes("where should i send your confirmation") ||
-                lower.includes("where can i send your calendar") ||
-                lower.includes("where should i send your calendar") ||
-                (lower.includes("email") && (
-                  lower.includes("what is") ||
-                  lower.includes("what's") ||
-                  lower.includes("may i have") ||
-                  lower.includes("can i have") ||
-                  lower.includes("provide") ||
-                  lower.includes("give me") ||
-                  lower.includes("tell me") ||
-                  lower.includes("send your calendar invite") ||
-                  lower.includes("send your confirmation")
-                ));
-
-              if (isAgentAskingEmail) {
-                awaitingEmailConfirmRef.current = false;
-                setShowEmailBar(true);
-              } else {
-                // Only hide bar if booking not finalized and not awaiting confirm
-                if (!bookingFinalizedRef.current && !awaitingEmailConfirmRef.current) {
-                  setShowEmailBar(false);
-                }
               }
             }
           }
