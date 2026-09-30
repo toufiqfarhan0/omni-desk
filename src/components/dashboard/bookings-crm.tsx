@@ -237,47 +237,20 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
                     <strong>${b.price || 0}</strong>
                   </td>
                   <td style={{ padding: "12px 14px" }}>
-                    {b.invite_sent || Boolean(b.confirmation_sent) || (b.status === "confirmed" && Boolean(b.customer_email)) ? (
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontFamily: "var(--mono)",
-                            padding: "3px 8px",
-                            borderRadius: "4px",
-                            background: "#ecfdf5",
-                            color: "#065f46",
-                            border: "1px solid #a7f3d0",
-                            fontWeight: 600,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                          Sent (.ics)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleResendInvite(b)}
-                          disabled={resendingCode === b.confirmation_code}
-                          title="Resend calendar invite to customer email"
-                          style={{
-                            background: "transparent",
-                            color: "#71717a",
-                            border: "1px solid #e4e4e7",
-                            padding: "2px 7px",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            fontSize: "10.5px",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {resendingCode === b.confirmation_code ? "..." : "Resend"}
-                        </button>
-                      </div>
+                    {b.invite_sent || Boolean(b.confirmation_sent) ? (
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontFamily: "var(--mono)",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          background: "#000000",
+                          color: "#ffffff",
+                          display: "inline-block",
+                        }}
+                      >
+                        Dispatched
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -294,7 +267,7 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
                           fontWeight: 500,
                         }}
                       >
-                        {resendingCode === b.confirmation_code ? "Sending..." : "Send .ics"}
+                        {resendingCode === b.confirmation_code ? "Sending..." : "Resend .ics"}
                       </button>
                     )}
                   </td>
