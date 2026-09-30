@@ -54,7 +54,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 
 - **Judges Drive Folder & 60s Video**: [Google Drive (`omni-desk-60's`)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) — Video walkthrough (`omni-60's.mp4`) & judge evaluation assets
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
-- **npm Package**: [`omnidesk-voice@0.1.9`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
+- **npm Package**: [`omnidesk-voice@0.1.10`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
 - **Live Script Embed Demo**: [https://salon-demo-script.vercel.app](https://salon-demo-script.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script))
 - **Live React npm Demo**: [https://salon-demo-react.vercel.app](https://salon-demo-react.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-react](https://github.com/toufiqfarhan0/salon-demo-react))
 - **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
@@ -322,7 +322,7 @@ assemblyai-voice-agent-scheduler/
 ├── .env.example                 # Example template for environment variables
 ├── package.json                 # Next.js 16 & React 19 dependencies
 ├── packages/
-│   └── widget/                  # 'omnidesk-voice' npm package (0.1.9)
+│   └── widget/                  # 'omnidesk-voice' npm package (0.1.10)
 │       ├── src/                 # Audio client, React widget & vanilla launcher
 │       └── tsup.config.ts       # CJS, ESM & IIFE multi-format bundler
 ├── public/
@@ -514,7 +514,7 @@ Response: { "ok": true, "sent": true, "email": "alex.smith@gmail.com" }
 
 ## Embeddable Voice Widget & npm Package (`omnidesk-voice`)
 
-OmniDesk ships with a standalone, production-ready npm package: **[`omnidesk-voice`](https://www.npmjs.com/package/omnidesk-voice)** (v0.1.9). It includes a 24kHz Web Audio streaming client, waveform audio visualizers, full-screen expandable dialogs, and a built-in **Verified Mailbox Entry** banner for anti-hallucinated email capture.
+OmniDesk ships with a standalone, production-ready npm package: **[`omnidesk-voice`](https://www.npmjs.com/package/omnidesk-voice)** (v0.1.10). It includes a 24kHz Web Audio streaming client, waveform audio visualizers, full-screen expandable dialogs, and a built-in **Verified Mailbox Entry** banner for anti-hallucinated email capture.
 
 ### 1. React & Next.js Installation
 
@@ -555,7 +555,7 @@ No bundler or build step needed:
 
 ```html
 <script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.9";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.10";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
@@ -592,7 +592,7 @@ Zero build tools or node setup required. Works in WordPress, Webflow, Shopify, o
 
 ```html
 <script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.9/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.10/dist/widget.global.global.js" 
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
   data-agent="agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"

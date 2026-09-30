@@ -216,7 +216,7 @@ function OverviewSection() {
           },
           {
             name: "Lumière Studio (React 19 / Vite)",
-            desc: "Full React app consuming omnidesk-voice@0.1.9 from npm with full TypeScript support and custom widget accent styling.",
+            desc: "Full React app consuming omnidesk-voice@0.1.10 from npm with full TypeScript support and custom widget accent styling.",
             url: "https://salon-demo-react.vercel.app/",
             color: "#18181b",
             label: "Open React Demo",

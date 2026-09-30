@@ -51,6 +51,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   let userLevel = 0;
   let agentLevel = 0;
   let emailCaptured = false;
+  let bookingFinalized = false;
+  let awaitingEmailConfirm = false;
   let lastSpeaker: "user" | "agent" | null = null;
   let lastBubbleInner: HTMLElement | null = null;
   let lastMsgWasFinal = false;
@@ -405,7 +407,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     if (client) {
       client.sendEmailInput(val);
     }
-    emailCaptured = true;
+    awaitingEmailConfirm = true;
     emailBar.style.display = "none";
     emailInput.value = "";
 
@@ -434,6 +436,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
 
   async function startCall() {
     emailCaptured = false;
+    bookingFinalized = false;
+    awaitingEmailConfirm = false;
     emailBar.style.display = "none";
     thinkingBubble.style.display = "none";
     lastSpeaker = null;
@@ -521,17 +525,30 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
               thinkingBubble.style.display = "flex";
             }
             const userTextLower = msg.text.toLowerCase();
+            // If caller says no, wrong, or requests change to their email
+            if (
+              userTextLower === "no" ||
+              userTextLower.startsWith("no ") ||
+              userTextLower.includes("no,") ||
+              userTextLower.includes("wrong") ||
+              userTextLower.includes("incorrect") ||
+              userTextLower.includes("change my email") ||
+              userTextLower.includes("different email")
+            ) {
+              awaitingEmailConfirm = false;
+            }
+            // If caller speaks their email or provides it in voice/text
             if (
               msg.text.includes("@") ||
               (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
-              userTextLower.includes("gmail") ||
-              userTextLower.includes("yahoo") ||
-              userTextLower.includes("outlook") ||
-              userTextLower.includes("hotmail") ||
-              userTextLower.includes("icloud")
+              userTextLower.includes("gmail.com") ||
+              userTextLower.includes("yahoo.com") ||
+              userTextLower.includes("outlook.com") ||
+              userTextLower.includes("hotmail.com") ||
+              userTextLower.includes("icloud.com")
             ) {
-              emailCaptured = true;
               emailBar.style.display = "none";
+              awaitingEmailConfirm = true;
             }
           } else if (msg.who === "agent") {
             if (msg.text && msg.text.trim().length > 0) {
@@ -539,54 +556,74 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             }
             const lower = msg.text.toLowerCase();
 
-            // 1. Immediate confirmation check: if agent confirms email, sends invite, or completes booking, lock permanently
-            const isConfirmationOrDone =
-              lower.includes("verified your email") ||
-              lower.includes("email is verified") ||
-              lower.includes("verified that email") ||
-              lower.includes("sent a calendar") ||
-              lower.includes("sent your confirmation") ||
-              lower.includes("calendar invite") ||
+            // 1. If booking is finalized, permanently lock and hide bar
+            const isBookingFinalized =
               lower.includes("confirmation code is") ||
               lower.includes("booking is confirmed") ||
+              lower.includes("scheduled your appointment") ||
               lower.includes("all set, your appointment") ||
-              lower.includes("scheduled your appointment");
+              (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
+              (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
 
-            if (isConfirmationOrDone) {
-              emailCaptured = true;
+            if (isBookingFinalized) {
+              bookingFinalized = true;
+              awaitingEmailConfirm = false;
+              emailBar.style.display = "none";
+              return;
             }
 
-            // 2. Strictly trigger popup ONLY when agent explicitly asks for email and not yet captured
-            const isStrictlyAskingEmail =
-              !emailCaptured &&
-              (lower.includes("what is your email") ||
-                lower.includes("what's your email") ||
-                lower.includes("may i have your email") ||
-                lower.includes("can i have your email") ||
-                lower.includes("could i get your email") ||
-                lower.includes("could you provide your email") ||
-                lower.includes("provide your email") ||
-                lower.includes("enter your email") ||
-                lower.includes("spell your email") ||
-                lower.includes("share your email") ||
-                lower.includes("need your email") ||
-                lower.includes("what email") ||
-                lower.includes("which email") ||
-                lower.includes("where can i send your confirmation") ||
-                lower.includes("where should i send your confirmation") ||
-                lower.includes("where can i send your calendar") ||
-                lower.includes("where should i send your calendar") ||
-                (lower.includes("email") && (
-                  lower.includes("what is") ||
-                  lower.includes("what's") ||
-                  lower.includes("may i have") ||
-                  lower.includes("can you provide") ||
-                  lower.includes("could you provide") ||
-                  lower.includes("give me your") ||
-                  lower.includes("tell me your")
-                )));
+            if (bookingFinalized) {
+              emailBar.style.display = "none";
+              return;
+            }
 
-            if (isStrictlyAskingEmail) {
+            // 2. If agent is asking the caller to confirm with yes or no:
+            // e.g., "I have verified your email as ... Can you please confirm with yes or no?"
+            const isAskingYesNo =
+              lower.includes("confirm with yes or no") ||
+              lower.includes("yes or no") ||
+              lower.includes("is that correct") ||
+              lower.includes("is that right");
+
+            if (isAskingYesNo) {
+              awaitingEmailConfirm = true;
+              emailBar.style.display = "none";
+              return;
+            }
+
+            // 3. Strictly show input ONLY when agent is asking for caller's email
+            const isAgentAskingEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("share your email") ||
+              lower.includes("need your email") ||
+              lower.includes("what email") ||
+              lower.includes("which email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar") ||
+              lower.includes("where should i send your calendar") ||
+              (lower.includes("email") && (
+                lower.includes("what is") ||
+                lower.includes("what's") ||
+                lower.includes("may i have") ||
+                lower.includes("can i have") ||
+                lower.includes("provide") ||
+                lower.includes("give me") ||
+                lower.includes("tell me") ||
+                lower.includes("send your calendar invite") ||
+                lower.includes("send your confirmation")
+              ));
+
+            if (isAgentAskingEmail) {
+              awaitingEmailConfirm = false;
               emailBar.style.display = "flex";
               setTimeout(() => emailInput.focus(), 60);
             } else {
@@ -713,6 +750,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     waveformBox.style.display = "none";
     emailBar.style.display = "none";
     thinkingBubble.style.display = "none";
+    bookingFinalized = false;
+    awaitingEmailConfirm = false;
     stopTimer();
   }
 

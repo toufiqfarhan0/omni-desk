@@ -435,7 +435,7 @@ export class AssemblyAIVoiceClient {
   sendEmailInput(email: string): boolean {
     return this.sendUserMessage(
       `My email address is ${email}`,
-      `The caller entered their verified email address: ${email}. Acknowledge this email, verify it using verify_customer_email if needed, and complete the booking.`
+      `The caller entered their email address: ${email}. Call verify_customer_email to validate it, then ask the caller: "I have verified your email as ${email}. Can you please confirm with yes or no?" Do not book until they confirm with yes. If they say no, ask for their email again.`
     );
   }
 

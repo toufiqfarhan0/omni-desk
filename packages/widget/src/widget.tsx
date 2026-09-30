@@ -54,6 +54,8 @@ export function OmniDeskWidget({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerStartRef = useRef<number>(0);
   const emailCapturedRef = useRef<boolean>(false);
+  const bookingFinalizedRef = useRef<boolean>(false);
+  const awaitingEmailConfirmRef = useRef<boolean>(false);
 
   const activeAccent = useMemo(() => {
     if (accentColor) return accentColor;
@@ -107,6 +109,8 @@ export function OmniDeskWidget({
     try {
       setCallStatus("connecting");
       emailCapturedRef.current = false;
+      bookingFinalizedRef.current = false;
+      awaitingEmailConfirmRef.current = false;
       setShowEmailBar(false);
       startTimer();
       const cleanHost = resolvedHost ? resolvedHost.replace(/\/$/, "") : "";
@@ -178,69 +182,106 @@ export function OmniDeskWidget({
           onTranscript?.(msg);
           if (msg.who === "user") {
             const userTextLower = msg.text.toLowerCase();
+            // If caller says no, wrong, or requests change to their email
+            if (
+              userTextLower === "no" ||
+              userTextLower.startsWith("no ") ||
+              userTextLower.includes("no,") ||
+              userTextLower.includes("wrong") ||
+              userTextLower.includes("incorrect") ||
+              userTextLower.includes("change my email") ||
+              userTextLower.includes("different email")
+            ) {
+              awaitingEmailConfirmRef.current = false;
+            }
+            // If caller speaks their email or provides it in voice/text
             if (
               msg.text.includes("@") ||
               (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
-              userTextLower.includes("gmail") ||
-              userTextLower.includes("yahoo") ||
-              userTextLower.includes("outlook") ||
-              userTextLower.includes("hotmail") ||
-              userTextLower.includes("icloud")
+              userTextLower.includes("gmail.com") ||
+              userTextLower.includes("yahoo.com") ||
+              userTextLower.includes("outlook.com") ||
+              userTextLower.includes("hotmail.com") ||
+              userTextLower.includes("icloud.com")
             ) {
-              emailCapturedRef.current = true;
               setShowEmailBar(false);
+              awaitingEmailConfirmRef.current = true;
             }
           } else if (msg.who === "agent") {
             const lower = msg.text.toLowerCase();
 
-            // 1. Immediate confirmation check: if agent confirms email, sends invite, or completes booking, lock permanently
-            const isConfirmationOrDone =
-              lower.includes("verified your email") ||
-              lower.includes("email is verified") ||
-              lower.includes("verified that email") ||
-              lower.includes("sent a calendar") ||
-              lower.includes("sent your confirmation") ||
-              lower.includes("calendar invite") ||
+            // 1. If booking is finalized, permanently lock and hide bar
+            const isBookingFinalized =
               lower.includes("confirmation code is") ||
               lower.includes("booking is confirmed") ||
+              lower.includes("scheduled your appointment") ||
               lower.includes("all set, your appointment") ||
-              lower.includes("scheduled your appointment");
+              (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
+              (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
 
-            if (isConfirmationOrDone) {
-              emailCapturedRef.current = true;
+            if (isBookingFinalized) {
+              bookingFinalizedRef.current = true;
+              awaitingEmailConfirmRef.current = false;
+              setShowEmailBar(false);
+              return;
             }
 
-            // 2. Strictly trigger popup ONLY when agent explicitly asks for email and not yet captured
-            const isStrictlyAskingEmail =
-              !emailCapturedRef.current &&
-              (lower.includes("what is your email") ||
-                lower.includes("what's your email") ||
-                lower.includes("may i have your email") ||
-                lower.includes("can i have your email") ||
-                lower.includes("could i get your email") ||
-                lower.includes("could you provide your email") ||
-                lower.includes("provide your email") ||
-                lower.includes("enter your email") ||
-                lower.includes("spell your email") ||
-                lower.includes("share your email") ||
-                lower.includes("need your email") ||
-                lower.includes("what email") ||
-                lower.includes("which email") ||
-                lower.includes("where can i send your confirmation") ||
-                lower.includes("where should i send your confirmation") ||
-                lower.includes("where can i send your calendar") ||
-                lower.includes("where should i send your calendar") ||
-                (lower.includes("email") && (
-                  lower.includes("what is") ||
-                  lower.includes("what's") ||
-                  lower.includes("may i have") ||
-                  lower.includes("can you provide") ||
-                  lower.includes("could you provide") ||
-                  lower.includes("give me your") ||
-                  lower.includes("tell me your")
-                )));
+            if (bookingFinalizedRef.current) {
+              setShowEmailBar(false);
+              return;
+            }
 
-            setShowEmailBar(Boolean(isStrictlyAskingEmail));
+            // 2. If agent is asking the caller to confirm with yes or no:
+            // e.g., "I have verified your email as ... Can you please confirm with yes or no?"
+            const isAskingYesNo =
+              lower.includes("confirm with yes or no") ||
+              lower.includes("yes or no") ||
+              lower.includes("is that correct") ||
+              lower.includes("is that right");
+
+            if (isAskingYesNo) {
+              awaitingEmailConfirmRef.current = true;
+              setShowEmailBar(false);
+              return;
+            }
+
+            // 3. Strictly show input ONLY when agent is asking for caller's email
+            const isAgentAskingEmail =
+              lower.includes("what is your email") ||
+              lower.includes("what's your email") ||
+              lower.includes("may i have your email") ||
+              lower.includes("can i have your email") ||
+              lower.includes("could i get your email") ||
+              lower.includes("could you provide your email") ||
+              lower.includes("provide your email") ||
+              lower.includes("enter your email") ||
+              lower.includes("spell your email") ||
+              lower.includes("share your email") ||
+              lower.includes("need your email") ||
+              lower.includes("what email") ||
+              lower.includes("which email") ||
+              lower.includes("where can i send your confirmation") ||
+              lower.includes("where should i send your confirmation") ||
+              lower.includes("where can i send your calendar") ||
+              lower.includes("where should i send your calendar") ||
+              (lower.includes("email") && (
+                lower.includes("what is") ||
+                lower.includes("what's") ||
+                lower.includes("may i have") ||
+                lower.includes("can i have") ||
+                lower.includes("provide") ||
+                lower.includes("give me") ||
+                lower.includes("tell me") ||
+                lower.includes("send your calendar invite") ||
+                lower.includes("send your confirmation")
+              ));
+
+            if (isAgentAskingEmail) {
+              awaitingEmailConfirmRef.current = false;
+              setShowEmailBar(true);
+            } else {
+              setShowEmailBar(false);
+            }
           }
         },
         onAudioLevel: (u, a) => {
@@ -271,6 +312,8 @@ export function OmniDeskWidget({
     setUserLevel(0);
     setAgentLevel(0);
     stopTimer();
+    bookingFinalizedRef.current = false;
+    awaitingEmailConfirmRef.current = false;
     setShowEmailBar(false);
     setEmailError("");
     setEmailSuccess("");
@@ -316,7 +359,7 @@ export function OmniDeskWidget({
         }
         setIsThinking(true);
 
-        emailCapturedRef.current = true;
+        awaitingEmailConfirmRef.current = true;
         setEmailInput("");
         setShowEmailBar(false);
         setEmailSuccess("");
