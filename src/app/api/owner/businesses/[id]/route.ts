@@ -37,7 +37,8 @@ export async function PATCH(
     }
 
     // Instantly sync voice and settings update to AssemblyAI in the cloud
-    if (updated.assemblyai_agent_id) {
+    const agentId = updated.assemblyai_agent_id?.trim();
+    if (agentId) {
       const publicBaseUrl =
         process.env.PUBLIC_API_BASE_URL ||
         (process.env.VERCEL_PROJECT_PRODUCTION_URL

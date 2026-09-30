@@ -222,11 +222,15 @@ export async function supabaseListBusinesses(ownerId = "owner_demo"): Promise<Bu
       }
     }
 
-    return effectiveBusinesses.map((b) => ({
-      ...b,
-      keyterms: Array.isArray(b.keyterms) ? b.keyterms : JSON.parse(b.keyterms || "[]"),
-      services: servicesByBiz[b.id] || [],
-    }));
+    return effectiveBusinesses.map((b) => {
+      const agentId = b.assemblyai_agent_id;
+      return {
+        ...b,
+        assemblyai_agent_id: agentId,
+        keyterms: Array.isArray(b.keyterms) ? b.keyterms : JSON.parse(b.keyterms || "[]"),
+        services: servicesByBiz[b.id] || [],
+      };
+    });
   } catch (err: any) {
     console.error("[Supabase] listBusinesses exception:", err);
     return [];
@@ -254,8 +258,11 @@ export async function supabaseGetBusiness(businessId: string): Promise<Business 
       .eq("business_id", businessId)
       .order("price", { ascending: true });
 
+    const agentId = biz.assemblyai_agent_id;
+
     return {
       ...biz,
+      assemblyai_agent_id: agentId,
       keyterms: Array.isArray(biz.keyterms) ? biz.keyterms : JSON.parse(biz.keyterms || "[]"),
       services: services || [],
     };
@@ -380,6 +387,8 @@ export async function supabaseUpdateBusiness(
 
     for (const col of allowedCols) {
       if (patch[col] !== undefined) {
+        // Never allow clearing assemblyai_agent_id — only save it when it's a non-empty value
+        if (col === "assemblyai_agent_id" && !patch[col]) continue;
         updateData[col] = patch[col];
       }
     }

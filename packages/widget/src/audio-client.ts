@@ -10,7 +10,7 @@ export interface VoiceSessionCallbacks {
 }
 
 const WIRE_RATE = 24000;
-const WS_URL = "wss://agents.assemblyai.com/v1/ws";
+const WS_URL = "wss://agents.us.assemblyai.com/v1/ws";
 
 const CAPTURE_WORKLET = `
   class CaptureProcessor extends AudioWorkletProcessor {
@@ -174,7 +174,7 @@ export class AssemblyAIVoiceClient {
     this.callbacks = callbacks;
   }
 
-  async start(token: string, agentId?: string, voice?: string) {
+  async start(token: string, agentId?: string, voice?: string, customWsUrl?: string) {
     try {
       this.callbacks.onStatusChange?.("connecting");
 
@@ -198,7 +198,8 @@ export class AssemblyAIVoiceClient {
       this.captureNode = await addWorklet(this.captureCtx, CAPTURE_WORKLET, "capture");
       this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);
 
-      const wsUrl = new URL(WS_URL);
+      const targetWs = (customWsUrl && customWsUrl.trim()) || WS_URL;
+      const wsUrl = new URL(targetWs);
       wsUrl.searchParams.set("token", token);
       this.ws = new WebSocket(wsUrl.toString());
 
@@ -332,6 +333,12 @@ export class AssemblyAIVoiceClient {
               });
               break;
 
+            case "reply.error":
+              this.setThinking(false);
+              this.callbacks.onError?.(msg.message || msg.code || "Reply generation error");
+              break;
+
+            case "error":
             case "session.error":
               this.setThinking(false);
               this.callbacks.onError?.(msg.message || msg.code || "Session error");

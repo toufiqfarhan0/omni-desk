@@ -20,7 +20,7 @@ export interface VoiceSessionCallbacks {
 }
 
 const WIRE_RATE = 24000;
-const WS_URL = "wss://agents.assemblyai.com/v1/ws";
+const WS_URL = "wss://agents.us.assemblyai.com/v1/ws";
 
 // Capture worklet from AssemblyAI official starter: resamples input mic stream to exactly 24kHz PCM16
 const CAPTURE_WORKLET = `
@@ -186,7 +186,7 @@ export class AssemblyAIVoiceClient {
     this.callbacks = callbacks;
   }
 
-  async start(token: string, agentId?: string, voice?: string) {
+  async start(token: string, agentId?: string, voice?: string, customWsUrl?: string) {
     try {
       this.callbacks.onStatusChange?.("connecting");
 
@@ -215,9 +215,11 @@ export class AssemblyAIVoiceClient {
       this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);
 
       // WebSocket to AssemblyAI
-      const wsUrl = new URL(WS_URL);
+      // Only `token` is a valid query parameter — speech_model and other options
+      // are set in the stored agent config or via session.update, not the URL.
+      const targetWs = (customWsUrl && customWsUrl.trim()) || WS_URL;
+      const wsUrl = new URL(targetWs);
       wsUrl.searchParams.set("token", token);
-      wsUrl.searchParams.set("speech_model", "universal-3-6-pro");
       this.ws = new WebSocket(wsUrl.toString());
 
       this.captureNode.port.onmessage = ({ data }) => {
@@ -363,9 +365,20 @@ export class AssemblyAIVoiceClient {
               }
               break;
 
+            case "reply.error":
+              this.setThinking(false);
+              this.callbacks.onError?.(
+                ([msg.code, msg.message].filter(Boolean).join(" \u2014 ")) || "Reply generation error"
+              );
+              break;
+
+            case "error":
             case "session.error":
               this.setThinking(false);
-              this.callbacks.onError?.(msg.message || msg.code || "Session error");
+              // Surface the full error details (code + message) from AssemblyAI
+              this.callbacks.onError?.(
+                ([msg.code, msg.message].filter(Boolean).join(" \u2014 ")) || "Session error"
+              );
               this.callbacks.onStatusChange?.("error");
               break;
 

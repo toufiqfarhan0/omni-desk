@@ -49,6 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <OmniDeskWidget
           host="https://omni-desk-rho.vercel.app"
           businessId="biz_demo_dental"
+          agentId="agent_118183fec8b04d99ac3702e5327ef544"
           theme="dark"
           position="bottom-right"
           label="Talk to Receptionist"
@@ -71,9 +72,11 @@ Add before `</body>`:
 
 ```html
 <script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.17/dist/widget.global.global.js"
+  onerror="this.onerror=null;this.src='https://omni-desk-rho.vercel.app/widget.js';"
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
+  data-agent="agent_118183fec8b04d99ac3702e5327ef544"
   data-position="bottom-right"
   data-theme="dark"
   data-label="Talk to Receptionist"
@@ -85,11 +88,12 @@ Add before `</body>`:
 
 ```html
 <script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.16";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.17";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
     businessId: "biz_demo_dental",
+    agentId: "agent_118183fec8b04d99ac3702e5327ef544",
     theme: "dark",
     position: "bottom-right",
     label: "Talk to Receptionist"

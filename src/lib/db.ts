@@ -287,7 +287,7 @@ function initSqliteDb(db: any): void {
         'alba',
         30, 9, 17, 'mon-fri',
         '["OmniDesk", "OmniDesk Hair Salon", "haircut", "styling", "balayage", "hair coloring", "blowout", "highlights", "scalp treatment"]',
-        'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794',
+        'agent_118183fec8b04d99ac3702e5327ef544',
         datetime('now'), datetime('now')
       )
     `).run();
@@ -320,7 +320,7 @@ function initSqliteDb(db: any): void {
         'jane',
         30, 9, 17, 'mon-fri',
         '[]',
-        'agent_8a409193fbde43acb6db72541947dc7b',
+        'agent_d737e54cf71a4c3db7046dbdd3a504f8',
         datetime('now'), datetime('now')
       )
     `).run();
@@ -337,12 +337,12 @@ function initSqliteDb(db: any): void {
   try {
     db.prepare(`
       UPDATE businesses 
-      SET assemblyai_agent_id = 'agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794' 
+      SET assemblyai_agent_id = 'agent_118183fec8b04d99ac3702e5327ef544' 
       WHERE id = 'biz_demo_dental' AND (assemblyai_agent_id IS NULL OR assemblyai_agent_id = '')
     `).run();
     db.prepare(`
       UPDATE businesses 
-      SET assemblyai_agent_id = 'agent_8a409193fbde43acb6db72541947dc7b' 
+      SET assemblyai_agent_id = 'agent_d737e54cf71a4c3db7046dbdd3a504f8' 
       WHERE id = 'biz_1790171996683_44dsu' AND (assemblyai_agent_id IS NULL OR assemblyai_agent_id = '')
     `).run();
   } catch {}
@@ -494,8 +494,10 @@ export async function listBusinesses(ownerId = "owner_demo"): Promise<Business[]
     } catch {
       keyterms = [];
     }
+    const agentId = r.assemblyai_agent_id;
     return {
       ...r,
+      assemblyai_agent_id: agentId,
       keyterms,
       services,
     };
@@ -526,8 +528,11 @@ export async function getBusiness(businessId: string): Promise<Business | null> 
     keyterms = [];
   }
 
+  const agentId = r.assemblyai_agent_id;
+
   return {
     ...r,
+    assemblyai_agent_id: agentId,
     keyterms,
     services,
   };
@@ -567,6 +572,8 @@ export async function updateBusiness(
 
   for (const col of allowedCols) {
     if (patch[col] !== undefined) {
+      // Never allow clearing assemblyai_agent_id — only save it when it's a non-empty value
+      if (col === "assemblyai_agent_id" && !patch[col]) continue;
       fields.push(`${col} = ?`);
       vals.push(patch[col]);
     }

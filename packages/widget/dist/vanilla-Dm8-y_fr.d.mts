@@ -10,6 +10,7 @@ interface VoiceSessionTokenResponse {
     agent_id: string;
     business_name?: string;
     voice?: string;
+    ws_url?: string;
     ok?: boolean;
 }
 interface OmniDeskWidgetProps {

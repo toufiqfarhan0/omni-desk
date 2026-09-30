@@ -54,7 +54,7 @@ OmniDesk is an autonomous, full-stack voice receptionist and appointment schedul
 
 - **Judges Drive Folder & 60s Video**: [Google Drive (`omni-desk-60's`)](https://drive.google.com/drive/folders/1ETJPv82bIJgqnDHIXSDbkSLNql-sr8Ay?usp=sharing) — Video walkthrough (`omni-60's.mp4`) & judge evaluation assets
 - **Live Production URL**: [https://omni-desk-rho.vercel.app](https://omni-desk-rho.vercel.app)
-- **npm Package**: [`omnidesk-voice@0.1.16`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
+- **npm Package**: [`omnidesk-voice@0.1.17`](https://www.npmjs.com/package/omnidesk-voice) — Embeddable React widget & Vanilla JS SDK
 - **Live Script Embed Demo**: [https://salon-demo-script.vercel.app](https://salon-demo-script.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-script](https://github.com/toufiqfarhan0/salon-demo-script))
 - **Live React npm Demo**: [https://salon-demo-react.vercel.app](https://salon-demo-react.vercel.app) (GitHub: [toufiqfarhan0/salon-demo-react](https://github.com/toufiqfarhan0/salon-demo-react))
 - **Management Console**: [`/dashboard`](https://omni-desk-rho.vercel.app/dashboard)
@@ -282,6 +282,14 @@ To ensure multi-tenant security, privacy, and zero risk of accidental overwrites
 - The **AssemblyAI Voice Agent ID** field in the dashboard is strictly **`readOnly`** with a one-click copy button, preventing manual tampering.
 - When deploying any new business, OmniDesk issues a `POST` request to AssemblyAI (`https://agents.assemblyai.com/v1/agents`) to create a **brand-new, independent agent**. Existing agents are never overwritten.
 
+### 5. Dynamic Business Lifecycle: How New Businesses Differ
+Any new business you create from the dashboard (`+ New Business`) does **NOT** use static or hardcoded IDs:
+
+1. **Dynamic Tenant Identity**: The new business receives a dynamically generated unique ID (e.g., `biz_1740928371928_9x2fa`).
+2. **Dedicated Cloud Agent Provisioning**: OmniDesk immediately sends a `POST` request to AssemblyAI's Cloud API (`https://agents.assemblyai.com/v1/agents`) with that business's specific name, services catalog, clinic hours, and dedicated webhook tool endpoints (`/api/tools/[biz_id]/...`). AssemblyAI provisions a brand-new cloud voice agent and returns a unique `agent_id`.
+3. **Persistent Database Binding**: That new dynamic ID is saved directly into the database (`assemblyai_agent_id` column in Supabase / SQLite) bound to that tenant.
+4. **Direct Widget Integration**: When integrating via the React `<OmniDeskWidget businessId="biz_..." />` or `<script>` tag, the widget requests `/api/token?businessId=biz_...`, which retrieves the business's live provisioned agent ID directly from the database and establishes the real-time WebSocket session.
+
 ---
 
 ## Key Capabilities
@@ -322,7 +330,7 @@ assemblyai-voice-agent-scheduler/
 ├── .env.example                 # Example template for environment variables
 ├── package.json                 # Next.js 16 & React 19 dependencies
 ├── packages/
-│   └── widget/                  # 'omnidesk-voice' npm package (0.1.16)
+│   └── widget/                  # 'omnidesk-voice' npm package (0.1.17)
 │       ├── src/                 # Audio client, React widget & vanilla launcher
 │       └── tsup.config.ts       # CJS, ESM & IIFE multi-format bundler
 ├── public/
@@ -386,14 +394,12 @@ Configure the variables:
 # [REQUIRED] AssemblyAI API Key (from https://www.assemblyai.com/dashboard)
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
-# Option A (Instant Zero-Setup): Use the pre-configured Universal-3.6 Pro agent ID:
-AGENT_ID=agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794
-# Option B (Create Your Own): Replace with your own Agent ID or create a fresh agent in 1-click from the Dashboard (/dashboard)
+# [OPTIONAL] AssemblyAI Agent ID
+# Leave blank to auto-provision under your own account with 1-click from Dashboard (/dashboard),
+# or paste your existing AssemblyAI Agent ID:
+AGENT_ID=your_agent_id_here
 
-# [ONLY NEEDED IF deploying a brand-new agent from localhost or running update script]
-# ✅ JUDGES: Leave this BLANK! The pre-configured AGENT_ID above already has tools
-#    pointing to the live Vercel deployment — zero tunnels needed for local testing.
+# [OPTIONAL] Base URL for tool webhooks (defaults to current deployment origin)
 PUBLIC_API_BASE_URL=
 
 # [OPTIONAL] Free Gmail SMTP for Calendar Invites (.ics)
@@ -514,7 +520,7 @@ Response: { "ok": true, "sent": true, "email": "alex.smith@gmail.com" }
 
 ## Embeddable Voice Widget & npm Package (`omnidesk-voice`)
 
-OmniDesk ships with a standalone, production-ready npm package: **[`omnidesk-voice`](https://www.npmjs.com/package/omnidesk-voice)** (v0.1.16). It includes a 24kHz Web Audio streaming client, waveform audio visualizers, full-screen expandable dialogs, and a built-in **Verified Mailbox Entry** banner for anti-hallucinated email capture.
+OmniDesk ships with a standalone, production-ready npm package: **[`omnidesk-voice`](https://www.npmjs.com/package/omnidesk-voice)** (v0.1.17). It includes a 24kHz Web Audio streaming client, waveform audio visualizers, full-screen expandable dialogs, and a built-in **Verified Mailbox Entry** banner for anti-hallucinated email capture.
 
 ### 1. React & Next.js Installation
 
@@ -536,6 +542,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OmniDeskWidget
           host="https://omni-desk-rho.vercel.app"
           businessId="biz_demo_dental"
+          agentId="agent_118183fec8b04d99ac3702e5327ef544"
           theme="dark"
           position="bottom-right"
           label="Talk to Receptionist"
@@ -555,11 +562,12 @@ No bundler or build step needed:
 
 ```html
 <script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.16";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.17";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
     businessId: "biz_demo_dental",
+    agentId: "agent_118183fec8b04d99ac3702e5327ef544",
     theme: "dark",
     position: "bottom-right",
     label: "Talk to Receptionist"
@@ -592,10 +600,11 @@ Zero build tools or node setup required. Works in WordPress, Webflow, Shopify, o
 
 ```html
 <script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.17/dist/widget.global.global.js"
+  onerror="this.onerror=null;this.src='https://omni-desk-rho.vercel.app/widget.js';"
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
-  data-agent="agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
+  data-agent="agent_118183fec8b04d99ac3702e5327ef544"
   data-position="bottom-right"
   data-theme="dark"
   data-label="Talk to Receptionist"
@@ -624,6 +633,13 @@ To verify the production build locally:
 pnpm build
 # or: npm run build
 ```
+
+## 🔮 Roadmap & Upcoming Features
+
+- [ ] **Twilio Telephony & Real Phone Numbers (PSTN)**: Connect real business phone numbers via Twilio Voice Media Streams directly to OmniDesk + AssemblyAI. Customers can dial from any mobile or landline to book appointments 24/7 without needing a browser.
+- [ ] **Automated SMS Booking Confirmations & Reminders**: Instant SMS text confirmations with one-tap calendar invites and 24-hour pre-appointment reminders powered by Twilio Messaging.
+- [ ] **Live Call Forwarding & Warm Transfer**: Real-time warm transfer capability allowing the AI receptionist to forward complex caller inquiries or VIP clients to an on-duty human manager.
+- [ ] **Two-Way Microsoft Outlook / Office 365 Sync**: Seamless calendar synchronization alongside existing Google Calendar and Apple Calendar `.ics` integrations.
 
 ---
 

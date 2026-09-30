@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getApiKey, ASSEMBLYAI_AGENT_HOST } from "@/lib/assemblyai";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,11 +10,11 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const apiKey = process.env.NEXT_ASSEMBLYAI_API_KEY;
+    const apiKey = getApiKey();
 
     if (!apiKey) {
       return NextResponse.json(
-        { ok: false, error: "NEXT_ASSEMBLYAI_API_KEY not configured" },
+        { ok: false, error: "AssemblyAI API key not configured" },
         { status: 500 }
       );
     }
@@ -28,7 +29,7 @@ export async function GET(
       );
     }
 
-    const res = await fetch(`https://agents.assemblyai.com/v1/sessions/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${ASSEMBLYAI_AGENT_HOST}/v1/sessions/${encodeURIComponent(id)}`, {
       method: "GET",
       headers: {
         Authorization: apiKey,

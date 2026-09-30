@@ -18,7 +18,7 @@ interface TemplateInfo {
 
 const TEMPLATES: Record<string, TemplateInfo> = {
   salon: {
-    id: "salon-demo",
+    id: "biz_demo_dental",
     name: "OmniDesk Hair Salon & Studio",
     greeting:
       "Thanks for calling OmniDesk Hair Salon & Studio! Are you looking to book a haircut, styling, or coloring session?",
@@ -128,8 +128,9 @@ export default function DemoPage() {
       }
 
       const token = data.token;
-      const agentId = data.agent_id || "";
+      const agentId = (data.agent_id || "agent_118183fec8b04d99ac3702e5327ef544").trim();
       const voice = data.voice || "alba";
+      const wsUrl = data.ws_url || "wss://agents.us.assemblyai.com/v1/ws";
 
       const client = new AssemblyAIVoiceClient({
         onStatusChange: (status) => {
@@ -318,15 +319,17 @@ export default function DemoPage() {
         },
         onError: (err) => {
           console.warn("Voice error:", err);
+          toast.error(err || "Voice session error");
           setCallStatus("error");
           stopTimer();
         },
       });
 
       voiceClientRef.current = client;
-      await client.start(token, agentId, voice);
+      await client.start(token, agentId, voice, wsUrl);
     } catch (err: any) {
       console.error(err);
+      toast.error(err.message || "Failed to start call");
       setCallStatus("error");
       stopTimer();
     }
@@ -588,7 +591,7 @@ export default function DemoPage() {
                   Lumière Studio
                 </h3>
                 <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 16px" }}>
-                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice@0.1.16</code> from npm with typed props and direct AssemblyAI streaming.
+                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice@0.1.17</code> from npm with typed props and direct AssemblyAI streaming.
                 </p>
               </div>
 

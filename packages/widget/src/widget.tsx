@@ -333,7 +333,7 @@ export function OmniDeskWidget({
       });
 
       clientRef.current = client;
-      await client.start(data.token, targetAgentId, data.voice);
+      await client.start(data.token, targetAgentId, data.voice, data.ws_url);
     } catch {
       setCallStatus("error");
       stopTimer();

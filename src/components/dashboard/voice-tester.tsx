@@ -112,10 +112,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
         throw new Error(data.message || data.error || "Failed to mint session token");
       }
 
-      const agentId =
-        data.agent_id ||
-        business.assemblyai_agent_id ||
-        "";
+      const agentId = (data.agent_id || business.assemblyai_agent_id || "").trim();
       const voice = data.voice || business.voice_id || "alba";
 
       const client = new AssemblyAIVoiceClient({
@@ -324,7 +321,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
       });
 
       voiceClientRef.current = client;
-      await client.start(data.token, agentId, voice);
+      await client.start(data.token, agentId, voice, data.ws_url);
     } catch (err: any) {
       toast.error(err.message || "Failed to start call");
       setCallStatus("error");
@@ -579,7 +576,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
 
   const scriptSnippet = `<!-- OmniDesk Autonomous Voice Receptionist -->
 <script
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.js"
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.17/dist/widget.global.global.js"
   onerror="this.onerror=null;this.src='${hostUrl}/widget.js'"
   data-host="${hostUrl}"
   data-business-id="${business.id}"

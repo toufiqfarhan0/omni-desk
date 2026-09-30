@@ -960,7 +960,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <OmniDeskWidget
           host="https://omni-desk-rho.vercel.app"
           businessId="biz_demo_dental"
-          agentId="agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"
+          agentId="copy-from-the-dashboard"
           theme="${widgetTheme}"
           position="${widgetPosition}"
           accentColor="${widgetAccent}"
@@ -977,7 +977,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() =>
                     handleCopy(
-                      `import { OmniDeskWidget } from "omnidesk-voice";\n\n<OmniDeskWidget host="https://omni-desk-rho.vercel.app" businessId="biz_demo_dental" agentId="agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" theme="${widgetTheme}" position="${widgetPosition}" accentColor="${widgetAccent}" label="${widgetLabel}" />`,
+                      `import { OmniDeskWidget } from "omnidesk-voice";\n\n<OmniDeskWidget host="https://omni-desk-rho.vercel.app" businessId="biz_demo_dental" agentId="copy-from-the-dashboard" theme="${widgetTheme}" position="${widgetPosition}" accentColor="${widgetAccent}" label="${widgetLabel}" />`,
                       "copy-react-code"
                     )
                   }
@@ -1349,7 +1349,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const widget = initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
     businessId: "biz_demo_dental",
-    agentId: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794",
+    agentId: "copy-from-the-dashboard",
     theme: "dark",
     position: "bottom-right",
     label: "Talk to Receptionist",
@@ -1366,7 +1366,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() =>
                     handleCopy(
-                      `<script type="module">\n  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice";\n  initOmniDeskWidget({\n    host: "https://omni-desk-rho.vercel.app",\n    businessId: "biz_demo_dental",\n    agentId: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794"\n  });\n</script>`,
+                      `<script type="module">\n  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice";\n  initOmniDeskWidget({\n    host: "https://omni-desk-rho.vercel.app",\n    businessId: "biz_demo_dental",\n    agentId: "copy-from-the-dashboard"\n  });\n</script>`,
                       "copy-vanilla-code"
                     )
                   }

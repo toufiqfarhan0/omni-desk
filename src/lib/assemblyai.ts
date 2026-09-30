@@ -12,9 +12,14 @@ export function getApiKey(): string {
     process.env.NEXT_ASSEMBLYAI_API_KEY ||
     process.env.ASSEMBLYAI_API_KEY ||
     ""
-  ).trim();
+  ).trim().replace(/^Bearer\s+/i, "").replace(/^["']|["']$/g, "");
 }
 
+
+export const ASSEMBLYAI_AGENT_HOST =
+  (process.env.ASSEMBLYAI_AGENT_HOST || "https://agents.us.assemblyai.com").replace(/\/$/, "");
+export const ASSEMBLYAI_WS_URL =
+  process.env.NEXT_PUBLIC_ASSEMBLYAI_WS_URL || "wss://agents.us.assemblyai.com/v1/ws";
 
 export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
   const apiKey = getApiKey();
@@ -23,7 +28,7 @@ export async function mintAgentToken(expiresInSeconds = 600): Promise<string> {
   }
 
   const res = await fetch(
-    `https://agents.assemblyai.com/v1/token?expires_in_seconds=${expiresInSeconds}`,
+    `${ASSEMBLYAI_AGENT_HOST}/v1/token?expires_in_seconds=${expiresInSeconds}`,
     {
       method: "GET",
       headers: {
@@ -340,16 +345,8 @@ Instructions:
     ...(biz.services || []).map((s) => s.label),
   ].filter(Boolean);
 
-  const apiKey = getApiKey();
-  const llm = apiKey
-    ? [
-        {
-          base_url: "https://llm-gateway.assemblyai.com/v1",
-          model: "claude-3-5-haiku",
-          api_key: apiKey,
-        },
-      ]
-    : undefined;
+  // AssemblyAI native managed LLM (included free with Voice Agents, zero setup or external keys needed)
+  const llm: any[] = [];
 
   return {
     name: biz.name,
@@ -371,7 +368,7 @@ Instructions:
       voice: voiceId,
     },
     tools,
-    ...(llm ? { llm } : {}),
+    llm,
   };
 }
 
@@ -387,78 +384,106 @@ export async function deployOrUpdateAgent(
     };
   }
 
+  let existingAgentId = biz.assemblyai_agent_id?.trim();
   const payload = buildAgentDefinition(biz, publicBaseUrl);
-  // If the business already has an agent ID, update the existing agent!
-  // Only generate a new agent ID if the business does NOT have an agent ID yet.
-  const existingAgentId =
-    biz.assemblyai_agent_id && biz.assemblyai_agent_id.trim()
-      ? biz.assemblyai_agent_id.trim()
-      : undefined;
 
-  let url = existingAgentId
-    ? `https://agents.assemblyai.com/v1/agents/${existingAgentId}`
-    : "https://agents.assemblyai.com/v1/agents";
-  let method = existingAgentId ? "PUT" : "POST";
+  if (existingAgentId) {
+    // Attempt PUT update on the stored agent ID
+    let lastErr = "";
+    let lastStatus = 0;
 
-  // Retries for DNS propagation
-  let lastErr = "";
-  let lastStatus = 0;
-
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    try {
-      let res = await fetch(url, {
-        method,
-        headers: {
-          Authorization: apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      // If existing agent ID was deleted or not found on AssemblyAI, fallback to creating a new one
-      if (res.status === 404 && method === "PUT") {
-        url = "https://agents.assemblyai.com/v1/agents";
-        method = "POST";
-        res = await fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-      }
-
-      lastStatus = res.status;
-      if (res.ok) {
-        const data = await res.json();
-        const finalAgentId = data.id || existingAgentId;
-        return { ok: true, agent_id: finalAgentId };
-      }
-
-      const errText = await res.text();
-      let cleanMsg = errText;
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const parsed = JSON.parse(errText);
-        cleanMsg = parsed.message || parsed.error || errText;
-      } catch {}
-      lastErr = `${res.status}: ${cleanMsg}`;
+        const putRes = await fetch(
+          `${ASSEMBLYAI_AGENT_HOST}/v1/agents/${encodeURIComponent(existingAgentId)}`,
+          {
+            method: "PUT",
+            headers: { Authorization: apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        lastStatus = putRes.status;
 
-      // Check if it's a DNS resolution error that might fix after a short wait
-      if (errText.includes("does not resolve") && attempt < 4) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        continue;
+        if (putRes.ok) {
+          const data = await putRes.json().catch(() => ({}));
+          return { ok: true, agent_id: data.id || existingAgentId };
+        }
+
+        const errText = await putRes.text();
+        let cleanMsg = errText;
+        try { cleanMsg = JSON.parse(errText).message || errText; } catch {}
+        lastErr = `${putRes.status}: ${cleanMsg}`;
+
+        // If 404 (ID does not exist on this cluster/account), find existing matching agent or create
+        if (putRes.status === 404) {
+          console.warn(`[AssemblyAI] PUT agent/${existingAgentId} returned 404. Finding active agent for "${biz.name}"...`);
+          break;
+        }
+
+        if (errText.includes("does not resolve") && attempt < 2) {
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+      } catch (e: any) {
+        lastErr = e.message;
       }
-      break;
-    } catch (e: any) {
-      lastErr = e.message;
-      if (attempt < 4) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    // If PUT failed with 404, look up an existing agent in this account matching this business name
+    if (lastStatus === 404) {
+      try {
+        const listRes = await fetch(`${ASSEMBLYAI_AGENT_HOST}/v1/agents`, {
+          headers: { Authorization: apiKey },
+          cache: "no-store",
+        });
+        if (listRes.ok) {
+          const listData = await listRes.json().catch(() => ({}));
+          const targetName = (biz.name || "").trim().toLowerCase();
+          const match = (listData.agents || []).find((a: any) => {
+            const aName = (a.name || "").trim().toLowerCase();
+            return aName && (aName === targetName || targetName.includes(aName) || aName.includes(targetName));
+          });
+
+          if (match && match.id) {
+            console.log(`[AssemblyAI] Found existing agent ${match.id} for "${biz.name}". Updating via PUT...`);
+            const retryPut = await fetch(
+              `${ASSEMBLYAI_AGENT_HOST}/v1/agents/${encodeURIComponent(match.id)}`,
+              {
+                method: "PUT",
+                headers: { Authorization: apiKey, "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }
+            );
+            if (retryPut.ok) {
+              const data = await retryPut.json().catch(() => ({}));
+              return { ok: true, agent_id: data.id || match.id };
+            }
+          }
+        }
+      } catch (findErr) {
+        console.warn("[AssemblyAI] Error looking up existing agents:", findErr);
       }
+    } else {
+      return { ok: false, error: lastErr, status_code: lastStatus };
     }
   }
 
-  return { ok: false, error: lastErr, status_code: lastStatus };
+  // If no agent ID existed, or PUT was 404 and no existing agent matched by name, create one
+  try {
+    const postRes = await fetch(`${ASSEMBLYAI_AGENT_HOST}/v1/agents`, {
+      method: "POST",
+      headers: { Authorization: apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (postRes.ok) {
+      const data = await postRes.json().catch(() => ({}));
+      return { ok: true, agent_id: data.id };
+    }
+    const errText = await postRes.text();
+    return { ok: false, error: `${postRes.status}: ${errText}`, status_code: postRes.status };
+  } catch (e: any) {
+    return { ok: false, error: e.message };
+  }
 }
 
 const verifiedAgentCache = new Map<string, { valid: boolean; timestamp: number }>();
@@ -483,14 +508,6 @@ export async function verifyAgentExists(
   if (!apiKey || !agentId || !agentId.trim()) return false;
   const cleanId = agentId.trim();
 
-  // Known verified active production agents
-  if (
-    cleanId === "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" ||
-    cleanId === "agent_8a409193fbde43acb6db72541947dc7b"
-  ) {
-    return true;
-  }
-
   const cacheKey = `${apiKey.slice(-8)}_${cleanId}`;
   if (!forceRefresh) {
     const cached = verifiedAgentCache.get(cacheKey);
@@ -501,7 +518,7 @@ export async function verifyAgentExists(
 
   try {
     const res = await fetch(
-      `https://agents.assemblyai.com/v1/agents/${encodeURIComponent(cleanId)}`,
+      `${ASSEMBLYAI_AGENT_HOST}/v1/agents/${encodeURIComponent(cleanId)}`,
       {
         method: "GET",
         headers: { Authorization: apiKey },
@@ -527,75 +544,38 @@ export async function getOrProvisionAgent(
   biz: Business,
   publicBaseUrl?: string
 ): Promise<string> {
-  // Guaranteed active agent for demo salon business
-  if (biz.id === "biz_demo_dental") {
-    try {
-      const { updateBusiness } = await import("@/lib/db");
-      await updateBusiness("biz_demo_dental", { assemblyai_agent_id: "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794" });
-    } catch {}
-    return "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
-  }
-
-  // Guaranteed active agent for Apex Sports Therapy business
-  if (biz.id === "biz_1790171996683_44dsu") {
-    try {
-      const { updateBusiness } = await import("@/lib/db");
-      await updateBusiness("biz_1790171996683_44dsu", { assemblyai_agent_id: "agent_8a409193fbde43acb6db72541947dc7b" });
-    } catch {}
-    return "agent_8a409193fbde43acb6db72541947dc7b";
-  }
-
   const existingId = biz.assemblyai_agent_id?.trim();
 
-  // 1. If business has an agent ID, verify that it is actually active and healthy on this AssemblyAI account
+  // 1. If stored ID exists and is verified on this active cluster, return it directly
   if (existingId) {
     const isLive = await verifyAgentExists(existingId);
     if (isLive) {
       return existingId;
     }
-    console.warn(
-      `[AssemblyAI Self-Healing] Stored agent '${existingId}' for business '${biz.id}' does not exist on this AssemblyAI account. Auto-provisioning...`
-    );
   }
 
-  // 2. Try auto-deploying / provisioning a new real agent on AssemblyAI for this business
-  const deployResult = await deployOrUpdateAgent(
-    { ...biz, assemblyai_agent_id: undefined },
-    publicBaseUrl
-  );
-
+  // 2. Stored ID is 404/unverified on this cluster — use deployOrUpdateAgent which auto-discovers
+  // an existing agent with matching business name or provisions a fresh one
+  const deployResult = await deployOrUpdateAgent(biz, publicBaseUrl);
   if (deployResult.ok && deployResult.agent_id) {
     try {
       const { updateBusiness } = await import("@/lib/db");
       await updateBusiness(biz.id, { assemblyai_agent_id: deployResult.agent_id });
       console.log(
-        `[AssemblyAI Self-Healing] Auto-provisioned and persisted new agent ${deployResult.agent_id} for business ${biz.id}`
+        `[AssemblyAI] Resolved and saved verified agent ${deployResult.agent_id} for business ${biz.id}`
       );
     } catch (e) {
-      console.error("[AssemblyAI] Failed to save auto-provisioned agent ID to database:", e);
+      console.error("[AssemblyAI] Failed to save agent ID to database:", e);
     }
-    verifiedAgentCache.set(deployResult.agent_id, { valid: true, timestamp: Date.now() });
     return deployResult.agent_id;
   }
 
-  // 3. Fallback to process.env.AGENT_ID if verified on AssemblyAI
+  // 3. Fallback to AGENT_ID env var if set and verified
   const envAgentId = (process.env.AGENT_ID || "").trim();
-  if (envAgentId) {
-    const isEnvAgentLive = await verifyAgentExists(envAgentId);
-    if (isEnvAgentLive) {
-      try {
-        const { updateBusiness } = await import("@/lib/db");
-        await updateBusiness(biz.id, { assemblyai_agent_id: envAgentId });
-        console.log(
-          `[AssemblyAI Self-Healing] Successfully linked verified fallback agent ${envAgentId} for business ${biz.id}`
-        );
-      } catch (e) {
-        console.error("[AssemblyAI] Failed to link fallback agent to database:", e);
-      }
-      return envAgentId;
-    }
+  if (envAgentId && (await verifyAgentExists(envAgentId))) {
+    return envAgentId;
   }
 
-  return "";
+  return existingId || envAgentId || "";
 }
 

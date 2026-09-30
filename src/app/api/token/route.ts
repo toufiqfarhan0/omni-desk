@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { mintAgentToken, getOrProvisionAgent, verifyAgentExists } from "@/lib/assemblyai";
+import {
+  mintAgentToken,
+  getOrProvisionAgent,
+  verifyAgentExists,
+  ASSEMBLYAI_WS_URL,
+} from "@/lib/assemblyai";
 import { getBusiness } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +26,10 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const businessId = searchParams.get("businessId") || "biz_demo_dental";
+    let businessId = searchParams.get("businessId") || "biz_demo_dental";
+    if (businessId === "salon-demo" || businessId === "demo") {
+      businessId = "biz_demo_dental";
+    }
 
     const biz = await getBusiness(businessId);
     let agentId = "";
@@ -34,33 +42,23 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    // 1. If business has a verified agent ID in database, use it
     if (biz?.assemblyai_agent_id?.trim()) {
       const storedId = biz.assemblyai_agent_id.trim();
-      const exists = await verifyAgentExists(storedId);
-      if (exists) {
+      const isLive = await verifyAgentExists(storedId);
+      if (isLive) {
         agentId = storedId;
       }
     }
 
-    // 2. Verified active fallbacks for demo tenants or auto-provisioning
-    if (!agentId) {
-      if (businessId === "biz_demo_dental") {
-        agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
-      } else if (businessId === "biz_1790171996683_44dsu") {
-        agentId = "agent_8a409193fbde43acb6db72541947dc7b";
-      } else if (biz) {
-        agentId = await getOrProvisionAgent(biz, publicBaseUrl);
-      } else {
-        const envId = (process.env.AGENT_ID || "").trim();
-        if (envId && (await verifyAgentExists(envId))) {
-          agentId = envId;
-        }
-      }
+    if (!agentId && biz) {
+      agentId = await getOrProvisionAgent(biz, publicBaseUrl);
     }
 
-    if (!agentId && (businessId === "biz_demo_dental" || !biz)) {
-      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+    if (!agentId) {
+      const envId = (process.env.AGENT_ID || "").trim();
+      if (envId && (await verifyAgentExists(envId))) {
+        agentId = envId;
+      }
     }
 
     if (!agentId) {
@@ -83,6 +81,7 @@ export async function GET(request: Request) {
         business_name: biz?.name || "OmniDesk",
         greeting: biz?.greeting,
         voice: biz?.voice_id || "eve",
+        ws_url: ASSEMBLYAI_WS_URL,
       },
       { headers: CORS_HEADERS }
     );

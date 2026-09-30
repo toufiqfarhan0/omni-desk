@@ -371,7 +371,7 @@ export function VoiceWidget({
       });
 
       voiceClientRef.current = client;
-      await client.start(data.token, propAgentId || data.agent_id, data.voice);
+      await client.start(data.token, propAgentId || data.agent_id, data.voice, data.ws_url);
     } catch (err: any) {
       toast.error(err.message || "Failed to start call");
       setCallStatus("error");

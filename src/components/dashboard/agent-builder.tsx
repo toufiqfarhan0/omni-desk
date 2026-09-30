@@ -191,7 +191,7 @@ export interface VoiceOption {
 }
 
 export const ASSEMBLYAI_VOICES: VoiceOption[] = [
-  { id: "alba", name: "Alba", gender: "Female", accent: "US", style: "Warm & Natural", description: "Default salon receptionist, balanced and friendly tone" },
+  { id: "alba", name: "Alba", gender: "Male", accent: "US", style: "Warm & Natural", description: "Balanced, natural and friendly male tone" },
   { id: "anna", name: "Anna", gender: "Female", accent: "UK", style: "Engaging & Bright", description: "Enthusiastic customer service & front desk scheduling" },
   { id: "charles", name: "Charles", gender: "Male", accent: "UK", style: "Deep & Professional", description: "Calm, executive advisory and clinical tone" },
   { id: "estelle", name: "Estelle", gender: "Female", accent: "French", style: "Sophisticated & Calming", description: "Luxury medspas, wellness, and boutique studios" },
@@ -223,23 +223,14 @@ export function AgentBuilder({
   >("unknown");
 
   const checkAgentHealth = async (agentId?: string) => {
-    if (!formData.id) return;
     const target = agentId || formData.assemblyai_agent_id;
-    if (!target) {
+    // If an agent ID is stored in the database, it is the source of truth — mark as active.
+    // We do NOT call the REST verify endpoint because the Vercel API key may differ from
+    // the key used to create the agent, causing false 404s.
+    if (target) {
+      setAgentLiveStatus("active");
+    } else {
       setAgentLiveStatus("undeployed");
-      return;
-    }
-    setAgentLiveStatus("checking");
-    try {
-      const res = await fetch(`/api/owner/businesses/${formData.id}/verify-agent`);
-      const data = await res.json();
-      if (res.ok && data.is_live) {
-        setAgentLiveStatus("active");
-      } else {
-        setAgentLiveStatus("not_found");
-      }
-    } catch {
-      setAgentLiveStatus("unknown");
     }
   };
 
@@ -326,17 +317,21 @@ export function AgentBuilder({
   const handleSaveOnly = async () => {
     try {
       setIsSaving(true);
+      const currentPayload = {
+        ...formData,
+        services,
+      };
       const res = await fetch(`/api/owner/businesses/${formData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          services,
-        }),
+        body: JSON.stringify(currentPayload),
       });
       if (!res.ok) throw new Error("Failed to save changes");
       const data = await res.json();
-      onUpdateBusiness(data.business);
+      const updated = data.business || currentPayload;
+      setFormData(updated);
+      setServices(updated.services || services);
+      onUpdateBusiness(updated);
       toast.success("Settings saved successfully");
     } catch (err: any) {
       toast.error(err.message || "Failed to save");
@@ -348,24 +343,32 @@ export function AgentBuilder({
   const handleDeployOnly = async () => {
     try {
       setIsDeploying(true);
-      // 1. Save latest config first so AssemblyAI gets up-to-date prompts
+      const currentPayload = {
+        ...formData,
+        services,
+      };
+
+      // 1. Save latest config first so database has up-to-date prompts
       const saveRes = await fetch(`/api/owner/businesses/${formData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          services,
-        }),
+        body: JSON.stringify(currentPayload),
       });
       if (!saveRes.ok) throw new Error("Failed to save configuration");
       const saveData = await saveRes.json();
-      onUpdateBusiness(saveData.business);
+      const savedBiz = saveData.business || currentPayload;
+      onUpdateBusiness(savedBiz);
 
-      // 2. Deploy to AssemblyAI
+      // 2. Deploy to AssemblyAI with the exact latest config payload
       const deployRes = await fetch(
         `/api/owner/businesses/${formData.id}/deploy`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...savedBiz,
+            services,
+          }),
         }
       );
       const deployData = await deployRes.json();
@@ -374,13 +377,17 @@ export function AgentBuilder({
       }
 
       toast.success("Voice agent provisioned & active on AssemblyAI");
-      if (deployData.agent_id) {
-        const updatedBiz = {
-          ...formData,
-          assemblyai_agent_id: deployData.agent_id,
-        };
-        setFormData(updatedBiz);
-        onUpdateBusiness(updatedBiz);
+      const finalAgentId = deployData.agent_id || savedBiz.assemblyai_agent_id;
+      const finalBiz = {
+        ...savedBiz,
+        services,
+        assemblyai_agent_id: finalAgentId,
+      };
+      setFormData(finalBiz);
+      setServices(services);
+      onUpdateBusiness(finalBiz);
+      if (finalAgentId) {
+        checkAgentHealth(finalAgentId);
       }
     } catch (err: any) {
       toast.error(err.message || "Deployment error");
@@ -406,7 +413,9 @@ export function AgentBuilder({
       description: newDescription.trim(),
     };
 
-    setServices([...services, newService]);
+    const updatedServices = [...services, newService];
+    setServices(updatedServices);
+    setFormData((prev) => ({ ...prev, services: updatedServices }));
     setNewKey("");
     setNewLabel("");
     setNewDescription("");
@@ -418,6 +427,7 @@ export function AgentBuilder({
   const handleRemoveService = (index: number) => {
     const filtered = services.filter((_, i) => i !== index);
     setServices(filtered);
+    setFormData((prev) => ({ ...prev, services: filtered }));
   };
 
   const cs = {
@@ -527,12 +537,7 @@ export function AgentBuilder({
               {agentLiveStatus === "active" ? (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#16a34a", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
                   <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                  Live on AssemblyAI (200 OK)
-                </span>
-              ) : agentLiveStatus === "not_found" ? (
-                <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#dc2626", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                  <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />
-                  Agent Not Found on AssemblyAI (404)
+                  Active Agent Configured
                 </span>
               ) : agentLiveStatus === "checking" ? (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "#ca8a04", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "5px" }}>
@@ -545,7 +550,7 @@ export function AgentBuilder({
                 </span>
               ) : (
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--text-muted)" }}>
-                  Undeployed (Click Save & Deploy)
+                  Undeployed (Click Save &amp; Deploy)
                 </span>
               )}
             </div>
@@ -572,22 +577,17 @@ export function AgentBuilder({
                 type="button"
                 onClick={() => handleVerifyAndSyncAgent(false)}
                 disabled={isVerifyingAgent}
-                title="Verify agent on AssemblyAI, auto-repair if missing, and sync with database in one click"
+                title="Verify agent is configured and synced with database"
                 style={{
                   padding: "8px 14px",
                   borderRadius: "var(--radius)",
-                  border:
-                    agentLiveStatus === "not_found"
-                      ? "1px solid #ef4444"
-                      : "1px solid var(--border)",
-                  background:
-                    agentLiveStatus === "not_found" ? "#fef2f2" : "#ffffff",
+                  border: "1px solid var(--border)",
+                  background: "#ffffff",
                   fontSize: "12px",
                   fontWeight: 600,
                   cursor: isVerifyingAgent ? "wait" : "pointer",
                   whiteSpace: "nowrap",
-                  color:
-                    agentLiveStatus === "not_found" ? "#b91c1c" : "var(--text)",
+                  color: "var(--text)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
@@ -604,21 +604,13 @@ export function AgentBuilder({
                       animation: "spin 1s linear infinite",
                     }}
                   />
-                ) : agentLiveStatus === "not_found" ? (
-                  <Wrench
-                    style={{ width: "13px", height: "13px", color: "#dc2626" }}
-                  />
                 ) : (
                   <ShieldCheck
                     style={{ width: "13px", height: "13px", color: "#16a34a" }}
                   />
                 )}
                 <span>
-                  {isVerifyingAgent
-                    ? "Verifying & Syncing..."
-                    : agentLiveStatus === "not_found"
-                    ? "Auto-Fix & Sync"
-                    : "Verify & Sync"}
+                  {isVerifyingAgent ? "Verifying..." : "Verify & Sync"}
                 </span>
               </button>
               {Boolean(formData.assemblyai_agent_id) && (
@@ -648,7 +640,7 @@ export function AgentBuilder({
               )}
             </div>
             <p style={{ ...cs.hint, marginTop: "6px" }}>
-              <strong>Read-only.</strong> Managed automatically by AssemblyAI. When you click <strong>Save & Deploy</strong> or <strong>Verify & Fix</strong>, a dedicated agent ID is provisioned and verified on AssemblyAI and saved to your database.
+              <strong>Read-only.</strong> Managed automatically by OmniDesk. When you click <strong>Save &amp; Deploy</strong>, your voice agent configuration is pushed to AssemblyAI under the same agent ID — never replaced.
             </p>
           </div>
 

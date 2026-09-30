@@ -1,6 +1,6 @@
 import React from 'react';
-import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-CBbmvgSw.mjs';
-export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-CBbmvgSw.mjs';
+import { O as OmniDeskWidgetProps, C as CallStatus, T as TranscriptMessage } from './vanilla-Dm8-y_fr.mjs';
+export { V as VanillaOmniDeskConfig, a as VoiceSessionTokenResponse, b as VoiceWidgetProps, i as initOmniDeskWidget } from './vanilla-Dm8-y_fr.mjs';
 
 declare function OmniDeskWidget({ host, businessId, agentId: propAgentId, theme, position, label, accent, accentColor, businessName: propBusinessName, greeting: propGreeting, className, onCallStart, onCallEnd, onTranscript, }: OmniDeskWidgetProps): React.JSX.Element;
 declare const VoiceWidget: typeof OmniDeskWidget;
@@ -34,7 +34,7 @@ declare class AssemblyAIVoiceClient {
     private isThinking;
     private setThinking;
     constructor(callbacks: VoiceSessionCallbacks);
-    start(token: string, agentId?: string, voice?: string): Promise<void>;
+    start(token: string, agentId?: string, voice?: string, customWsUrl?: string): Promise<void>;
     setMuted(muted: boolean): void;
     getMuted(): boolean;
     sendUserMessage(text: string, instructions?: string): boolean;

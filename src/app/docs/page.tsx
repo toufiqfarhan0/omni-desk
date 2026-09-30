@@ -105,7 +105,7 @@ export default function DocsPage() {
               React Demo (Lumière) ↗
             </a>
             <a href="https://www.npmjs.com/package/omnidesk-voice" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
-              npm: omnidesk-voice@0.1.16 ↗
+              npm: omnidesk-voice@0.1.17 ↗
             </a>
             <a href="https://github.com/toufiqfarhan0/omni-desk" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
               GitHub Repo ↗
@@ -222,7 +222,7 @@ function OverviewSection() {
           },
           {
             name: "Lumière Studio (React 19 / Vite)",
-            desc: "Full React app consuming omnidesk-voice@0.1.16 from npm with full TypeScript support and custom widget accent styling.",
+            desc: "Full React app consuming omnidesk-voice@0.1.17 from npm with full TypeScript support and custom widget accent styling.",
             url: "https://salon-demo-react.vercel.app/",
             color: "#18181b",
             label: "Open React Demo",
@@ -275,8 +275,8 @@ pnpm install`}</div>
           <div className="doc-code">{`# [REQUIRED] AssemblyAI API Key
 NEXT_ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 
-# [REQUIRED FOR INSTANT DEMO & LIVE TESTER]
-AGENT_ID=agent_5e74813381884bb8b82f881b6db66aaf
+# [OPTIONAL] AssemblyAI Agent ID (Leave blank to auto-provision in 1 click from Dashboard)
+AGENT_ID=your_agent_id_here
 
 # [OPTIONAL] Supabase (Leave blank for zero-setup local SQLite)
 SUPABASE_URL=
@@ -313,9 +313,9 @@ SMTP_PASS=your_16_char_google_app_password`}</div>
       </div>
 
       <div className="doc-callout callout-info">
-        <div className="callout-title">AssemblyAI Agent ID</div>
+        <div className="callout-title">Dynamic AssemblyAI Agent Provisioning</div>
         <p style={{ fontSize: "14px", color: "#3f3f46", margin: 0, lineHeight: 1.6 }}>
-          The pre-configured <span className="doc-inline-code">AGENT_ID</span> (<code>agent_5e74813381884bb8b82f881b6db66aaf</code>) is deployed and running on AssemblyAI's <strong>Universal-3.6 Pro Realtime</strong> engine. Calls connect immediately with zero tunnel setup.
+          OmniDesk features <strong>dynamic 1-click agent provisioning</strong>. Deploy or customize your agent directly from the Owner Dashboard (<code>/dashboard</code>), or supply an existing <span className="doc-inline-code">AGENT_ID</span> from your AssemblyAI account.
         </p>
       </div>
     </div>
@@ -327,7 +327,7 @@ function WidgetSection() {
     <div>
       <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: 600, color: "#2563eb", marginBottom: "16px" }}>
         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
-        npm package · omnidesk-voice@0.1.16
+        npm package · omnidesk-voice@0.1.17
       </div>
       <h1 className="doc-h1">Voice Widget & npm SDK</h1>
       <p className="doc-lead">
@@ -365,6 +365,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OmniDeskWidget
           host="https://omni-desk-rho.vercel.app"
           businessId="biz_demo_dental"
+          agentId="agent_118183fec8b04d99ac3702e5327ef544"
           theme="dark"
           position="bottom-right"
           label="Talk to Receptionist"
@@ -380,9 +381,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <h2 className="doc-h2">2. Zero-Install Vanilla HTML / CDN</h2>
       <p className="doc-p">For WordPress, Shopify, Webflow, or static websites, add the universal CDN script tag directly before the closing <code>&lt;/body&gt;</code> tag:</p>
       <div className="doc-code">{`<script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.17/dist/widget.global.global.js" 
+  onerror="this.onerror=null;this.src='https://omni-desk-rho.vercel.app/widget.js';"
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
+  data-agent="agent_118183fec8b04d99ac3702e5327ef544"
   data-position="bottom-right"
   data-theme="dark"
   data-label="Talk to Receptionist"
@@ -391,11 +394,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <p className="doc-p">Or initialize via modern ESM dynamic import:</p>
       <div className="doc-code">{`<script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.16";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.17";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
     businessId: "biz_demo_dental",
+    agentId: "agent_118183fec8b04d99ac3702e5327ef544",
     theme: "dark",
     position: "bottom-right",
     label: "Talk to Receptionist"
@@ -503,6 +507,33 @@ function ArchitectureSection() {
       </table>
 
       <p className="doc-p">The mode is auto-detected at runtime. Set <span className="doc-inline-code">DB_MODE=sqlite</span> to force SQLite locally even if Supabase keys are present.</p>
+
+      <h2 className="doc-h2">Multi-Tenant Agent Lifecycle: How New Businesses Differ</h2>
+      <p className="doc-p">OmniDesk is built on a true multi-tenant voice architecture. Any new business created from the dashboard does <strong>not</strong> use static or hardcoded IDs:</p>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "14px", margin: "16px 0 24px" }}>
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "#3b82f6", marginBottom: "6px" }}>1. Dynamic Tenant ID</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>Unique Business ID</div>
+          <div style={{ fontSize: "12.5px", color: "#71717a", lineHeight: 1.55 }}>
+            Receives a dynamically generated unique ID (e.g. <code>biz_174...</code>) isolating calendar slots, operating hours, and service catalog.
+          </div>
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "#10b981", marginBottom: "6px" }}>2. Cloud Agent Provisioning</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>Dedicated AssemblyAI Agent</div>
+          <div style={{ fontSize: "12.5px", color: "#71717a", lineHeight: 1.55 }}>
+            OmniDesk immediately provisions a brand-new cloud voice agent on AssemblyAI with pre-loaded services, custom prompts, and webhook tools.
+          </div>
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "#8b5cf6", marginBottom: "6px" }}>3. Database &amp; Widget Binding</div>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>Persistent Sync</div>
+          <div style={{ fontSize: "12.5px", color: "#71717a", lineHeight: 1.55 }}>
+            The returned dynamic <code>agent_id</code> is saved to the database (Supabase/SQLite) and dynamically retrieved by the widget via <code>/api/token</code>.
+          </div>
+        </div>
+      </div>
 
       <h2 className="doc-h2">Key Directories</h2>
       <div className="doc-code">{`src/
@@ -663,6 +694,34 @@ SMTP_PASS=abcd efgh ijkl mnop   # 16-char app password`}</div>
       <div className="doc-code">{`SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=your_anon_key`}</div>
       <p className="doc-p">See the <strong>Supabase Setup</strong> section for the full SQL schema to run in your Supabase project.</p>
+
+      <h2 className="doc-h2">🔮 Coming Soon: Twilio Telephony (Actual Phone Calls)</h2>
+      <p className="doc-p">
+        We are actively expanding OmniDesk beyond browser web calls to support real telephone numbers (PSTN) via <strong>Twilio Voice Media Streams</strong>. Clients will be able to dial a regular local or toll-free telephone number from any landline or smartphone:
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", margin: "20px 0" }}>
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "16px", borderLeft: "3px solid #ef4444" }}>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>📞 Real Phone Numbers (PSTN)</div>
+          <div style={{ fontSize: "13px", color: "#52525b", lineHeight: 1.5 }}>
+            Direct inbound phone calling with μ-law audio streamed over WebSockets directly to AssemblyAI + OmniDesk. No browser required.
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "16px", borderLeft: "3px solid #3b82f6" }}>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>📱 Automated SMS Confirmations</div>
+          <div style={{ fontSize: "13px", color: "#52525b", lineHeight: 1.5 }}>
+            Automated SMS text messages sent immediately after booking with one-tap calendar invites and rescheduling links.
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", border: "1px solid #e4e4e7", borderRadius: "10px", padding: "16px", borderLeft: "3px solid #10b981" }}>
+          <div style={{ fontSize: "14px", fontWeight: 700, color: "#09090b", marginBottom: "6px" }}>☎️ Human Escalation & Warm Transfer</div>
+          <div style={{ fontSize: "13px", color: "#52525b", lineHeight: 1.5 }}>
+            Real-time call forwarding allowing the AI receptionist to transfer complex questions or VIP clients to an on-duty human receptionist.
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -811,7 +870,7 @@ function DeploymentSection() {
             <tbody>
               {[
                 ["NEXT_ASSEMBLYAI_API_KEY", "Required", "Your AssemblyAI API key"],
-                ["AGENT_ID", "Required", "Your AssemblyAI Voice Agent ID"],
+                ["AGENT_ID", "Optional", "AssemblyAI Agent ID (or auto-provision in 1 click from Dashboard)"],
                 ["SUPABASE_URL", "Required", "Supabase project URL"],
                 ["SUPABASE_ANON_KEY", "Required", "Supabase Anon Key"],
                 ["GMAIL_USER", "Optional", "Gmail address for confirmations"],
@@ -903,6 +962,7 @@ function FaqSection() {
     { q: "Can I add my own industry type?", a: "Yes. The industry field is a free-form string. You can customize the system_prompt and services to fit any business type — medical clinic, law firm, restaurant, etc." },
     { q: "How do I get email confirmations working?", a: "Set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file. You need a Gmail App Password (not your regular password). The booking confirmation email includes a .ics calendar attachment." },
     { q: "What AssemblyAI features are used?", a: "The Voice Agent API (bidirectional WebSocket streaming), server-side HTTP tool calling, phonetic keyword boosting (KeyTerms), and the real-time transcription pipeline." },
+    { q: "Can clients call in from a regular phone number?", a: "Currently, OmniDesk provides ultra-low latency voice calling in-browser via the web SDK and script embed. On our upcoming roadmap, we are integrating Twilio Voice Media Streams so clients can call real local or toll-free phone numbers (PSTN) to reach the autonomous AssemblyAI receptionist from any telephone." },
   ];
 
   return (

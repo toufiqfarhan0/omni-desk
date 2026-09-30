@@ -758,7 +758,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
         },
       });
 
-      await client.start(data.token, targetAgentId, data.voice);
+      await client.start(data.token, targetAgentId, data.voice, data.ws_url);
     } catch (err: any) {
       console.error("[OmniDesk Voice Widget Error]:", err);
       statusText.innerText = "Error";
