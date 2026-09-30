@@ -570,12 +570,19 @@ export function VoiceTester({ business }: VoiceTesterProps) {
     !window.location.origin.includes("127.0.0.1")
       ? window.location.origin
       : "";
-  const origin = deployedUrl || "";
+  const hostUrl =
+    deployedUrl ||
+    (typeof window !== "undefined" && !window.location.origin.includes("localhost")
+      ? window.location.origin
+      : "https://omni-desk-rho.vercel.app");
   const agentId = business.assemblyai_agent_id || "";
 
   const scriptSnippet = `<!-- OmniDesk Autonomous Voice Receptionist -->
 <script
-  src="${origin}/widget.js"
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.js"
+  onerror="this.onerror=null;this.src='${hostUrl}/widget.js'"
+  data-host="${hostUrl}"
+  data-business-id="${business.id}"
   data-agent="${agentId}"
   data-position="${widgetPos}"
   data-theme="${widgetTheme}"
@@ -591,6 +598,7 @@ export function VoiceTester({ business }: VoiceTesterProps) {
 export default function App() {
   return (
     <OmniDeskWidget
+      host="${hostUrl}"
       businessId="${business.id}"
       agentId="${agentId}"
       theme="${widgetTheme}"

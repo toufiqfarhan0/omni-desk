@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBusiness, updateBusiness } from "@/lib/db";
+import { deployOrUpdateAgent } from "@/lib/assemblyai";
 
 export async function GET(
   _request: Request,
@@ -34,6 +35,22 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    // Instantly sync voice and settings update to AssemblyAI in the cloud
+    if (updated.assemblyai_agent_id) {
+      const publicBaseUrl =
+        process.env.PUBLIC_API_BASE_URL ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL
+          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+          : null) ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+        new URL(request.url).origin;
+
+      deployOrUpdateAgent(updated, publicBaseUrl).catch((err) => {
+        console.warn("[AssemblyAI] Background sync of updated business settings failed:", err?.message || err);
+      });
+    }
+
     return NextResponse.json({ business: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

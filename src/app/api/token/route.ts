@@ -34,25 +34,28 @@ export async function GET(request: Request) {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       new URL(request.url).origin;
 
-    if (businessId === "biz_demo_dental") {
-      agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
-    } else if (businessId === "biz_1790171996683_44dsu") {
-      agentId = "agent_8a409193fbde43acb6db72541947dc7b";
-    } else if (biz?.assemblyai_agent_id?.trim()) {
+    // 1. If business has a verified agent ID in database, use it
+    if (biz?.assemblyai_agent_id?.trim()) {
       const storedId = biz.assemblyai_agent_id.trim();
       const exists = await verifyAgentExists(storedId);
       if (exists) {
         agentId = storedId;
-      } else {
-        // Stored agent ID doesn't belong to this account (e.g. judge key), auto-provision fresh agent
-        agentId = await getOrProvisionAgent(biz, publicBaseUrl);
       }
-    } else if (biz) {
-      agentId = await getOrProvisionAgent(biz, publicBaseUrl);
-    } else {
-      const envId = (process.env.AGENT_ID || "").trim();
-      if (envId && (await verifyAgentExists(envId))) {
-        agentId = envId;
+    }
+
+    // 2. Verified active fallbacks for demo tenants or auto-provisioning
+    if (!agentId) {
+      if (businessId === "biz_demo_dental") {
+        agentId = "agent_6e8ae0f0f2a24f8e88bf8c6f74e7c794";
+      } else if (businessId === "biz_1790171996683_44dsu") {
+        agentId = "agent_8a409193fbde43acb6db72541947dc7b";
+      } else if (biz) {
+        agentId = await getOrProvisionAgent(biz, publicBaseUrl);
+      } else {
+        const envId = (process.env.AGENT_ID || "").trim();
+        if (envId && (await verifyAgentExists(envId))) {
+          agentId = envId;
+        }
       }
     }
 
@@ -79,7 +82,7 @@ export async function GET(request: Request) {
         business_id: businessId,
         business_name: biz?.name || "OmniDesk",
         greeting: biz?.greeting,
-        voice: biz?.voice_id || "alba",
+        voice: biz?.voice_id || "eve",
       },
       { headers: CORS_HEADERS }
     );
