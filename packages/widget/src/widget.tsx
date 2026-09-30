@@ -42,9 +42,6 @@ export function OmniDeskWidget({
   // Email input bar states
   const [showEmailBar, setShowEmailBar] = useState(false);
   const [emailInput, setEmailInput] = useState("");
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
-  const [emailError, setEmailError] = useState("");
-  const [emailSuccess, setEmailSuccess] = useState("");
 
   const [isThinking, setIsThinking] = useState(false);
 
@@ -210,77 +207,83 @@ export function OmniDeskWidget({
           } else if (msg.who === "agent") {
             const lower = msg.text.toLowerCase();
 
-            // 1. If booking is finalized, permanently lock and hide bar
-            const isBookingFinalized =
-              lower.includes("confirmation code is") ||
-              lower.includes("booking is confirmed") ||
-              lower.includes("scheduled your appointment") ||
-              lower.includes("all set, your appointment") ||
-              (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
-              (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
+            // Only evaluate email-bar state on the FINAL agent message
+            // (not on every streaming delta, which would clear it prematurely)
+            if (msg.isFinal) {
+              // 1. If booking is finalized, permanently lock and hide bar
+              const isBookingFinalized =
+                lower.includes("confirmation code is") ||
+                lower.includes("booking is confirmed") ||
+                lower.includes("scheduled your appointment") ||
+                lower.includes("all set, your appointment") ||
+                (lower.includes("sent your confirmation") && (lower.includes("code") || lower.includes("calendar invite"))) ||
+                (lower.includes("sent a calendar invite") && (lower.includes("code") || lower.includes("all set")));
 
-            if (isBookingFinalized) {
-              bookingFinalizedRef.current = true;
-              awaitingEmailConfirmRef.current = false;
-              setShowEmailBar(false);
-              return;
-            }
+              if (isBookingFinalized) {
+                bookingFinalizedRef.current = true;
+                awaitingEmailConfirmRef.current = false;
+                setShowEmailBar(false);
+                return;
+              }
 
-            if (bookingFinalizedRef.current) {
-              setShowEmailBar(false);
-              return;
-            }
+              if (bookingFinalizedRef.current) {
+                setShowEmailBar(false);
+                return;
+              }
 
-            // 2. If agent is asking the caller to confirm with yes or no:
-            // e.g., "I have verified your email as ... Can you please confirm with yes or no?"
-            const isAskingYesNo =
-              lower.includes("confirm with yes or no") ||
-              lower.includes("yes or no") ||
-              lower.includes("is that correct") ||
-              lower.includes("is that right");
+              // 2. If agent is asking caller to confirm with yes or no
+              const isAskingYesNo =
+                lower.includes("confirm with yes or no") ||
+                lower.includes("yes or no") ||
+                lower.includes("is that correct") ||
+                lower.includes("is that right");
 
-            if (isAskingYesNo) {
-              awaitingEmailConfirmRef.current = true;
-              setShowEmailBar(false);
-              return;
-            }
+              if (isAskingYesNo) {
+                awaitingEmailConfirmRef.current = true;
+                setShowEmailBar(false);
+                return;
+              }
 
-            // 3. Strictly show input ONLY when agent is asking for caller's email
-            const isAgentAskingEmail =
-              lower.includes("what is your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("could i get your email") ||
-              lower.includes("could you provide your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("share your email") ||
-              lower.includes("need your email") ||
-              lower.includes("what email") ||
-              lower.includes("which email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar") ||
-              lower.includes("where should i send your calendar") ||
-              (lower.includes("email") && (
-                lower.includes("what is") ||
-                lower.includes("what's") ||
-                lower.includes("may i have") ||
-                lower.includes("can i have") ||
-                lower.includes("provide") ||
-                lower.includes("give me") ||
-                lower.includes("tell me") ||
-                lower.includes("send your calendar invite") ||
-                lower.includes("send your confirmation")
-              ));
+              // 3. Strictly show input ONLY when agent is asking for caller's email
+              const isAgentAskingEmail =
+                lower.includes("what is your email") ||
+                lower.includes("what's your email") ||
+                lower.includes("may i have your email") ||
+                lower.includes("can i have your email") ||
+                lower.includes("could i get your email") ||
+                lower.includes("could you provide your email") ||
+                lower.includes("provide your email") ||
+                lower.includes("enter your email") ||
+                lower.includes("spell your email") ||
+                lower.includes("share your email") ||
+                lower.includes("need your email") ||
+                lower.includes("what email") ||
+                lower.includes("which email") ||
+                lower.includes("where can i send your confirmation") ||
+                lower.includes("where should i send your confirmation") ||
+                lower.includes("where can i send your calendar") ||
+                lower.includes("where should i send your calendar") ||
+                (lower.includes("email") && (
+                  lower.includes("what is") ||
+                  lower.includes("what's") ||
+                  lower.includes("may i have") ||
+                  lower.includes("can i have") ||
+                  lower.includes("provide") ||
+                  lower.includes("give me") ||
+                  lower.includes("tell me") ||
+                  lower.includes("send your calendar invite") ||
+                  lower.includes("send your confirmation")
+                ));
 
-            if (isAgentAskingEmail) {
-              awaitingEmailConfirmRef.current = false;
-              setShowEmailBar(true);
-            } else {
-              setShowEmailBar(false);
+              if (isAgentAskingEmail) {
+                awaitingEmailConfirmRef.current = false;
+                setShowEmailBar(true);
+              } else {
+                // Only hide bar if booking not finalized and not awaiting confirm
+                if (!bookingFinalizedRef.current && !awaitingEmailConfirmRef.current) {
+                  setShowEmailBar(false);
+                }
+              }
             }
           }
         },
@@ -315,8 +318,6 @@ export function OmniDeskWidget({
     bookingFinalizedRef.current = false;
     awaitingEmailConfirmRef.current = false;
     setShowEmailBar(false);
-    setEmailError("");
-    setEmailSuccess("");
     if (callStartTimeRef.current > 0) {
       const duration = Math.round((Date.now() - callStartTimeRef.current) / 1000);
       callStartTimeRef.current = 0;
@@ -325,51 +326,23 @@ export function OmniDeskWidget({
   }, [onCallEnd, stopTimer]);
 
   const handleEmailSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
       const trimmed = emailInput.trim();
       if (!trimmed) return;
 
-      setIsVerifyingEmail(true);
-      setEmailError("");
-      setEmailSuccess("");
-
-      try {
-        const cleanHost = resolvedHost ? resolvedHost.replace(/\/$/, "") : "";
-        const res = await fetch(`${cleanHost}/api/tools/${encodeURIComponent(businessId)}/verify_customer_email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: trimmed }),
-        });
-        const data = await res.json();
-
-        if (!res.ok || !data.valid || !data.email) {
-          setEmailError(data.message || "Invalid email or domain has no active mail server.");
-          setIsVerifyingEmail(false);
-          return;
-        }
-
-        const verifiedEmail = data.email;
-        setEmailSuccess(`Verified: ${verifiedEmail}. Sent to agent.`);
-
-        setTranscripts((prev) => [...prev, { who: "user", text: `My email is ${verifiedEmail}` }]);
-
-        if (clientRef.current) {
-          clientRef.current.sendEmailInput(verifiedEmail);
-        }
-        setIsThinking(true);
-
-        awaitingEmailConfirmRef.current = true;
-        setEmailInput("");
-        setShowEmailBar(false);
-        setEmailSuccess("");
-      } catch (err: any) {
-        setEmailError(err.message || "Failed to verify email with mail server.");
-      } finally {
-        setIsVerifyingEmail(false);
+      // Send email to the agent. The agent will call verify_customer_email tool.
+      // conversation.message echoes back as transcript.user, so the bubble appears automatically.
+      // Do NOT manually add a transcript bubble here — that would cause duplicates.
+      if (clientRef.current) {
+        clientRef.current.sendEmailInput(trimmed);
       }
+      setIsThinking(true);
+      awaitingEmailConfirmRef.current = true;
+      setEmailInput("");
+      setShowEmailBar(false);
     },
-    [emailInput, resolvedHost, businessId]
+    [emailInput]
   );
 
   useEffect(() => {
@@ -860,7 +833,7 @@ export function OmniDeskWidget({
                         display: "inline-block",
                       }}
                     />
-                    Email Requested by Agent • Auto Verification
+                    Email Requested by Agent
                   </span>
                   <button
                     type="button"
@@ -884,19 +857,15 @@ export function OmniDeskWidget({
                     type="email"
                     autoFocus
                     value={emailInput}
-                    onChange={(e) => {
-                      setEmailInput(e.target.value);
-                      setEmailError("");
-                    }}
-                    placeholder="Enter your real email (e.g. name@gmail.com)"
-                    disabled={isVerifyingEmail}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="Enter your email (e.g. name@gmail.com)"
                     required
                     style={{
                       flex: 1,
                       fontSize: "12.5px",
                       padding: "7px 11px",
                       borderRadius: "7px",
-                      border: emailError ? "1.5px solid #ef4444" : "1px solid #86efac",
+                      border: "1px solid #86efac",
                       background: "#ffffff",
                       color: "#09090b",
                       outline: "none",
@@ -904,7 +873,7 @@ export function OmniDeskWidget({
                   />
                   <button
                     type="submit"
-                    disabled={isVerifyingEmail || !emailInput.trim()}
+                    disabled={!emailInput.trim()}
                     style={{
                       background: "#16a34a",
                       color: "#ffffff",
@@ -913,24 +882,13 @@ export function OmniDeskWidget({
                       borderRadius: "7px",
                       fontSize: "12px",
                       fontWeight: 600,
-                      cursor: isVerifyingEmail ? "wait" : "pointer",
-                      opacity: isVerifyingEmail ? 0.7 : 1,
+                      cursor: emailInput.trim() ? "pointer" : "not-allowed",
+                      opacity: emailInput.trim() ? 1 : 0.6,
                     }}
                   >
-                    {isVerifyingEmail ? "..." : "Verify & Send"}
+                    Send
                   </button>
                 </form>
-
-                {emailError && (
-                  <div style={{ fontSize: "11px", color: "#ef4444", fontWeight: 500 }}>
-                    ⚠️ {emailError}
-                  </div>
-                )}
-                {emailSuccess && (
-                  <div style={{ fontSize: "11px", color: "#15803d", fontWeight: 600 }}>
-                    ✓ {emailSuccess}
-                  </div>
-                )}
               </div>
             )}
 
