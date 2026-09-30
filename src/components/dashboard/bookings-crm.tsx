@@ -49,14 +49,20 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
         body: JSON.stringify({
           bookingId: booking.id,
           confirmationCode: booking.confirmation_code,
+          confirmation_code: booking.confirmation_code,
+          email: booking.customer_email,
+          businessId: business.id,
         }),
       });
-      if (!res.ok) throw new Error("Failed to dispatch calendar invite");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Failed to dispatch calendar invite");
+      }
       toast.success(`Calendar invite (.ics) sent to ${booking.customer_email}`);
       setBookings((prev) =>
         prev.map((b) =>
           b.confirmation_code === booking.confirmation_code
-            ? { ...b, invite_sent: true }
+            ? { ...b, invite_sent: true, confirmation_sent: 1 }
             : b
         )
       );
@@ -246,10 +252,29 @@ export function BookingsCRM({ business }: BookingsCRMProps) {
                           borderRadius: "4px",
                           background: "#000000",
                           color: "#ffffff",
-                          display: "inline-block",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
                         }}
                       >
                         Dispatched
+                        <button
+                          type="button"
+                          onClick={() => handleResendInvite(b)}
+                          disabled={resendingCode === b.confirmation_code}
+                          title="Resend calendar invite (.ics)"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "#9ca3af",
+                            cursor: "pointer",
+                            fontSize: "10px",
+                            padding: 0,
+                            textDecoration: "underline",
+                          }}
+                        >
+                          {resendingCode === b.confirmation_code ? "..." : "Resend"}
+                        </button>
                       </span>
                     ) : (
                       <button

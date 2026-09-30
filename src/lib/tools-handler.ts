@@ -5,6 +5,7 @@ import {
   listBookings,
   markBookingConfirmationSent,
   recordConversation,
+  getActiveVerifiedEmail,
   Business,
   Booking,
 } from "./db";
@@ -428,7 +429,15 @@ export async function executeTool(
     }
 
     case "verify_customer_email": {
-      const email = (args.email || "").trim();
+      let email = (
+        args.email ||
+        args.email_address ||
+        args.customer_email ||
+        args.caller_email ||
+        args.user_email ||
+        args.client_email ||
+        ""
+      ).trim();
       const lower = email.toLowerCase();
       if (
         !lower ||
@@ -451,14 +460,14 @@ export async function executeTool(
           valid: true,
           email: res.email,
           auto_corrected: res.auto_corrected,
-          message: `Email verified: ${res.email}. Acknowledge with the caller as ${res.email} (do NOT spell it out as 'zero at gmail dot com').`,
+          message: `Email verified: ${res.email}. You MUST now ask the caller to confirm: "I have verified your email as ${res.email}. Can you please confirm with yes or no?" and wait for their confirmation.`,
         };
       }
       return {
         ok: false,
         valid: false,
         reason: res.reason || "bad_email",
-        message: `${res.message}. Please ask the caller to clarify or provide their correct email address.`,
+        message: `${res.message}. Please ask the caller: "Could you please provide your correct email address?"`,
       };
     }
 
@@ -559,11 +568,31 @@ export async function executeTool(
       const dateStr = normalizeDate(rawDate);
       const rawTime = args.time || args.slot || args.appointment_time || "";
       const timeStr = normalizeTime(rawTime) || rawTime.trim();
-      let customerName = (args.customer_name || args.name || "").trim();
+      let customerName = (
+        args.customer_name ||
+        args.name ||
+        args.caller_name ||
+        args.client_name ||
+        ""
+      ).trim();
       customerName = customerName
         .replace(/^(my name is|this is|i am|it's|it is)\s+/i, "")
         .trim();
-      const rawEmail = (args.email || "").trim();
+      let rawEmail = (
+        args.email ||
+        args.customer_email ||
+        args.caller_email ||
+        args.email_address ||
+        args.user_email ||
+        args.client_email ||
+        ""
+      ).trim();
+
+      if (!rawEmail) {
+        const active = await getActiveVerifiedEmail(biz.id);
+        if (active) rawEmail = active;
+      }
+
       const lowerEmail = rawEmail.toLowerCase();
       const lowerName = customerName.toLowerCase();
 
@@ -671,22 +700,27 @@ export async function executeTool(
         } catch {}
       }
 
-      // ASYNCHRONOUS EMAIL DISPATCH (Ultra-low latency):
-      // SMTP network handshakes take 1-3 seconds. By dispatching in the background,
-      // book_appointment returns to the voice agent in < 30ms with zero awkward delay.
-      (async () => {
-        try {
-          const emailResult = await sendCalendarConfirmation(booking, biz);
-          if (emailResult.sent) {
-            await markBookingConfirmationSent(booking.confirmation_code);
-            if (biz.id === "biz_demo_dental") {
-              store.markConfirmationSent(booking.confirmation_code);
-            }
+      // RELIABLE EMAIL DISPATCH:
+      // Await delivery with a safety timeout so serverless runtimes (Vercel) do not terminate
+      // before SMTP TLS handshake and email transmission complete.
+      try {
+        const emailPromise = sendCalendarConfirmation(booking, biz);
+        const timeoutPromise = new Promise<{ sent: false; reason: string }>((resolve) =>
+          setTimeout(() => resolve({ sent: false, reason: "timeout" }), 3500)
+        );
+        const emailResult = await Promise.race([emailPromise, timeoutPromise]);
+        if (emailResult.sent) {
+          booking.confirmation_sent = 1;
+          await markBookingConfirmationSent(booking.confirmation_code);
+          if (biz.id === "biz_demo_dental") {
+            store.markConfirmationSent(booking.confirmation_code);
           }
-        } catch (emailErr) {
-          console.error("[book_appointment] Background email delivery failed:", emailErr);
+        } else {
+          console.warn("[book_appointment] Email delivery status:", emailResult.reason);
         }
-      })().catch((err) => console.error("[book_appointment] Email promise error:", err));
+      } catch (emailErr) {
+        console.error("[book_appointment] Email delivery error:", emailErr);
+      }
 
       const spoken = `I have scheduled your ${serviceLabel} for ${formatDaySpoken(dateStr)} at ${formatTimeSpoken(selectedSlot)}. Your confirmation code is ${booking.confirmation_code}. I have sent a calendar invite to ${email}.`;
 
@@ -796,27 +830,42 @@ export async function executeTool(
         };
       }
 
-      // Dispatch email delivery in background if not already delivered
-      (async () => {
-        try {
-          const res = await sendResendConfirmation(booking!, biz);
-          if (res.sent) {
-            await markBookingConfirmationSent(booking!.confirmation_code);
-            if (biz.id === "biz_demo_dental") {
-              store.markConfirmationSent(booking!.confirmation_code);
-            }
+      // RELIABLE EMAIL DISPATCH:
+      try {
+        const emailPromise = sendResendConfirmation(booking!, biz);
+        const timeoutPromise = new Promise<{ sent: false; reason: string }>((resolve) =>
+          setTimeout(() => resolve({ sent: false, reason: "timeout" }), 3500)
+        );
+        const res = await Promise.race([emailPromise, timeoutPromise]);
+        if (res.sent) {
+          booking!.confirmation_sent = 1;
+          await markBookingConfirmationSent(booking!.confirmation_code);
+          if (biz.id === "biz_demo_dental") {
+            store.markConfirmationSent(booking!.confirmation_code);
           }
-        } catch (err) {
-          console.error("[send_confirmation] Background email delivery failed:", err);
+          return {
+            ok: true,
+            sent: true,
+            email: booking!.customer_email,
+            message: `Confirmation email with calendar invite (.ics) sent to ${booking!.customer_email}.`,
+          };
+        } else {
+          return {
+            ok: false,
+            sent: false,
+            email: booking!.customer_email,
+            message: `Failed to deliver confirmation email: ${res.reason || "SMTP error"}`,
+          };
         }
-      })().catch((err) => console.error("[send_confirmation] Promise error:", err));
-
-      return {
-        ok: true,
-        sent: true,
-        email: booking.customer_email,
-        message: `Confirmation email with calendar invite (.ics) sent to ${booking.customer_email}.`,
-      };
+      } catch (err: any) {
+        console.error("[send_confirmation] Email delivery failed:", err);
+        return {
+          ok: false,
+          sent: false,
+          email: booking!.customer_email,
+          message: `Failed to deliver confirmation email: ${err.message}`,
+        };
+      }
     }
 
     default:

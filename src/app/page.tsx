@@ -445,7 +445,7 @@ export default function LandingPage() {
                   Lumière Hair Studio
                 </h3>
                 <p style={{ fontSize: "13.5px", color: "#a1a1aa", lineHeight: 1.6, margin: 0 }}>
-                  A modern React 19 + Vite + TypeScript application consuming <code>omnidesk-voice@0.1.15</code> directly from npm. Features typed props, custom accent colors, and real-time appointment booking.
+                  A modern React 19 + Vite + TypeScript application consuming <code>omnidesk-voice@0.1.16</code> directly from npm. Features typed props, custom accent colors, and real-time appointment booking.
                 </p>
               </div>
               <div style={{ padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", background: "#fafafa", borderTop: "1px solid #f4f4f5" }}>

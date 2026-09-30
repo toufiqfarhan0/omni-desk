@@ -172,20 +172,49 @@ export default function DemoPage() {
             ];
           });
           if (event.who === "user") {
-            const userTextLower = event.text.toLowerCase();
-            // If caller says no, wrong, or requests change to their email
-            if (
+            const userTextLower = event.text.toLowerCase().trim();
+
+            // If caller says no, wrong, or requests change to their email:
+            const isNo =
               userTextLower === "no" ||
               userTextLower.startsWith("no ") ||
               userTextLower.includes("no,") ||
               userTextLower.includes("wrong") ||
               userTextLower.includes("incorrect") ||
               userTextLower.includes("change my email") ||
-              userTextLower.includes("different email")
-            ) {
+              userTextLower.includes("different email") ||
+              userTextLower.includes("that's not right") ||
+              userTextLower.includes("thats not right") ||
+              userTextLower.includes("not right") ||
+              userTextLower.includes("not my email");
+
+            if (isNo) {
               awaitingEmailConfirmRef.current = false;
+              // User rejected email! Immediately show the email input bar again so they can enter it!
+              setShowEmailBar(true);
             }
-            // If caller speaks their email or provides it in voice/text
+
+            // If caller says yes to confirm their email:
+            const isYes =
+              userTextLower === "yes" ||
+              userTextLower.startsWith("yes ") ||
+              userTextLower.includes("yes,") ||
+              userTextLower === "yeah" ||
+              userTextLower.startsWith("yeah ") ||
+              userTextLower === "yep" ||
+              userTextLower === "correct" ||
+              userTextLower.includes("that's right") ||
+              userTextLower.includes("thats right") ||
+              userTextLower.includes("sounds good") ||
+              userTextLower === "confirm" ||
+              userTextLower === "sure";
+
+            if (isYes && awaitingEmailConfirmRef.current) {
+              awaitingEmailConfirmRef.current = false;
+              setShowEmailBar(false);
+            }
+
+            // If caller speaks their email or provides it in voice/text:
             if (
               event.text.includes("@") ||
               (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
@@ -222,77 +251,68 @@ export default function DemoPage() {
               return;
             }
 
-            // 2. If agent is asking the caller to confirm with yes or no:
-            const isAskingYesNo =
+            // 2. If agent is confirming the email or asking for yes/no confirmation:
+            // e.g., "I have verified your email as ... Can you please confirm with yes or no?"
+            const isConfirmingEmail =
               lower.includes("confirm with yes or no") ||
               lower.includes("yes or no") ||
               lower.includes("is that correct") ||
-              lower.includes("is that right");
+              lower.includes("is that right") ||
+              lower.includes("verified your email") ||
+              lower.includes("checking that email") ||
+              lower.includes("let me check that email");
 
-            if (isAskingYesNo) {
+            if (isConfirmingEmail) {
               awaitingEmailConfirmRef.current = true;
               setShowEmailBar(false);
               return;
             }
 
-            // 3. Strictly show input when agent is asking for caller's email
-            // SHOW on any streaming text match — don't wait for isFinal.
-            // HIDE only on the complete final message.
+            // 3. Strictly show input ONLY when agent is explicitly asking the caller to provide their email.
+            // MUST NOT trigger in the middle of conversation (e.g. discussing services, pricing, dates, or caller name).
             const isAgentAskingEmail =
-              lower.includes("what is your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("whats your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("could i have your email") ||
-              lower.includes("could i get your email") ||
-              lower.includes("could you provide your email") ||
-              lower.includes("can you provide your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("share your email") ||
-              lower.includes("need your email") ||
-              lower.includes("what email") ||
-              lower.includes("which email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar") ||
-              lower.includes("where should i send your calendar") ||
-              (lower.includes("email") && (
-                lower.includes("what is") ||
-                lower.includes("what's") ||
-                lower.includes("whats") ||
-                lower.includes("may i have") ||
-                lower.includes("can i have") ||
-                lower.includes("could i have") ||
-                lower.includes("may i get") ||
-                lower.includes("could i get") ||
-                lower.includes("can you provide") ||
-                lower.includes("could you provide") ||
-                lower.includes("provide") ||
-                lower.includes("give me") ||
-                lower.includes("tell me") ||
-                lower.includes("share") ||
-                lower.includes("best email") ||
-                lower.includes("your email") ||
-                lower.includes("send your calendar invite") ||
-                lower.includes("send your confirmation") ||
-                lower.includes("send a calendar invite") ||
-                lower.includes("send the calendar invite") ||
-                lower.includes("send the confirmation") ||
-                lower.includes("send a confirmation") ||
-                lower.includes("so i can send") ||
-                lower.includes("to send your")
-              ));
+              !awaitingEmailConfirmRef.current &&
+              (
+                lower.includes("what is your email") ||
+                lower.includes("what's your email") ||
+                lower.includes("whats your email") ||
+                lower.includes("may i have your email") ||
+                lower.includes("can i have your email") ||
+                lower.includes("could i have your email") ||
+                lower.includes("could i get your email") ||
+                lower.includes("could you provide your email") ||
+                lower.includes("can you provide your email") ||
+                lower.includes("provide your email") ||
+                lower.includes("enter your email") ||
+                lower.includes("share your email") ||
+                lower.includes("need your email") ||
+                lower.includes("what is your correct email") ||
+                lower.includes("provide your correct email") ||
+                lower.includes("where can i send your confirmation") ||
+                lower.includes("where should i send your confirmation") ||
+                lower.includes("where can i send your calendar") ||
+                lower.includes("where should i send your calendar") ||
+                (lower.includes("email address") && (
+                  lower.includes("what is") ||
+                  lower.includes("what's") ||
+                  lower.includes("whats") ||
+                  lower.includes("may i have") ||
+                  lower.includes("can i have") ||
+                  lower.includes("could i have") ||
+                  lower.includes("could you provide") ||
+                  lower.includes("can you provide") ||
+                  lower.includes("provide") ||
+                  lower.includes("share") ||
+                  lower.includes("so i can send") ||
+                  lower.includes("to send your")
+                ))
+              );
 
             if (isAgentAskingEmail) {
-              awaitingEmailConfirmRef.current = false;
               setShowEmailBar(true);
             } else if (event.isFinal) {
-              if (!bookingFinalizedRef.current && !awaitingEmailConfirmRef.current) {
-                setShowEmailBar(false);
-              }
+              // Hide on final message if not explicitly asking for email
+              setShowEmailBar(false);
             }
           }
         },
@@ -568,7 +588,7 @@ export default function DemoPage() {
                   Lumière Studio
                 </h3>
                 <p style={{ fontSize: "13px", color: "#71717a", lineHeight: 1.5, margin: "0 0 16px" }}>
-                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice@0.1.15</code> from npm with typed props and direct AssemblyAI streaming.
+                  Modern React 19 + Vite + TypeScript application installing <code>omnidesk-voice@0.1.16</code> from npm with typed props and direct AssemblyAI streaming.
                 </p>
               </div>
 

@@ -71,7 +71,7 @@ Add before `</body>`:
 
 ```html
 <script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.15/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.global.js" 
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
   data-position="bottom-right"
@@ -85,7 +85,7 @@ Add before `</body>`:
 
 ```html
 <script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.15";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.16";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",

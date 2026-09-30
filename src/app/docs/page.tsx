@@ -105,7 +105,7 @@ export default function DocsPage() {
               React Demo (Lumière) ↗
             </a>
             <a href="https://www.npmjs.com/package/omnidesk-voice" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", marginBottom: "6px", fontWeight: 500 }}>
-              npm: omnidesk-voice@0.1.15 ↗
+              npm: omnidesk-voice@0.1.16 ↗
             </a>
             <a href="https://github.com/toufiqfarhan0/omni-desk" target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: "13px", color: "#2563eb", textDecoration: "none", fontWeight: 500 }}>
               GitHub Repo ↗
@@ -222,7 +222,7 @@ function OverviewSection() {
           },
           {
             name: "Lumière Studio (React 19 / Vite)",
-            desc: "Full React app consuming omnidesk-voice@0.1.15 from npm with full TypeScript support and custom widget accent styling.",
+            desc: "Full React app consuming omnidesk-voice@0.1.16 from npm with full TypeScript support and custom widget accent styling.",
             url: "https://salon-demo-react.vercel.app/",
             color: "#18181b",
             label: "Open React Demo",
@@ -327,7 +327,7 @@ function WidgetSection() {
     <div>
       <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "999px", padding: "4px 12px", fontSize: "12px", fontWeight: 600, color: "#2563eb", marginBottom: "16px" }}>
         <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
-        npm package · omnidesk-voice@0.1.15
+        npm package · omnidesk-voice@0.1.16
       </div>
       <h1 className="doc-h1">Voice Widget & npm SDK</h1>
       <p className="doc-lead">
@@ -380,7 +380,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <h2 className="doc-h2">2. Zero-Install Vanilla HTML / CDN</h2>
       <p className="doc-p">For WordPress, Shopify, Webflow, or static websites, add the universal CDN script tag directly before the closing <code>&lt;/body&gt;</code> tag:</p>
       <div className="doc-code">{`<script 
-  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.15/dist/widget.global.global.js" 
+  src="https://cdn.jsdelivr.net/npm/omnidesk-voice@0.1.16/dist/widget.global.global.js" 
   data-host="https://omni-desk-rho.vercel.app"
   data-business-id="biz_demo_dental"
   data-position="bottom-right"
@@ -391,7 +391,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       <p className="doc-p">Or initialize via modern ESM dynamic import:</p>
       <div className="doc-code">{`<script type="module">
-  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.15";
+  import { initOmniDeskWidget } from "https://esm.sh/omnidesk-voice@0.1.16";
 
   initOmniDeskWidget({
     host: "https://omni-desk-rho.vercel.app",
@@ -562,6 +562,7 @@ function ApiReferenceSection() {
         { method: "POST", path: "/api/tools/get_today", desc: "Returns today's date, current time, and day-of-week. Used to anchor the agent's temporal awareness." },
         { method: "POST", path: "/api/tools/check_availability", desc: "Returns available appointment slots for a given service on a specific date." },
         { method: "POST", path: "/api/tools/book_appointment", desc: "Creates a confirmed booking record and dispatches an email + .ics invite to the customer." },
+        { method: "POST", path: "/api/tools/send_confirmation", desc: "Dispatches a formal email confirmation with an RFC 5545 .ics calendar invite attached." },
         { method: "POST", path: "/api/tools/get_services", desc: "Returns all available services for the business with pricing and duration." },
       ].map((ep) => (
         <div key={ep.path} className="endpoint-row">
@@ -578,6 +579,8 @@ function ApiReferenceSection() {
         { method: "GET", path: "/api/owner/businesses?ownerId=...", desc: "Lists all businesses belonging to a specific owner ID." },
         { method: "POST", path: "/api/owner/businesses", desc: "Creates a new business and auto-provisions a dedicated AssemblyAI cloud voice agent." },
         { method: "POST", path: "/api/owner/businesses/[id]/deploy", desc: "Deploys or updates the business configuration to AssemblyAI's API via PUT/POST." },
+        { method: "GET", path: "/api/owner/bookings", desc: "Retrieves list of all client bookings across businesses." },
+        { method: "POST", path: "/api/owner/bookings/resend-invite", desc: "Manual CRM trigger: re-dispatches confirmation email and .ics calendar invite to customer." },
         { method: "GET", path: "/api/owner/conversations/[id]/recording", desc: "Retrieves the signed AWS S3 URL for the call audio recording (.ogg) from AssemblyAI session artifacts." },
         { method: "POST", path: "/api/conversations/save", desc: "Saves live call transcripts, outcomes, and session IDs to Supabase or SQLite." },
         { method: "GET", path: "/api/owner-stats", desc: "Returns aggregate booking and revenue stats for the dashboard." },
