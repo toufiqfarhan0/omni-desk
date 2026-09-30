@@ -64,6 +64,88 @@ export interface EmailVerificationResult {
   mailbox_verified?: boolean;
 }
 
+export function cleanSpokenEmailText(raw: string): string {
+  if (!raw) return "";
+  let s = raw.toLowerCase().trim();
+
+  // Strip common conversational prefixes callers might speak
+  s = s
+    .replace(
+      /^(?:my\s+email\s+(?:address\s+)?(?:is|would\s+be)\s*:?|it(?:'s|\s+is)\s*:?|email\s*:?|the\s+email\s+is\s*:?|sure\s*,?\s*it(?:'s|\s+is)\s*:?|you\s+can\s+send\s+it\s+to\s*:?)/i,
+      ""
+    )
+    .trim();
+
+  // Convert spoken number words to digits
+  const wordToDigit: Record<string, string> = {
+    zero: "0",
+    one: "1",
+    two: "2",
+    three: "3",
+    four: "4",
+    five: "5",
+    six: "6",
+    seven: "7",
+    eight: "8",
+    nine: "9",
+  };
+
+  for (const [w, d] of Object.entries(wordToDigit)) {
+    s = s.replace(new RegExp(`\\b${w}\\b`, "g"), d);
+  }
+
+  // Handle "oh" as 0 (e.g. "farhan oh at" -> "farhan 0 at")
+  s = s.replace(/\b(?:oh)\b(?=\s*(?:@|at\b|\d|[a-z]))/g, "0");
+
+  // Normalize spoken symbols
+  s = s.replace(/\s+(?:at\s+the\s+rate|at\s+sign|at)\s+/g, "@");
+  s = s.replace(/@\s+/g, "@");
+  s = s.replace(/\s+@/g, "@");
+
+  s = s.replace(/\s+(?:dot|period|point)\s+/g, ".");
+  s = s.replace(/\.\s+/g, ".");
+  s = s.replace(/\s+\./g, ".");
+
+  s = s.replace(/\s+(?:underscore|under\s+score)\s+/g, "_");
+  s = s.replace(/\s+(?:dash|hyphen|minus)\s+/g, "-");
+  s = s.replace(/\s+(?:plus)\s+/g, "+");
+
+  if (s.includes("@")) {
+    const atParts = s.split("@");
+    if (atParts.length === 2) {
+      const user = atParts[0].replace(/\s+/g, "");
+      const domain = atParts[1].replace(/\s+/g, "");
+      s = `${user}@${domain}`;
+    } else {
+      s = s.replace(/\s+/g, "");
+    }
+  } else {
+    // If no '@', check if a common spoken domain was uttered
+    const commonDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "hotmail.com",
+      "outlook.com",
+      "icloud.com",
+      "proton.me",
+      "protonmail.com",
+    ];
+    for (const dom of commonDomains) {
+      const domRegex = new RegExp(
+        `(?:\\s+at\\s+|\\s+)(?:${dom.replace(".", "\\.")})`,
+        "i"
+      );
+      if (domRegex.test(s)) {
+        s = s.replace(domRegex, `@${dom}`);
+        break;
+      }
+    }
+    s = s.replace(/\s+/g, "");
+  }
+
+  return s;
+}
+
 export async function validateAndVerifyEmail(
   raw: string,
   bizId?: string
@@ -78,20 +160,25 @@ export async function validateAndVerifyEmail(
     };
   }
 
-  // Normalize spoken patterns: "alex dot smith at gmail dot com"
-  let s = cleaned.toLowerCase();
-  s = s.replace(/\s+at\s+/g, "@");
-  s = s.replace(/\s+dot\s+/g, ".");
-  s = s.replace(/\s+underscore\s+/g, "_");
-  s = s.replace(/\s+dash\s+|\s+hyphen\s+/g, "-");
-  s = s.replace(/\s+/g, "");
+  // Normalize spoken patterns: "toufik dot farhan at gmail dot com", "toufiq farhan zero at gmail dot com"
+  let s = cleanSpokenEmailText(cleaned);
 
-  if (!s.includes("@") || (s.match(/@/g) || []).length !== 1) {
+  // If there is no '@' and no domain structure
+  if (!s.includes("@")) {
     return {
       ok: false,
       valid: false,
       reason: "missing_at",
-      message: "Email address must contain exactly one '@' symbol (e.g. name@gmail.com).",
+      message: "Email address must contain '@' (e.g. name@gmail.com).",
+    };
+  }
+
+  if ((s.match(/@/g) || []).length !== 1) {
+    return {
+      ok: false,
+      valid: false,
+      reason: "invalid_at_count",
+      message: "Email address must contain exactly one '@' symbol.",
     };
   }
 

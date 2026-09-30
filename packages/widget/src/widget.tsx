@@ -177,63 +177,70 @@ export function OmniDeskWidget({
           });
           onTranscript?.(msg);
           if (msg.who === "user") {
-            if (msg.text.includes("@") || (msg.text.toLowerCase().includes(" at ") && msg.text.toLowerCase().includes(" dot "))) {
+            const userTextLower = msg.text.toLowerCase();
+            if (
+              msg.text.includes("@") ||
+              (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
+              userTextLower.includes("gmail") ||
+              userTextLower.includes("yahoo") ||
+              userTextLower.includes("outlook") ||
+              userTextLower.includes("hotmail") ||
+              userTextLower.includes("icloud")
+            ) {
               emailCapturedRef.current = true;
               setShowEmailBar(false);
             }
           } else if (msg.who === "agent") {
             const lower = msg.text.toLowerCase();
 
-            // First: Check if agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("could i get your email") ||
-              lower.includes("could you provide your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email") && (
-                lower.includes("what") ||
-                lower.includes("have") ||
-                lower.includes("provide") ||
-                lower.includes("give") ||
-                lower.includes("tell") ||
-                lower.includes("share") ||
-                lower.includes("address")
-              ));
-
-            if (isAskingForEmail) {
-              emailCapturedRef.current = false;
-              setShowEmailBar(true);
-              return;
-            }
-
-            // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
-            if (
+            // 1. Immediate confirmation check: if agent confirms email, sends invite, or completes booking, lock permanently
+            const isConfirmationOrDone =
               lower.includes("verified your email") ||
-              lower.includes("thank you for your email") ||
-              lower.includes("thank you for providing your email") ||
-              lower.includes("sent a calendar invite") ||
+              lower.includes("email is verified") ||
+              lower.includes("verified that email") ||
+              lower.includes("sent a calendar") ||
               lower.includes("sent your confirmation") ||
+              lower.includes("calendar invite") ||
               lower.includes("confirmation code is") ||
-              lower.includes("i have sent")
-            ) {
+              lower.includes("booking is confirmed") ||
+              lower.includes("all set, your appointment") ||
+              lower.includes("scheduled your appointment");
+
+            if (isConfirmationOrDone) {
               emailCapturedRef.current = true;
-              setShowEmailBar(false);
-              return;
             }
 
-            // If already captured, never re-show email bar
-            if (emailCapturedRef.current) {
-              setShowEmailBar(false);
-            }
+            // 2. Strictly trigger popup ONLY when agent explicitly asks for email and not yet captured
+            const isStrictlyAskingEmail =
+              !emailCapturedRef.current &&
+              (lower.includes("what is your email") ||
+                lower.includes("what's your email") ||
+                lower.includes("may i have your email") ||
+                lower.includes("can i have your email") ||
+                lower.includes("could i get your email") ||
+                lower.includes("could you provide your email") ||
+                lower.includes("provide your email") ||
+                lower.includes("enter your email") ||
+                lower.includes("spell your email") ||
+                lower.includes("share your email") ||
+                lower.includes("need your email") ||
+                lower.includes("what email") ||
+                lower.includes("which email") ||
+                lower.includes("where can i send your confirmation") ||
+                lower.includes("where should i send your confirmation") ||
+                lower.includes("where can i send your calendar") ||
+                lower.includes("where should i send your calendar") ||
+                (lower.includes("email") && (
+                  lower.includes("what is") ||
+                  lower.includes("what's") ||
+                  lower.includes("may i have") ||
+                  lower.includes("can you provide") ||
+                  lower.includes("could you provide") ||
+                  lower.includes("give me your") ||
+                  lower.includes("tell me your")
+                )));
+
+            setShowEmailBar(Boolean(isStrictlyAskingEmail));
           }
         },
         onAudioLevel: (u, a) => {
@@ -415,8 +422,8 @@ export function OmniDeskWidget({
               maxWidth: isExpanded ? "1140px" : "calc(100vw - 32px)",
               height: isExpanded ? "calc(100vh - 40px)" : "560px",
               maxHeight: isExpanded ? "900px" : "calc(100vh - 100px)",
-              background: "#ffffff",
-              border: "1px solid #e4e4e7",
+              background: isDark ? "#09090b" : "#ffffff",
+              border: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
               borderRadius: "20px",
               boxShadow: isExpanded
                 ? "0 32px 64px -16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1)"
@@ -483,11 +490,11 @@ export function OmniDeskWidget({
                     width: "28px",
                     height: "28px",
                     borderRadius: "50%",
-                    background: isDark ? "rgba(255,255,255,0.15)" : "#f4f4f5",
+                    background: isDark ? "rgba(255,255,255,0.15)" : (activeAccent === "#18181b" ? "rgba(24,24,27,0.08)" : `${activeAccent}18`),
                     display: "grid",
                     placeItems: "center",
                     flexShrink: 0,
-                    color: isDark ? "#ffffff" : "#09090b",
+                    color: isDark ? "#ffffff" : (activeAccent === "#18181b" ? "#09090b" : activeAccent),
                   }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -623,7 +630,7 @@ export function OmniDeskWidget({
                 display: "flex",
                 flexDirection: "column",
                 gap: "12px",
-                background: "#ffffff",
+                background: isDark ? "#09090b" : "#ffffff",
               }}
             >
               {/* Placeholder in Gray Background */}
@@ -633,9 +640,9 @@ export function OmniDeskWidget({
                     margin: "auto",
                     textAlign: "center",
                     padding: "10px 18px",
-                    background: "#f4f4f5",
-                    border: "1px solid #e4e4e7",
-                    color: "#52525b",
+                    background: isDark ? "#18181b" : "#f4f4f5",
+                    border: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
+                    color: isDark ? "#a1a1aa" : "#52525b",
                     borderRadius: "12px",
                     fontSize: "12.5px",
                     fontWeight: 500,
@@ -650,7 +657,7 @@ export function OmniDeskWidget({
                       width: "6px",
                       height: "6px",
                       borderRadius: "50%",
-                      background: isCallActive ? "#22c55e" : "#a1a1aa",
+                      background: isCallActive ? "#22c55e" : (callStatus === "connecting" ? "#eab308" : "#a1a1aa"),
                       display: "inline-block",
                     }}
                   />
@@ -705,9 +712,10 @@ export function OmniDeskWidget({
                           borderRadius: isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
                           fontSize: "13px",
                           lineHeight: "1.45",
-                          background: isUser ? "#18181b" : "#f4f4f5",
-                          color: isUser ? "#ffffff" : "#09090b",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                          background: isUser ? activeAccent : (isDark ? "#18181b" : "#f4f4f5"),
+                          color: isUser ? "#ffffff" : (isDark ? "#fafafa" : "#09090b"),
+                          border: !isUser && isDark ? "1px solid #27272a" : "none",
+                          boxShadow: isUser ? `0 2px 8px ${activeAccent}35` : "0 1px 2px rgba(0,0,0,0.04)",
                         }}
                       >
                         {t.text}
@@ -753,8 +761,9 @@ export function OmniDeskWidget({
                         borderRadius: "14px 14px 14px 2px",
                         fontSize: "13px",
                         lineHeight: "1.45",
-                        background: "#f4f4f5",
-                        color: "#71717a",
+                        background: isDark ? "#18181b" : "#f4f4f5",
+                        color: isDark ? "#a1a1aa" : "#71717a",
+                        border: isDark ? "1px solid #27272a" : "none",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
                         display: "inline-flex",
                         alignItems: "center",
@@ -882,12 +891,12 @@ export function OmniDeskWidget({
               </div>
             )}
 
-            {/* Bottom Call Bar (Matching Reference Image) */}
+            {/* Bottom Call Bar (Matching Live Voice Tester) */}
             <div
               style={{
                 padding: "12px 16px",
-                borderTop: "1px solid #e4e4e7",
-                background: "#fafafa",
+                borderTop: `1px solid ${isDark ? "#27272a" : "#e4e4e7"}`,
+                background: isDark ? "#121214" : "#fafafa",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -904,12 +913,19 @@ export function OmniDeskWidget({
                   alignItems: "center",
                   gap: "8px",
                   padding: "8px 16px",
-                  background: isCallActive ? "#dc2626" : "#000000",
+                  background: isCallActive
+                    ? "#dc2626"
+                    : callStatus === "connecting"
+                    ? "#64748b"
+                    : activeAccent,
                   color: "#ffffff",
                   borderRadius: "10px",
                   border: "none",
                   fontSize: "13px",
                   fontWeight: 600,
+                  boxShadow: isCallActive
+                    ? "0 4px 14px rgba(220, 38, 38, 0.35)"
+                    : `0 4px 14px ${activeAccent}40`,
                   cursor: callStatus === "connecting" ? "not-allowed" : "pointer",
                   transition: "all 0.15s ease",
                 }}
@@ -934,7 +950,7 @@ export function OmniDeskWidget({
                         style={{
                           width: "2.5px",
                           height: `${Math.max(4, Math.min(14, Math.round(h * (0.35 + Math.max(userLevel, agentLevel) * 1.5))))}px`,
-                          background: "#000000",
+                          background: activeAccent,
                           borderRadius: "1px",
                           transition: "height 0.12s ease",
                         }}
@@ -949,8 +965,9 @@ export function OmniDeskWidget({
                     fontWeight: 600,
                     padding: "3px 8px",
                     borderRadius: "6px",
-                    background: isCallActive ? "#000000" : "#f4f4f5",
-                    color: isCallActive ? "#ffffff" : "#71717a",
+                    background: isDark ? "#18181b" : (isCallActive ? "#000000" : "#f4f4f5"),
+                    color: isDark ? "#ffffff" : (isCallActive ? "#ffffff" : "#71717a"),
+                    border: isDark ? "1px solid #27272a" : "none",
                   }}
                 >
                   {callDuration}

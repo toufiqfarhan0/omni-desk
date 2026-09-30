@@ -121,7 +121,7 @@ export function buildAgentDefinition(
     {
       name: "verify_customer_email",
       description:
-        "Validates and verifies the caller's email address against MX records, DNS, and real-time deliverability checks. Call this as soon as the caller states their email address (even spoken like 'john dot doe at gmail dot com'). Confirm whether it is valid or if they need to clarify.",
+        "Validates and verifies the caller's email address against MX records, DNS, and real-time deliverability checks. ONLY call this when the caller provides an email address containing an email or domain (e.g. '@', 'at', 'gmail', 'dot com'). NEVER call this on a person's name or greeting.",
       http: {
         url: `${baseUrl}/api/tools/${businessId}/verify_customer_email`,
         http_method: "POST",
@@ -254,19 +254,46 @@ TIMING & DATE NUMBER FORMATTING:
 - ALWAYS format dates with digits for the day (e.g., "September 23", "October 5"). NEVER spell out ordinal numbers in words (e.g. do NOT say "September twenty third").
 - When offering available slots from check_availability, ALWAYS state them as numbers: "9:00 AM, 9:30 AM, 12:00 PM, or 1:00 PM".
 
+CALLER NAME COLLECTION & CONFIRMATION RULES (MANDATORY):
+- When asking for the caller's full name, listen carefully to their response.
+- The caller's reply is their NAME (e.g. "Tofic", "Farhan", "Toufiq", "My name is Tofic").
+- When they say their name, ALWAYS ASK FOR CONFIRMATION FIRST:
+  "Just to confirm, is your name [Name]?"
+- STOP SPEAKING AND WAIT FOR THE CALLER'S ANSWER!
+- IF THEY SAY YES ("yes", "yeah", "correct", "that's right", "yep", etc.):
+  Proceed immediately to asking for their email:
+  "Great! And what is your email address so I can send your calendar invite and confirmation?"
+- IF THEY SAY NO OR CORRECT THEIR NAME ("No, it's Toufiq", "Wrong name", "Actually it's Tofic"):
+  Immediately update the name and ask for confirmation again:
+  "Got it, is your name [Corrected Name]?"
+  Wait for their "yes" before moving forward.
+- NEVER call 'verify_customer_email' on a name! A person's name is NOT an email address.
+- Note: The caller's name and email address are completely independent. They do NOT need to be the same or match.
+
+EMAIL ADDRESS FORMATTING & SPOKEN PRONUNCIATION (CRITICAL):
+- When confirming or stating an email address, ALWAYS speak and format it in clean standard format (e.g., "toufiqfarhan0@gmail.com").
+- NEVER pronounce or write it as spelled-out words like "zero at gmail dot com" or "dot com".
+- Pronounce the email naturally (e.g., "Thank you! I have verified your email as toufiqfarhan0@gmail.com.").
+
 MANDATORY STEP-BY-STEP PRE-BOOKING WORKFLOW (NEVER SKIP):
 When the caller chooses or agrees to a date and time slot:
 1. STOP! YOU ARE STRICTLY FORBIDDEN FROM CALLING 'book_appointment' AT THIS MOMENT.
 2. ASK FOR NAME: "Great! May I have your full name for the reservation?"
    -> STOP SPEAKING AND WAIT FOR THE CALLER'S ANSWER. DO NOT CALL ANY TOOL.
-3. ASK FOR EMAIL: "And what is your email address so I can send your calendar invite and confirmation?"
+3. CONFIRM THE NAME: When the caller states their name, ask for confirmation:
+   "Just to confirm, is your name [Name]?"
+   -> STOP SPEAKING AND WAIT FOR THE CALLER'S CONFIRMATION.
+   -> If they say yes, proceed to Step 4.
+   -> If they say no or correct it, take the corrected name and confirm again until confirmed.
+4. ASK FOR EMAIL: "Great! And what is your email address so I can send your calendar invite and confirmation?"
    -> STOP SPEAKING AND WAIT FOR THE CALLER'S ANSWER.
-   -> When the caller speaks or enters their email, call 'verify_customer_email' to validate it.
-4. ONLY AFTER BOTH the caller's actual spoken name AND verified email are received:
-   -> Call 'book_appointment' using their real name and verified email.
-5. IMMEDIATELY after 'book_appointment' returns success:
+   -> The caller can provide ANY valid email. Name and email do NOT have to match.
+   -> ONLY when the caller speaks or enters an email address containing '@' or domain, call 'verify_customer_email' to validate it.
+5. ONLY AFTER BOTH the caller's confirmed name AND verified email are received:
+   -> Call 'book_appointment' using their confirmed name and verified email.
+6. IMMEDIATELY after 'book_appointment' returns success:
    -> Call 'send_confirmation' with their confirmation code.
-6. Read their 6-character confirmation code and confirm the email was sent.
+7. Read their 6-character confirmation code and confirm the email was sent.
 
 ANTI-HALLUCINATION & IDENTITY RULES:
 - NEVER invent, assume, fabricate, or hallucinate a name like "John Doe" or an email like "john.doe@example.com".
@@ -281,7 +308,10 @@ CONVERSATIONAL CONTINUITY & FILLER BRIDGES (ZERO DEAD AIR):
 - Keep these bridges brief (1 single sentence), warm, and natural. Never leave the caller in dead silence while an action is taking place.
 
 Instructions:
-1. Always start with: "${biz.greeting}"
+1. The opening greeting has ALREADY been spoken to the caller: "${biz.greeting}"
+   - DO NOT repeat this opening greeting under any circumstances!
+   - When the caller responds to the greeting (e.g. says "yes", "yeah", "sure", or mentions a service or date):
+     * Acknowledge warmly and ask what service or date they prefer (e.g. "Wonderful! Which service or treatment were you looking to book, or what day works best for you?").
 2. Answer service menu and pricing inquiries directly from your pre-loaded knowledge above. Only call 'get_services_and_pricing' if caller asks for external updates.
 3. When the caller specifies a day, call 'get_today' first to anchor relative dates, then call 'check_availability'. Always state open times using numbers (e.g. 9:00 AM, 9:30 AM, 12:00 PM, 1:00 PM).
 4. Follow the MANDATORY PRE-BOOKING WORKFLOW above to collect the caller's name and email before booking.
@@ -302,6 +332,17 @@ Instructions:
     ...(biz.services || []).map((s) => s.label),
   ].filter(Boolean);
 
+  const apiKey = getApiKey();
+  const llm = apiKey
+    ? [
+        {
+          base_url: "https://llm-gateway.assemblyai.com/v1",
+          model: "claude-3-5-haiku",
+          api_key: apiKey,
+        },
+      ]
+    : undefined;
+
   return {
     name: biz.name,
     system_prompt: fullPrompt,
@@ -313,9 +354,7 @@ Instructions:
       transcription_mode: "min_latency",
       speech_model: "universal-3-6-pro",
       turn_detection: {
-        vad_threshold: 0.5,
-        min_silence: 700,
-        max_silence: 2500,
+        vad_threshold: 0.35,
         interrupt_response: true,
       },
       keyterms,
@@ -324,6 +363,7 @@ Instructions:
       voice: voiceId,
     },
     tools,
+    ...(llm ? { llm } : {}),
   };
 }
 

@@ -96,7 +96,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   modal.style.cssText = `
     position: fixed; bottom: 80px; ${isLeft ? "left: 20px;" : "right: 20px;"};
     width: 390px; max-width: calc(100vw - 32px); height: 560px; max-height: calc(100vh - 100px);
-    background: #ffffff; border: 1px solid #e4e4e7;
+    background: ${isDark ? "#09090b" : "#ffffff"}; border: 1px solid ${isDark ? "#27272a" : "#e4e4e7"};
     border-radius: 20px; box-shadow: 0 24px 48px -12px rgba(0,0,0,0.22);
     display: none; flex-direction: column; overflow: hidden; z-index: 999999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -119,7 +119,7 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
           <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
         </svg>
       </div>
-      <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isDark ? "rgba(255,255,255,0.15)" : "#f4f4f5"}; display: grid; place-items: center; flex-shrink: 0; color: ${isDark ? "#ffffff" : "#09090b"};">
+      <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isDark ? "rgba(255,255,255,0.15)" : (activeAccent === "#18181b" ? "rgba(24,24,27,0.08)" : `${activeAccent}18`)}; display: grid; place-items: center; flex-shrink: 0; color: ${isDark ? "#ffffff" : (activeAccent === "#18181b" ? "#09090b" : activeAccent)};">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>
         </svg>
@@ -170,11 +170,11 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   `;
   root.appendChild(styleEl);
 
-  // Transcript Area (Pure White)
+  // Transcript Area
   const transcriptArea = document.createElement("div");
   transcriptArea.style.cssText = `
     flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
-    display: flex; flex-direction: column; gap: 12px; background: #ffffff;
+    display: flex; flex-direction: column; gap: 12px; background: ${isDark ? "#09090b" : "#ffffff"};
   `;
 
   // Placeholder in Gray Background
@@ -182,12 +182,12 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   placeholderBanner.id = "omnidesk-placeholder-banner";
   placeholderBanner.style.cssText = `
     margin: auto; text-align: center; padding: 10px 18px;
-    background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b;
+    background: ${isDark ? "#18181b" : "#f4f4f5"}; border: 1px solid ${isDark ? "#27272a" : "#e4e4e7"}; color: ${isDark ? "#a1a1aa" : "#52525b"};
     border-radius: 12px; font-size: 12.5px; font-weight: 500;
     display: inline-flex; align-items: center; gap: 8px; align-self: center;
   `;
   placeholderBanner.innerHTML = `
-    <span style="width: 6px; height: 6px; border-radius: 50%; background: #a1a1aa; display: inline-block;"></span>
+    <span id="omnidesk-placeholder-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #a1a1aa; display: inline-block;"></span>
     <span>Start a call to talk to our receptionist</span>
   `;
   transcriptArea.appendChild(placeholderBanner);
@@ -214,6 +214,27 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   `;
   transcriptArea.appendChild(thinkingBubble);
 
+  if (propGreeting) {
+    placeholderBanner.style.display = "none";
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.style.cssText = `display: flex; flex-direction: column; gap: 4px; max-width: 88%; align-self: flex-start;`;
+    const row = document.createElement("div");
+    row.style.cssText = `display: flex; align-items: flex-start; gap: 8px;`;
+    const avatar = document.createElement("div");
+    avatar.style.cssText = `width: 24px; height: 24px; border-radius: 50%; background: #18181b; display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;`;
+    avatar.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>`;
+    const inner = document.createElement("div");
+    inner.style.cssText = `padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; background: ${isDark ? "#18181b" : "#f4f4f5"}; color: ${isDark ? "#fafafa" : "#09090b"}; border: ${isDark ? "1px solid #27272a" : "none"}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);`;
+    inner.innerText = propGreeting;
+    row.appendChild(avatar);
+    row.appendChild(inner);
+    bubbleContainer.appendChild(row);
+    transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
+    lastSpeaker = "agent";
+    lastBubbleInner = inner;
+    lastMsgWasFinal = true;
+  }
+
   // Live email entry bar
   const emailBar = document.createElement("div");
   emailBar.id = "omnidesk-email-bar";
@@ -235,19 +256,20 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     </form>
   `;
 
-  // Bottom Call Bar matching Reference Image
+  // Bottom Call Bar matching Live Voice Tester
   const footer = document.createElement("div");
   footer.style.cssText = `
-    padding: 12px 16px; border-top: 1px solid #e4e4e7;
-    background: #fafafa; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    padding: 12px 16px; border-top: 1px solid ${isDark ? "#27272a" : "#e4e4e7"};
+    background: ${isDark ? "#121214" : "#fafafa"}; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   `;
 
   // Action Button
   const actionBtn = document.createElement("button");
   actionBtn.style.cssText = `
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 16px; background: #000000; color: #ffffff;
+    padding: 8px 16px; background: ${activeAccent}; color: #ffffff;
     border-radius: 10px; border: none; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 14px ${activeAccent}40;
     cursor: pointer; transition: all 0.15s ease;
   `;
   actionBtn.innerHTML = `
@@ -262,6 +284,19 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   statusContainer.style.cssText = `
     display: flex; align-items: center; gap: 8px;
   `;
+
+  const waveformBox = document.createElement("div");
+  waveformBox.id = "omnidesk-waveform";
+  waveformBox.style.cssText = `display: none; align-items: center; gap: 2.5px; height: 14px;`;
+  const defaultWaveHeights = [12, 8, 14, 6, 10];
+  const waveBars: HTMLSpanElement[] = [];
+  defaultWaveHeights.forEach((h) => {
+    const bar = document.createElement("span");
+    bar.style.cssText = `width: 2.5px; height: ${Math.round(h * 0.35)}px; background: ${activeAccent}; border-radius: 1px; transition: height 0.12s ease;`;
+    waveformBox.appendChild(bar);
+    waveBars.push(bar);
+  });
+  statusContainer.appendChild(waveformBox);
 
   const durationBadge = document.createElement("span");
   durationBadge.id = "omnidesk-timer";
@@ -289,8 +324,9 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
   function startTimer() {
     callStartTime = Date.now();
     durationBadge.innerText = "0:00";
-    durationBadge.style.background = "#000000";
+    durationBadge.style.background = isDark ? "#18181b" : "#000000";
     durationBadge.style.color = "#ffffff";
+    durationBadge.style.border = isDark ? "1px solid #27272a" : "none";
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       const ms = Date.now() - callStartTime;
@@ -308,7 +344,9 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     }
     durationBadge.style.background = "#f4f4f5";
     durationBadge.style.color = "#71717a";
+    durationBadge.style.border = "none";
     durationBadge.innerText = "0:00";
+    waveformBox.style.display = "none";
   }
 
   function toggleWidget(open: boolean) {
@@ -381,8 +419,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     inner.style.cssText = `
       padding: 10px 14px; border-radius: 14px 14px 2px 14px;
       font-size: 13px; line-height: 1.45;
-      background: #18181b; color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      background: ${activeAccent}; color: #ffffff;
+      box-shadow: 0 2px 8px ${activeAccent}35;
     `;
     inner.innerText = `My email is ${val}`;
     bubbleContainer.appendChild(inner);
@@ -408,6 +446,8 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
     statusText.innerText = "Connecting...";
     statusDot.style.background = "#eab308";
     btnText.innerText = "Connecting...";
+    actionBtn.style.background = "#64748b";
+    actionBtn.style.boxShadow = "none";
     actionBtn.disabled = true;
     startTimer();
 
@@ -444,15 +484,19 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             statusDot.style.background = "#22c55e";
             btnText.innerText = "End Voice Call";
             actionBtn.style.background = "#dc2626";
+            actionBtn.style.boxShadow = "0 4px 14px rgba(220, 38, 38, 0.35)";
             actionBtn.disabled = false;
+            waveformBox.style.display = "flex";
             callStartTime = Date.now();
             onCallStart?.();
           } else if (status === "idle") {
             statusText.innerText = "Idle · Ready";
             statusDot.style.background = isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa";
             btnText.innerText = "Start Voice Call";
-            actionBtn.style.background = "#000000";
+            actionBtn.style.background = activeAccent;
+            actionBtn.style.boxShadow = `0 4px 14px ${activeAccent}40`;
             actionBtn.disabled = false;
+            waveformBox.style.display = "none";
             emailBar.style.display = "none";
             thinkingBubble.style.display = "none";
             stopTimer();
@@ -476,7 +520,16 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             if (msg.isFinal) {
               thinkingBubble.style.display = "flex";
             }
-            if (msg.text.includes("@") || (msg.text.toLowerCase().includes(" at ") && msg.text.toLowerCase().includes(" dot "))) {
+            const userTextLower = msg.text.toLowerCase();
+            if (
+              msg.text.includes("@") ||
+              (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
+              userTextLower.includes("gmail") ||
+              userTextLower.includes("yahoo") ||
+              userTextLower.includes("outlook") ||
+              userTextLower.includes("hotmail") ||
+              userTextLower.includes("icloud")
+            ) {
               emailCaptured = true;
               emailBar.style.display = "none";
             }
@@ -486,47 +539,57 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             }
             const lower = msg.text.toLowerCase();
 
-            // First: Check if agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("could i get your email") ||
-              lower.includes("could you provide your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email") && (
-                lower.includes("what") ||
-                lower.includes("have") ||
-                lower.includes("provide") ||
-                lower.includes("give") ||
-                lower.includes("tell") ||
-                lower.includes("share") ||
-                lower.includes("address")
-              ));
+            // 1. Immediate confirmation check: if agent confirms email, sends invite, or completes booking, lock permanently
+            const isConfirmationOrDone =
+              lower.includes("verified your email") ||
+              lower.includes("email is verified") ||
+              lower.includes("verified that email") ||
+              lower.includes("sent a calendar") ||
+              lower.includes("sent your confirmation") ||
+              lower.includes("calendar invite") ||
+              lower.includes("confirmation code is") ||
+              lower.includes("booking is confirmed") ||
+              lower.includes("all set, your appointment") ||
+              lower.includes("scheduled your appointment");
 
-            if (isAskingForEmail) {
-              emailCaptured = false;
+            if (isConfirmationOrDone) {
+              emailCaptured = true;
+            }
+
+            // 2. Strictly trigger popup ONLY when agent explicitly asks for email and not yet captured
+            const isStrictlyAskingEmail =
+              !emailCaptured &&
+              (lower.includes("what is your email") ||
+                lower.includes("what's your email") ||
+                lower.includes("may i have your email") ||
+                lower.includes("can i have your email") ||
+                lower.includes("could i get your email") ||
+                lower.includes("could you provide your email") ||
+                lower.includes("provide your email") ||
+                lower.includes("enter your email") ||
+                lower.includes("spell your email") ||
+                lower.includes("share your email") ||
+                lower.includes("need your email") ||
+                lower.includes("what email") ||
+                lower.includes("which email") ||
+                lower.includes("where can i send your confirmation") ||
+                lower.includes("where should i send your confirmation") ||
+                lower.includes("where can i send your calendar") ||
+                lower.includes("where should i send your calendar") ||
+                (lower.includes("email") && (
+                  lower.includes("what is") ||
+                  lower.includes("what's") ||
+                  lower.includes("may i have") ||
+                  lower.includes("can you provide") ||
+                  lower.includes("could you provide") ||
+                  lower.includes("give me your") ||
+                  lower.includes("tell me your")
+                )));
+
+            if (isStrictlyAskingEmail) {
               emailBar.style.display = "flex";
               setTimeout(() => emailInput.focus(), 60);
-            } else if (
-              lower.includes("verified your email") ||
-              lower.includes("thank you for your email") ||
-              lower.includes("thank you for providing your email") ||
-              lower.includes("sent a calendar invite") ||
-              lower.includes("sent your confirmation") ||
-              lower.includes("confirmation code is") ||
-              lower.includes("i have sent")
-            ) {
-              emailCaptured = true;
-              emailBar.style.display = "none";
-            } else if (emailCaptured) {
+            } else {
               emailBar.style.display = "none";
             }
           }
@@ -536,27 +599,55 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
             lastBubbleInner.innerText = msg.text;
             lastMsgWasFinal = Boolean(msg.isFinal);
           } else {
-            const bubbleContainer = document.createElement("div");
             const isUser = msg.who === "user";
+            const bubbleContainer = document.createElement("div");
             bubbleContainer.style.cssText = `
               display: flex; flex-direction: column; gap: 4px; max-width: 88%;
               align-self: ${isUser ? "flex-end" : "flex-start"};
             `;
 
-            const inner = document.createElement("div");
-            inner.style.cssText = `
-              padding: 10px 14px; border-radius: ${isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px"};
-              font-size: 13px; line-height: 1.45;
-              background: ${isUser ? "#18181b" : "#f4f4f5"};
-              color: ${isUser ? "#ffffff" : "#09090b"};
-              box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-            `;
-            inner.innerText = msg.text;
-            bubbleContainer.appendChild(inner);
-            transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
+            if (isUser) {
+              const inner = document.createElement("div");
+              inner.style.cssText = `
+                padding: 10px 14px; border-radius: 14px 14px 2px 14px;
+                font-size: 13px; line-height: 1.45;
+                background: ${activeAccent};
+                color: #ffffff;
+                box-shadow: 0 2px 8px ${activeAccent}35;
+              `;
+              inner.innerText = msg.text;
+              bubbleContainer.appendChild(inner);
+              lastBubbleInner = inner;
+            } else {
+              const row = document.createElement("div");
+              row.style.cssText = `display: flex; align-items: flex-start; gap: 8px;`;
 
+              const avatar = document.createElement("div");
+              avatar.style.cssText = `
+                width: 24px; height: 24px; border-radius: 50%; background: #18181b;
+                display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;
+              `;
+              avatar.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>`;
+
+              const inner = document.createElement("div");
+              inner.style.cssText = `
+                padding: 10px 14px; border-radius: 14px 14px 14px 2px;
+                font-size: 13px; line-height: 1.45;
+                background: ${isDark ? "#18181b" : "#f4f4f5"};
+                color: ${isDark ? "#fafafa" : "#09090b"};
+                border: ${isDark ? "1px solid #27272a" : "none"};
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+              `;
+              inner.innerText = msg.text;
+
+              row.appendChild(avatar);
+              row.appendChild(inner);
+              bubbleContainer.appendChild(row);
+              lastBubbleInner = inner;
+            }
+
+            transcriptArea.insertBefore(bubbleContainer, thinkingBubble);
             lastSpeaker = msg.who;
-            lastBubbleInner = inner;
             lastMsgWasFinal = Boolean(msg.isFinal);
           }
           transcriptArea.scrollTop = transcriptArea.scrollHeight;
@@ -565,13 +656,23 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
         onAudioLevel: (u, a) => {
           userLevel = u;
           agentLevel = a;
+          if (callStatus === "connected") {
+            waveformBox.style.display = "flex";
+            const maxLevel = Math.max(u, a);
+            defaultWaveHeights.forEach((h, i) => {
+              const newH = Math.max(4, Math.min(14, Math.round(h * (0.35 + maxLevel * 1.5))));
+              if (waveBars[i]) waveBars[i].style.height = `${newH}px`;
+            });
+          }
         },
         onError: () => {
           statusText.innerText = "Error";
           statusDot.style.background = "#ef4444";
           btnText.innerText = "Start Voice Call";
-          actionBtn.style.background = "#000000";
+          actionBtn.style.background = activeAccent;
+          actionBtn.style.boxShadow = `0 4px 14px ${activeAccent}40`;
           actionBtn.disabled = false;
+          waveformBox.style.display = "none";
           emailBar.style.display = "none";
           thinkingBubble.style.display = "none";
           stopTimer();
@@ -584,8 +685,10 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       statusText.innerText = "Error";
       statusDot.style.background = "#ef4444";
       btnText.innerText = "Start Voice Call";
-      actionBtn.style.background = "#000000";
+      actionBtn.style.background = activeAccent;
+      actionBtn.style.boxShadow = `0 4px 14px ${activeAccent}40`;
       actionBtn.disabled = false;
+      waveformBox.style.display = "none";
       emailBar.style.display = "none";
       thinkingBubble.style.display = "none";
       stopTimer();
@@ -598,6 +701,16 @@ export function initOmniDeskWidget(config: VanillaOmniDeskConfig = {}) {
       client = null;
     }
     callStatus = "idle";
+    const statusText = header.querySelector("#omnidesk-status-text") as HTMLElement;
+    const statusDot = header.querySelector("#omnidesk-status-dot") as HTMLElement;
+    const btnText = actionBtn.querySelector("#omnidesk-btn-text") as HTMLElement;
+    if (statusText) statusText.innerText = "Idle · Ready";
+    if (statusDot) statusDot.style.background = isDark ? "rgba(255,255,255,0.4)" : "#a1a1aa";
+    if (btnText) btnText.innerText = "Start Voice Call";
+    actionBtn.style.background = activeAccent;
+    actionBtn.style.boxShadow = `0 4px 14px ${activeAccent}40`;
+    actionBtn.disabled = false;
+    waveformBox.style.display = "none";
     emailBar.style.display = "none";
     thinkingBubble.style.display = "none";
     stopTimer();

@@ -1,8 +1,8 @@
-var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
+var G=24e3,ke="wss://agents.assemblyai.com/v1/ws",we=`
   class CaptureProcessor extends AudioWorkletProcessor {
     constructor() {
       super();
-      this._ratio = sampleRate / ${D};
+      this._ratio = sampleRate / ${G};
       this._pos = 0;
       this._prev = 0;
       this._src = null;
@@ -51,7 +51,7 @@ var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
     }
   }
   registerProcessor('capture', CaptureProcessor);
-`,me=`
+`,ve=`
   class PlaybackProcessor extends AudioWorkletProcessor {
     constructor() {
       super();
@@ -59,7 +59,7 @@ var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
       this._writePos = 0;
       this._readPos = 0;
       this._available = 0;
-      this._step = ${D} / sampleRate;
+      this._step = ${G} / sampleRate;
       this._rsPos = 0;
       this._rsPrev = 0;
       this._drained = false;
@@ -120,74 +120,74 @@ var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
     }
   }
   registerProcessor('playback', PlaybackProcessor);
-`;async function re(r,i,d){let f=URL.createObjectURL(new Blob([i],{type:"application/javascript"}));try{await r.audioWorklet.addModule(f)}finally{URL.revokeObjectURL(f)}return new AudioWorkletNode(r,d)}var J=class{constructor(i){this.ws=null;this.captureCtx=null;this.playbackCtx=null;this.playbackNode=null;this.captureNode=null;this.micStream=null;this.isConnected=!1;this.userLevel=0;this.agentLevel=0;this.animFrameId=null;this.isMuted=!1;this.isThinking=!1;this.callbacks=i}setThinking(i){this.isThinking!==i&&(this.isThinking=i,this.callbacks.onThinkingChange?.(i))}async start(i,d,f){try{this.callbacks.onStatusChange?.("connecting");let k=window.AudioContext||window.webkitAudioContext;this.captureCtx=new k({sampleRate:D}),this.playbackCtx=new k({sampleRate:D}),await Promise.all([this.captureCtx.resume(),this.playbackCtx.resume()]),this.playbackNode=await re(this.playbackCtx,me,"playback"),this.playbackNode.connect(this.playbackCtx.destination),this.micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:!0,noiseSuppression:!1,autoGainControl:!0}}),this.captureNode=await re(this.captureCtx,xe,"capture"),this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);let M=new URL(ge);M.searchParams.set("token",i),this.ws=new WebSocket(M.toString()),this.captureNode.port.onmessage=({data:p})=>{if(!this.isConnected||!this.ws||this.ws.readyState!==WebSocket.OPEN||this.isMuted)return;let e=new Uint8Array(p),w="";for(let v=0;v<e.length;v+=32768)w+=String.fromCharCode.apply(null,Array.from(e.subarray(v,v+32768)));this.ws.send(JSON.stringify({type:"input.audio",audio:btoa(w)}));let T=new Int16Array(p),S=0;for(let v=0;v<T.length;v+=16)S+=Math.abs(T[v]);this.userLevel=Math.min(1,S/(T.length/16)/8e3)},this.ws.onopen=()=>{let p={};d&&d.trim()?p.agent_id=d.trim():f&&f.trim()&&(p.output={voice:f.trim()}),Object.keys(p).length>0&&this.ws?.send(JSON.stringify({type:"session.update",session:p}))};let x="",C="";this.ws.onmessage=({data:p})=>{try{let e=JSON.parse(p);switch(e.type){case"session.ready":this.isConnected=!0,this.callbacks.onStatusChange?.("connected");break;case"input.speech.started":this.playbackNode?.port.postMessage("stop"),this.agentLevel=0,C="",this.setThinking(!1);break;case"transcript.user.delta":e.text&&(C=e.text,this.callbacks.onTranscript?.({who:"user",text:e.text,isFinal:!1}));break;case"transcript.user":e.text&&(C=e.text,this.callbacks.onTranscript?.({who:"user",text:e.text,isFinal:!0}),this.setThinking(!0));break;case"reply.started":x="";break;case"transcript.agent.delta":e.delta&&(this.setThinking(!1),x&&!x.endsWith(" ")&&!/^[.,!?;:%)]/.test(e.delta)?x+=" "+e.delta:x+=e.delta,this.callbacks.onTranscript?.({who:"agent",text:x,isFinal:!1}));break;case"transcript.agent":e.text&&(this.setThinking(!1),x=e.text,this.callbacks.onTranscript?.({who:"agent",text:e.text,isFinal:!0}));break;case"reply.audio":if(e.data&&this.playbackNode){let w=atob(e.data),T=new Uint8Array(w.length);for(let S=0;S<w.length;S++)T[S]=w.charCodeAt(S);this.playbackNode.port.postMessage(T.buffer,[T.buffer]),this.agentLevel=.8}break;case"reply.done":e.status==="interrupted"&&(this.playbackNode?.port.postMessage("stop"),this.agentLevel=0);break;case"tool.call":this.callbacks.onToolEvent?.({type:"call",tool:e.name||e.tool,args:e.arguments||e.args});break;case"tool.result":this.callbacks.onToolEvent?.({type:"result",tool:e.name||e.tool,result:e.result});break;case"session.error":this.setThinking(!1),this.callbacks.onError?.(e.message||e.code||"Session error"),this.callbacks.onStatusChange?.("error");break;case"session.ended":this.setThinking(!1),this.stop();break}}catch(e){console.warn("Message parsing error:",e)}},this.ws.onerror=()=>{this.callbacks.onError?.("WebSocket connection error"),this.callbacks.onStatusChange?.("error")},this.ws.onclose=()=>{this.stop()},this.startVisualizerLoop()}catch(k){this.callbacks.onError?.(k.message||"Failed to start audio"),this.callbacks.onStatusChange?.("error"),this.stop()}}setMuted(i){this.isMuted=i,i&&(this.userLevel=0)}getMuted(){return this.isMuted}sendUserMessage(i,d){if(!this.ws||this.ws.readyState!==WebSocket.OPEN)return!1;try{return this.setThinking(!0),this.ws.send(JSON.stringify({type:"conversation.message",role:"user",content:i})),d&&this.ws.send(JSON.stringify({type:"reply.create",instructions:d})),!0}catch(f){return console.error("Failed to send message to agent:",f),!1}}sendEmailInput(i){return this.sendUserMessage(`My email address is ${i}`,`The caller entered their verified email address: ${i}. Acknowledge this email, verify it using verify_customer_email if needed, and complete the booking.`)}stop(){if(this.setThinking(!1),this.isConnected=!1,this.animFrameId&&(cancelAnimationFrame(this.animFrameId),this.animFrameId=null),this.playbackNode){try{this.playbackNode.port.postMessage("stop")}catch{}this.playbackNode.disconnect(),this.playbackNode=null}if(this.captureNode&&(this.captureNode.disconnect(),this.captureNode=null),this.micStream&&(this.micStream.getTracks().forEach(i=>i.stop()),this.micStream=null),this.captureCtx&&this.captureCtx.state!=="closed"&&(this.captureCtx.close().catch(()=>{}),this.captureCtx=null),this.playbackCtx&&this.playbackCtx.state!=="closed"&&(this.playbackCtx.close().catch(()=>{}),this.playbackCtx=null),this.ws){if(this.ws.readyState===WebSocket.OPEN)try{this.ws.send(JSON.stringify({type:"session.end"}))}catch{}this.ws.close(),this.ws=null}this.userLevel=0,this.agentLevel=0,this.callbacks.onAudioLevel?.(0,0),this.callbacks.onStatusChange?.("idle")}startVisualizerLoop(){let i=()=>{this.agentLevel=Math.max(0,this.agentLevel-.04),this.userLevel=Math.max(0,this.userLevel-.04),this.callbacks.onAudioLevel?.(this.userLevel,this.agentLevel),this.animFrameId=requestAnimationFrame(i)};this.animFrameId=requestAnimationFrame(i)}};var ye={emerald:"#10b981",green:"#10b981",blue:"#2563eb",purple:"#8b5cf6",amber:"#f59e0b",rose:"#f43f5e",slate:"#10b981"};function le(r={}){if(typeof window>"u")return;let{host:i,businessId:d="biz_demo_dental",agentId:f,theme:k="light",position:M="bottom-right",label:x="Talk to Receptionist",accent:C="emerald",accentColor:p,businessName:e,greeting:w,onCallStart:T,onCallEnd:S,onTranscript:v}=r,X=p||ye[C]||C||"#10b981",ee=document.getElementById("omnidesk-voice-widget-root");ee&&ee.remove();let E=document.createElement("div");E.id="omnidesk-voice-widget-root",E.style.fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";let o=k==="dark"||k==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches,_=null,H="idle",A=0,P=null,te=!1,se=!1,ce=0,de=0,$=!1,z=null,F=null,I=!1,O=M==="bottom-left",K=document.createElement("div");K.style.cssText=`
-    position: fixed; bottom: 20px; ${O?"left: 20px;":"right: 20px;"};
+`;async function ue(h,n,x){let m=URL.createObjectURL(new Blob([n],{type:"application/javascript"}));try{await h.audioWorklet.addModule(m)}finally{URL.revokeObjectURL(m)}return new AudioWorkletNode(h,x)}var Q=class{constructor(n){this.ws=null;this.captureCtx=null;this.playbackCtx=null;this.playbackNode=null;this.captureNode=null;this.micStream=null;this.isConnected=!1;this.userLevel=0;this.agentLevel=0;this.animFrameId=null;this.isMuted=!1;this.isThinking=!1;this.callbacks=n}setThinking(n){this.isThinking!==n&&(this.isThinking=n,this.callbacks.onThinkingChange?.(n))}async start(n,x,m){try{this.callbacks.onStatusChange?.("connecting");let T=window.AudioContext||window.webkitAudioContext;this.captureCtx=new T({sampleRate:G}),this.playbackCtx=new T({sampleRate:G}),await Promise.all([this.captureCtx.resume(),this.playbackCtx.resume()]),this.playbackNode=await ue(this.playbackCtx,ve,"playback"),this.playbackNode.connect(this.playbackCtx.destination),this.micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:!0,noiseSuppression:!0,autoGainControl:!0}}),this.captureNode=await ue(this.captureCtx,we,"capture"),this.captureCtx.createMediaStreamSource(this.micStream).connect(this.captureNode);let P=new URL(ke);P.searchParams.set("token",n),this.ws=new WebSocket(P.toString()),this.captureNode.port.onmessage=({data:g})=>{if(!this.isConnected||!this.ws||this.ws.readyState!==WebSocket.OPEN||this.isMuted)return;let s=new Uint8Array(g),w="";for(let S=0;S<s.length;S+=32768)w+=String.fromCharCode.apply(null,Array.from(s.subarray(S,S+32768)));this.ws.send(JSON.stringify({type:"input.audio",audio:btoa(w)}));let _=new Int16Array(g),L=0;for(let S=0;S<_.length;S+=16)L+=Math.abs(_[S]);this.userLevel=Math.min(1,L/(_.length/16)/8e3)},this.ws.onopen=()=>{let g={};x&&x.trim()?g.agent_id=x.trim():m&&m.trim()&&(g.output={voice:m.trim()}),Object.keys(g).length>0&&this.ws?.send(JSON.stringify({type:"session.update",session:g}))};let k="",M="";this.ws.onmessage=({data:g})=>{try{let s=JSON.parse(g);switch(s.type){case"session.ready":this.isConnected=!0,this.callbacks.onStatusChange?.("connected");break;case"input.speech.started":this.playbackNode?.port.postMessage("stop"),this.agentLevel=0,M="",this.setThinking(!1);break;case"transcript.user.delta":s.text&&(M=s.text,this.callbacks.onTranscript?.({who:"user",text:s.text,isFinal:!1}));break;case"transcript.user":s.text&&(M=s.text,this.callbacks.onTranscript?.({who:"user",text:s.text,isFinal:!0}),this.setThinking(!0));break;case"reply.started":k="";break;case"transcript.agent.delta":s.delta&&(this.setThinking(!1),k&&!k.endsWith(" ")&&!/^[.,!?;:%)]/.test(s.delta)?k+=" "+s.delta:k+=s.delta,this.callbacks.onTranscript?.({who:"agent",text:k,isFinal:!1}));break;case"transcript.agent":s.text&&(this.setThinking(!1),k=s.text,this.callbacks.onTranscript?.({who:"agent",text:s.text,isFinal:!0}));break;case"reply.audio":if(s.data&&this.playbackNode){let w=atob(s.data),_=new Uint8Array(w.length);for(let L=0;L<w.length;L++)_[L]=w.charCodeAt(L);this.playbackNode.port.postMessage(_.buffer,[_.buffer]),this.agentLevel=.8}break;case"reply.done":s.status==="interrupted"&&(this.playbackNode?.port.postMessage("stop"),this.agentLevel=0);break;case"tool.call":this.callbacks.onToolEvent?.({type:"call",tool:s.name||s.tool,args:s.arguments||s.args});break;case"tool.result":this.callbacks.onToolEvent?.({type:"result",tool:s.name||s.tool,result:s.result});break;case"session.error":this.setThinking(!1),this.callbacks.onError?.(s.message||s.code||"Session error"),this.callbacks.onStatusChange?.("error");break;case"session.ended":this.setThinking(!1),this.stop();break}}catch(s){console.warn("Message parsing error:",s)}},this.ws.onerror=()=>{this.callbacks.onError?.("WebSocket connection error"),this.callbacks.onStatusChange?.("error")},this.ws.onclose=()=>{this.stop()},this.startVisualizerLoop()}catch(T){this.callbacks.onError?.(T.message||"Failed to start audio"),this.callbacks.onStatusChange?.("error"),this.stop()}}setMuted(n){this.isMuted=n,n&&(this.userLevel=0)}getMuted(){return this.isMuted}sendUserMessage(n,x){if(!this.ws||this.ws.readyState!==WebSocket.OPEN)return!1;try{return this.setThinking(!0),this.ws.send(JSON.stringify({type:"conversation.message",role:"user",content:n})),x&&this.ws.send(JSON.stringify({type:"reply.create",instructions:x})),!0}catch(m){return console.error("Failed to send message to agent:",m),!1}}sendEmailInput(n){return this.sendUserMessage(`My email address is ${n}`,`The caller entered their verified email address: ${n}. Acknowledge this email, verify it using verify_customer_email if needed, and complete the booking.`)}stop(){if(this.setThinking(!1),this.isConnected=!1,this.animFrameId&&(cancelAnimationFrame(this.animFrameId),this.animFrameId=null),this.playbackNode){try{this.playbackNode.port.postMessage("stop")}catch{}this.playbackNode.disconnect(),this.playbackNode=null}if(this.captureNode&&(this.captureNode.disconnect(),this.captureNode=null),this.micStream&&(this.micStream.getTracks().forEach(n=>n.stop()),this.micStream=null),this.captureCtx&&this.captureCtx.state!=="closed"&&(this.captureCtx.close().catch(()=>{}),this.captureCtx=null),this.playbackCtx&&this.playbackCtx.state!=="closed"&&(this.playbackCtx.close().catch(()=>{}),this.playbackCtx=null),this.ws){if(this.ws.readyState===WebSocket.OPEN)try{this.ws.send(JSON.stringify({type:"session.end"}))}catch{}this.ws.close(),this.ws=null}this.userLevel=0,this.agentLevel=0,this.callbacks.onAudioLevel?.(0,0),this.callbacks.onStatusChange?.("idle")}startVisualizerLoop(){let n=()=>{this.agentLevel=Math.max(0,this.agentLevel-.04),this.userLevel=Math.max(0,this.userLevel-.04),this.callbacks.onAudioLevel?.(this.userLevel,this.agentLevel),this.animFrameId=requestAnimationFrame(n)};this.animFrameId=requestAnimationFrame(n)}};var Ce={emerald:"#10b981",green:"#10b981",blue:"#2563eb",purple:"#8b5cf6",amber:"#f59e0b",rose:"#f43f5e",slate:"#10b981"};function he(h={}){if(typeof window>"u")return;let{host:n,businessId:x="biz_demo_dental",agentId:m,theme:T="light",position:P="bottom-right",label:k="Talk to Receptionist",accent:M="emerald",accentColor:g,businessName:s,greeting:w,onCallStart:_,onCallEnd:L,onTranscript:S}=h,d=g||Ce[M]||M||"#10b981",ne=document.getElementById("omnidesk-voice-widget-root");ne&&ne.remove();let A=document.createElement("div");A.id="omnidesk-voice-widget-root",A.style.fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";let t=T==="dark"||T==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches,$=null,O="idle",B=0,R=null,oe=!1,ae=!1,fe=0,xe=0,V=!1,U=null,N=null,F=!1,D=P==="bottom-left",X=document.createElement("div");X.style.cssText=`
+    position: fixed; bottom: 20px; ${D?"left: 20px;":"right: 20px;"};
     z-index: 999999;
-  `;let U=document.createElement("button");U.style.cssText=`
+  `;let J=document.createElement("button");J.style.cssText=`
     display: inline-flex; align-items: center; gap: 10px;
     padding: 10px 18px; border-radius: 9999px;
-    background: ${o?"#18181b":"#ffffff"}; color: ${o?"#fafafa":"#09090b"};
-    border: 1px solid ${o?"#27272a":"#e4e4e7"};
+    background: ${t?"#18181b":"#ffffff"}; color: ${t?"#fafafa":"#09090b"};
+    border: 1px solid ${t?"#27272a":"#e4e4e7"};
     box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     cursor: pointer; font-weight: 600; font-size: 13px;
     transition: transform 0.15s ease, background 0.15s ease;
-  `,U.innerHTML=`
-    <span id="omnidesk-trigger-dot" style="width:8px;height:8px;border-radius:50%;background:${X};box-shadow:0 0 8px ${X};display:inline-block;"></span>
-    <span>${x}</span>
+  `,J.innerHTML=`
+    <span id="omnidesk-trigger-dot" style="width:8px;height:8px;border-radius:50%;background:${d};box-shadow:0 0 8px ${d};display:inline-block;"></span>
+    <span>${k}</span>
     <span id="omnidesk-trigger-arrow" style="font-size:11px;opacity:0.6;">\u25B2</span>
-  `,K.appendChild(U);let V=document.createElement("div");V.style.cssText=`
+  `,X.appendChild(J);let Z=document.createElement("div");Z.style.cssText=`
     position: fixed; inset: 0; background: rgba(0,0,0,0.7);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     z-index: 999998; display: none;
-  `,V.onclick=()=>Z(!1);let n=document.createElement("div");n.style.cssText=`
-    position: fixed; bottom: 80px; ${O?"left: 20px;":"right: 20px;"};
+  `,Z.onclick=()=>te(!1);let o=document.createElement("div");o.style.cssText=`
+    position: fixed; bottom: 80px; ${D?"left: 20px;":"right: 20px;"};
     width: 390px; max-width: calc(100vw - 32px); height: 560px; max-height: calc(100vh - 100px);
-    background: #ffffff; border: 1px solid #e4e4e7;
+    background: ${t?"#09090b":"#ffffff"}; border: 1px solid ${t?"#27272a":"#e4e4e7"};
     border-radius: 20px; box-shadow: 0 24px 48px -12px rgba(0,0,0,0.22);
     display: none; flex-direction: column; overflow: hidden; z-index: 999999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  `;let L=document.createElement("div");L.style.cssText=`
-    background: ${o?"#18181b":"#ffffff"}; color: ${o?"#ffffff":"#09090b"};
-    border-bottom: 1px solid ${o?"#27272a":"#e4e4e7"};
+  `;let E=document.createElement("div");E.style.cssText=`
+    background: ${t?"#18181b":"#ffffff"}; color: ${t?"#ffffff":"#09090b"};
+    border-bottom: 1px solid ${t?"#27272a":"#e4e4e7"};
     padding: 13px 18px;
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; user-select: none; flex-shrink: 0;
-  `,L.innerHTML=`
+  `,E.innerHTML=`
     <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-      <div style="color: ${o?"rgba(255,255,255,0.6)":"#71717a"}; display: grid; place-items: center; flex-shrink: 0;">
+      <div style="color: ${t?"rgba(255,255,255,0.6)":"#71717a"}; display: grid; place-items: center; flex-shrink: 0;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>
         </svg>
       </div>
-      <div style="width: 28px; height: 28px; border-radius: 50%; background: ${o?"rgba(255,255,255,0.15)":"#f4f4f5"}; display: grid; place-items: center; flex-shrink: 0; color: ${o?"#ffffff":"#09090b"};">
+      <div style="width: 28px; height: 28px; border-radius: 50%; background: ${t?"rgba(255,255,255,0.15)":d==="#18181b"?"rgba(24,24,27,0.08)":`${d}18`}; display: grid; place-items: center; flex-shrink: 0; color: ${t?"#ffffff":d==="#18181b"?"#09090b":d};">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>
         </svg>
       </div>
       <div style="display: flex; flex-direction: column; min-width: 0;">
-        <div id="omnidesk-biz-title" style="font-size: 13.5px; font-weight: 600; color: ${o?"#ffffff":"#09090b"}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${e||"OmniDesk Hair Salon & Studio"}
+        <div id="omnidesk-biz-title" style="font-size: 13.5px; font-weight: 600; color: ${t?"#ffffff":"#09090b"}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${s||"OmniDesk Hair Salon & Studio"}
         </div>
-        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: ${o?"rgba(255,255,255,0.75)":"#71717a"}; white-space: nowrap;">
-          <span id="omnidesk-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: ${o?"rgba(255,255,255,0.4)":"#a1a1aa"}; display: inline-block;"></span>
+        <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: ${t?"rgba(255,255,255,0.75)":"#71717a"}; white-space: nowrap;">
+          <span id="omnidesk-status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: ${t?"rgba(255,255,255,0.4)":"#a1a1aa"}; display: inline-block;"></span>
           <span id="omnidesk-status-text">Idle \xB7 Ready</span>
         </div>
       </div>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <button id="omnidesk-expand-btn" style="background: ${o?"rgba(255,255,255,0.1)":"#f4f4f5"}; border: 1px solid ${o?"rgba(255,255,255,0.15)":"#e4e4e7"}; border-radius: 7px; color: ${o?"#ffffff":"#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Open Full">
+      <button id="omnidesk-expand-btn" style="background: ${t?"rgba(255,255,255,0.1)":"#f4f4f5"}; border: 1px solid ${t?"rgba(255,255,255,0.15)":"#e4e4e7"}; border-radius: 7px; color: ${t?"#ffffff":"#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Open Full">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
         </svg>
       </button>
-      <button id="omnidesk-close-btn" style="background: ${o?"rgba(255,255,255,0.1)":"#f4f4f5"}; border: 1px solid ${o?"rgba(255,255,255,0.15)":"#e4e4e7"}; border-radius: 7px; color: ${o?"#ffffff":"#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Close">
+      <button id="omnidesk-close-btn" style="background: ${t?"rgba(255,255,255,0.1)":"#f4f4f5"}; border: 1px solid ${t?"rgba(255,255,255,0.15)":"#e4e4e7"}; border-radius: 7px; color: ${t?"#ffffff":"#52525b"}; width: 30px; height: 30px; cursor: pointer; display: grid; place-items: center;" title="Close">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
     </div>
-  `;let ie=document.createElement("style");ie.textContent=`
+  `;let re=document.createElement("style");re.textContent=`
     @keyframes omnidesk-typing-dot {
       0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.35; }
       40% { transform: translateY(-6px) scale(1.15); opacity: 1; }
@@ -204,36 +204,36 @@ var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
     .omnidesk-dot-1 { animation-delay: 0s; }
     .omnidesk-dot-2 { animation-delay: 0.18s; }
     .omnidesk-dot-3 { animation-delay: 0.36s; }
-  `,E.appendChild(ie);let m=document.createElement("div");m.style.cssText=`
+  `,A.appendChild(re);let y=document.createElement("div");y.style.cssText=`
     flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
-    display: flex; flex-direction: column; gap: 12px; background: #ffffff;
-  `;let N=document.createElement("div");N.id="omnidesk-placeholder-banner",N.style.cssText=`
+    display: flex; flex-direction: column; gap: 12px; background: ${t?"#09090b":"#ffffff"};
+  `;let H=document.createElement("div");H.id="omnidesk-placeholder-banner",H.style.cssText=`
     margin: auto; text-align: center; padding: 10px 18px;
-    background: #f4f4f5; border: 1px solid #e4e4e7; color: #52525b;
+    background: ${t?"#18181b":"#f4f4f5"}; border: 1px solid ${t?"#27272a":"#e4e4e7"}; color: ${t?"#a1a1aa":"#52525b"};
     border-radius: 12px; font-size: 12.5px; font-weight: 500;
     display: inline-flex; align-items: center; gap: 8px; align-self: center;
-  `,N.innerHTML=`
-    <span style="width: 6px; height: 6px; border-radius: 50%; background: #a1a1aa; display: inline-block;"></span>
+  `,H.innerHTML=`
+    <span id="omnidesk-placeholder-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #a1a1aa; display: inline-block;"></span>
     <span>Start a call to talk to our receptionist</span>
-  `,m.appendChild(N);let c=document.createElement("div");c.id="omnidesk-thinking-bubble",c.style.cssText=`
+  `,y.appendChild(H);let f=document.createElement("div");if(f.id="omnidesk-thinking-bubble",f.style.cssText=`
     display: none; flex-direction: column; gap: 4px; max-width: 88%; align-self: flex-start;
-  `,c.innerHTML=`
+  `,f.innerHTML=`
     <div style="display: flex; align-items: flex-start; gap: 8px;">
       <div style="width: 24px; height: 24px; border-radius: 50%; background: #18181b; display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
         </svg>
       </div>
-      <div style="padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; background: ${o?"#18181b":"#f4f4f5"}; color: ${o?"#a1a1aa":"#71717a"}; border: ${o?"1px solid #27272a":"none"}; boxShadow: 0 1px 2px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 5px; min-height: 38px;" title="Agent is thinking and processing...">
+      <div style="padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; background: ${t?"#18181b":"#f4f4f5"}; color: ${t?"#a1a1aa":"#71717a"}; border: ${t?"1px solid #27272a":"none"}; boxShadow: 0 1px 2px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 5px; min-height: 38px;" title="Agent is thinking and processing...">
         <span class="omnidesk-motion-dot omnidesk-dot-1"></span>
         <span class="omnidesk-motion-dot omnidesk-dot-2"></span>
         <span class="omnidesk-motion-dot omnidesk-dot-3"></span>
       </div>
     </div>
-  `,m.appendChild(c);let a=document.createElement("div");a.id="omnidesk-email-bar",a.style.cssText=`
+  `,y.appendChild(f),w){H.style.display="none";let a=document.createElement("div");a.style.cssText="display: flex; flex-direction: column; gap: 4px; max-width: 88%; align-self: flex-start;";let r=document.createElement("div");r.style.cssText="display: flex; align-items: flex-start; gap: 8px;";let p=document.createElement("div");p.style.cssText="width: 24px; height: 24px; border-radius: 50%; background: #18181b; display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;",p.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>';let c=document.createElement("div");c.style.cssText=`padding: 10px 14px; border-radius: 14px 14px 14px 2px; font-size: 13px; line-height: 1.45; background: ${t?"#18181b":"#f4f4f5"}; color: ${t?"#fafafa":"#09090b"}; border: ${t?"1px solid #27272a":"none"}; box-shadow: 0 1px 2px rgba(0,0,0,0.04);`,c.innerText=w,r.appendChild(p),r.appendChild(c),a.appendChild(r),y.insertBefore(a,f),U="agent",N=c,F=!0}let u=document.createElement("div");u.id="omnidesk-email-bar",u.style.cssText=`
     padding: 11px 16px; background: #f0fdf4; border-top: 1px solid #bbf7d0;
     display: none; flex-direction: column; gap: 7px; flex-shrink: 0;
-  `,a.innerHTML=`
+  `,u.innerHTML=`
     <div style="display: flex; align-items: center; justify-content: space-between;">
       <span style="font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 6px;">
         <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
@@ -245,40 +245,51 @@ var D=24e3,ge="wss://agents.assemblyai.com/v1/ws",xe=`
       <input id="omnidesk-email-input" type="email" placeholder="Enter your real email (e.g. name@gmail.com)" required style="flex: 1; font-size: 12.5px; padding: 7px 11px; border-radius: 7px; border: 1px solid #86efac; background: #ffffff; color: #09090b; outline: none;" />
       <button id="omnidesk-email-submit" type="submit" style="background: #16a34a; color: #ffffff; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;">Verify & Send</button>
     </form>
-  `;let j=document.createElement("div");j.style.cssText=`
-    padding: 12px 16px; border-top: 1px solid #e4e4e7;
-    background: #fafafa; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-  `;let u=document.createElement("button");u.style.cssText=`
+  `;let K=document.createElement("div");K.style.cssText=`
+    padding: 12px 16px; border-top: 1px solid ${t?"#27272a":"#e4e4e7"};
+    background: ${t?"#121214":"#fafafa"}; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  `;let l=document.createElement("button");l.style.cssText=`
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 16px; background: #000000; color: #ffffff;
+    padding: 8px 16px; background: ${d}; color: #ffffff;
     border-radius: 10px; border: none; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 14px ${d}40;
     cursor: pointer; transition: all 0.15s ease;
-  `,u.innerHTML=`
+  `,l.innerHTML=`
     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line>
     </svg>
     <span id="omnidesk-btn-text">Start Voice Call</span>
   `;let Y=document.createElement("div");Y.style.cssText=`
     display: flex; align-items: center; gap: 8px;
-  `;let y=document.createElement("span");y.id="omnidesk-timer",y.style.cssText=`
+  `;let C=document.createElement("div");C.id="omnidesk-waveform",C.style.cssText="display: none; align-items: center; gap: 2.5px; height: 14px;";let le=[12,8,14,6,10],ee=[];le.forEach(a=>{let r=document.createElement("span");r.style.cssText=`width: 2.5px; height: ${Math.round(a*.35)}px; background: ${d}; border-radius: 1px; transition: height 0.12s ease;`,C.appendChild(r),ee.push(r)}),Y.appendChild(C);let b=document.createElement("span");b.id="omnidesk-timer",b.style.cssText=`
     font-family: monospace; font-size: 12px; font-weight: 600;
     padding: 3px 8px; border-radius: 6px; background: #f4f4f5; color: #71717a;
-  `,y.innerText="0:00",Y.appendChild(y),j.appendChild(u),j.appendChild(Y),n.appendChild(L),n.appendChild(m),n.appendChild(a),n.appendChild(j),E.appendChild(K),E.appendChild(V),E.appendChild(n),document.body.appendChild(E);function pe(){A=Date.now(),y.innerText="0:00",y.style.background="#000000",y.style.color="#ffffff",P&&clearInterval(P),P=setInterval(()=>{let l=Date.now()-A,g=Math.floor(l/1e3),b=Math.floor(g/60),h=g%60;y.innerText=`${b}:${String(h).padStart(2,"0")}`},250)}function R(){P&&(clearInterval(P),P=null),y.style.background="#f4f4f5",y.style.color="#71717a",y.innerText="0:00"}function ne(l){te=l,n.style.display=l?"flex":"none"}function Z(l){se=l,V.style.display=l?"block":"none",l?(n.style.top="50%",n.style.left="50%",n.style.bottom="auto",n.style.right="auto",n.style.transform="translate(-50%, -50%)",n.style.width="calc(100vw - 40px)",n.style.maxWidth="1140px",n.style.height="calc(100vh - 40px)",n.style.maxHeight="900px"):(n.style.top="auto",n.style.left=O?"20px":"auto",n.style.right=O?"auto":"20px",n.style.bottom="80px",n.style.transform="none",n.style.width="390px",n.style.maxWidth="calc(100vw - 32px)",n.style.height="560px",n.style.maxHeight="calc(100vh - 100px)")}U.onclick=()=>ne(!te),L.querySelector("#omnidesk-close-btn").addEventListener("click",()=>{ne(!1),Z(!1)}),L.querySelector("#omnidesk-expand-btn").addEventListener("click",()=>{Z(!se)});let ue=a.querySelector("#omnidesk-email-form"),G=a.querySelector("#omnidesk-email-input");a.querySelector("#omnidesk-email-close-btn").addEventListener("click",()=>{a.style.display="none"}),ue.addEventListener("submit",l=>{l.preventDefault();let g=G.value.trim();if(!g||!g.includes("@"))return;_&&_.sendEmailInput(g),$=!0,a.style.display="none",G.value="",N.style.display="none";let b=document.createElement("div");b.style.cssText=`
+  `,b.innerText="0:00",Y.appendChild(b),K.appendChild(l),K.appendChild(Y),o.appendChild(E),o.appendChild(y),o.appendChild(u),o.appendChild(K),A.appendChild(X),A.appendChild(Z),A.appendChild(o),document.body.appendChild(A);function ge(){B=Date.now(),b.innerText="0:00",b.style.background=t?"#18181b":"#000000",b.style.color="#ffffff",b.style.border=t?"1px solid #27272a":"none",R&&clearInterval(R),R=setInterval(()=>{let a=Date.now()-B,r=Math.floor(a/1e3),p=Math.floor(r/60),c=r%60;b.innerText=`${p}:${String(c).padStart(2,"0")}`},250)}function j(){R&&(clearInterval(R),R=null),b.style.background="#f4f4f5",b.style.color="#71717a",b.style.border="none",b.innerText="0:00",C.style.display="none"}function de(a){oe=a,o.style.display=a?"flex":"none"}function te(a){ae=a,Z.style.display=a?"block":"none",a?(o.style.top="50%",o.style.left="50%",o.style.bottom="auto",o.style.right="auto",o.style.transform="translate(-50%, -50%)",o.style.width="calc(100vw - 40px)",o.style.maxWidth="1140px",o.style.height="calc(100vh - 40px)",o.style.maxHeight="900px"):(o.style.top="auto",o.style.left=D?"20px":"auto",o.style.right=D?"auto":"20px",o.style.bottom="80px",o.style.transform="none",o.style.width="390px",o.style.maxWidth="calc(100vw - 32px)",o.style.height="560px",o.style.maxHeight="calc(100vh - 100px)")}J.onclick=()=>de(!oe),E.querySelector("#omnidesk-close-btn").addEventListener("click",()=>{de(!1),te(!1)}),E.querySelector("#omnidesk-expand-btn").addEventListener("click",()=>{te(!ae)});let me=u.querySelector("#omnidesk-email-form"),se=u.querySelector("#omnidesk-email-input");u.querySelector("#omnidesk-email-close-btn").addEventListener("click",()=>{u.style.display="none"}),me.addEventListener("submit",a=>{a.preventDefault();let r=se.value.trim();if(!r||!r.includes("@"))return;$&&$.sendEmailInput(r),V=!0,u.style.display="none",se.value="",H.style.display="none";let p=document.createElement("div");p.style.cssText=`
       display: flex; flex-direction: column; gap: 4px; max-width: 88%;
       align-self: flex-end;
-    `;let h=document.createElement("div");h.style.cssText=`
+    `;let c=document.createElement("div");c.style.cssText=`
       padding: 10px 14px; border-radius: 14px 14px 2px 14px;
       font-size: 13px; line-height: 1.45;
-      background: #18181b; color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    `,h.innerText=`My email is ${g}`,b.appendChild(h),m.insertBefore(b,c),c.style.display="flex",m.scrollTop=m.scrollHeight,z="user",F=h,I=!0});async function oe(){$=!1,a.style.display="none",c.style.display="none",z=null,F=null,I=!1;let l=L.querySelector("#omnidesk-status-text"),g=L.querySelector("#omnidesk-status-dot"),b=u.querySelector("#omnidesk-btn-text");l.innerText="Connecting...",g.style.background="#eab308",b.innerText="Connecting...",u.disabled=!0,pe();try{let h=i;if(!h&&typeof document<"u"){let s=document.querySelector("script[src*='widget.js']");if(s&&s.src&&s.src.startsWith("http"))try{h=new URL(s.src).origin}catch{}}!h&&typeof window<"u"&&!window.location.origin.includes("localhost")&&(h=window.location.origin);let he=(h||"https://omni-desk-rho.vercel.app").replace(/\/$/,""),Q=await fetch(`${he}/api/token?businessId=${encodeURIComponent(d)}`);if(!Q.ok)throw new Error(`Failed to get session token (${Q.status})`);let W=await Q.json();if(W.business_name&&!e){let s=L.querySelector("#omnidesk-biz-title");s&&(s.innerText=W.business_name)}let fe=f||W.agent_id||"";_=new J({onStatusChange:s=>{if(H=s,s==="connected")l.innerText="Live \xB7 Speaking",g.style.background="#22c55e",b.innerText="End Voice Call",u.style.background="#dc2626",u.disabled=!1,A=Date.now(),T?.();else if(s==="idle"&&(l.innerText="Idle \xB7 Ready",g.style.background=o?"rgba(255,255,255,0.4)":"#a1a1aa",b.innerText="Start Voice Call",u.style.background="#000000",u.disabled=!1,a.style.display="none",c.style.display="none",R(),A>0)){let t=Math.round((Date.now()-A)/1e3);A=0,S?.(t)}},onThinkingChange:s=>{s&&(c.style.display="flex",m.scrollTop=m.scrollHeight)},onTranscript:s=>{if(N.style.display="none",s.who==="user")s.isFinal&&(c.style.display="flex"),(s.text.includes("@")||s.text.toLowerCase().includes(" at ")&&s.text.toLowerCase().includes(" dot "))&&($=!0,a.style.display="none");else if(s.who==="agent"){s.text&&s.text.trim().length>0&&(c.style.display="none");let t=s.text.toLowerCase();t.includes("what is your email")||t.includes("what's your email")||t.includes("may i have your email")||t.includes("provide your email")||t.includes("can i have your email")||t.includes("could i get your email")||t.includes("could you provide your email")||t.includes("enter your email")||t.includes("spell your email")||t.includes("where can i send your confirmation")||t.includes("where should i send your confirmation")||t.includes("where can i send your calendar invite")||t.includes("where should i send your calendar invite")||t.includes("email")&&(t.includes("what")||t.includes("have")||t.includes("provide")||t.includes("give")||t.includes("tell")||t.includes("share")||t.includes("address"))?($=!1,a.style.display="flex",setTimeout(()=>G.focus(),60)):t.includes("verified your email")||t.includes("thank you for your email")||t.includes("thank you for providing your email")||t.includes("sent a calendar invite")||t.includes("sent your confirmation")||t.includes("confirmation code is")||t.includes("i have sent")?($=!0,a.style.display="none"):$&&(a.style.display="none")}if(z===s.who&&F&&!I)F.innerText=s.text,I=!!s.isFinal;else{let t=document.createElement("div"),B=s.who==="user";t.style.cssText=`
+      background: ${d}; color: #ffffff;
+      box-shadow: 0 2px 8px ${d}35;
+    `,c.innerText=`My email is ${r}`,p.appendChild(c),y.insertBefore(p,f),f.style.display="flex",y.scrollTop=y.scrollHeight,U="user",N=c,F=!0});async function ce(){V=!1,u.style.display="none",f.style.display="none",U=null,N=null,F=!1;let a=E.querySelector("#omnidesk-status-text"),r=E.querySelector("#omnidesk-status-dot"),p=l.querySelector("#omnidesk-btn-text");a.innerText="Connecting...",r.style.background="#eab308",p.innerText="Connecting...",l.style.background="#64748b",l.style.boxShadow="none",l.disabled=!0,ge();try{let c=n;if(!c&&typeof document<"u"){let i=document.querySelector("script[src*='widget.js']");if(i&&i.src&&i.src.startsWith("http"))try{c=new URL(i.src).origin}catch{}}!c&&typeof window<"u"&&!window.location.origin.includes("localhost")&&(c=window.location.origin);let ye=(c||"https://omni-desk-rho.vercel.app").replace(/\/$/,""),ie=await fetch(`${ye}/api/token?businessId=${encodeURIComponent(x)}`);if(!ie.ok)throw new Error(`Failed to get session token (${ie.status})`);let q=await ie.json();if(q.business_name&&!s){let i=E.querySelector("#omnidesk-biz-title");i&&(i.innerText=q.business_name)}let be=m||q.agent_id||"";$=new Q({onStatusChange:i=>{if(O=i,i==="connected")a.innerText="Live \xB7 Speaking",r.style.background="#22c55e",p.innerText="End Voice Call",l.style.background="#dc2626",l.style.boxShadow="0 4px 14px rgba(220, 38, 38, 0.35)",l.disabled=!1,C.style.display="flex",B=Date.now(),_?.();else if(i==="idle"&&(a.innerText="Idle \xB7 Ready",r.style.background=t?"rgba(255,255,255,0.4)":"#a1a1aa",p.innerText="Start Voice Call",l.style.background=d,l.style.boxShadow=`0 4px 14px ${d}40`,l.disabled=!1,C.style.display="none",u.style.display="none",f.style.display="none",j(),B>0)){let e=Math.round((Date.now()-B)/1e3);B=0,L?.(e)}},onThinkingChange:i=>{i&&(f.style.display="flex",y.scrollTop=y.scrollHeight)},onTranscript:i=>{if(H.style.display="none",i.who==="user"){i.isFinal&&(f.style.display="flex");let e=i.text.toLowerCase();(i.text.includes("@")||e.includes(" at ")&&e.includes(" dot ")||e.includes("gmail")||e.includes("yahoo")||e.includes("outlook")||e.includes("hotmail")||e.includes("icloud"))&&(V=!0,u.style.display="none")}else if(i.who==="agent"){i.text&&i.text.trim().length>0&&(f.style.display="none");let e=i.text.toLowerCase();(e.includes("verified your email")||e.includes("email is verified")||e.includes("verified that email")||e.includes("sent a calendar")||e.includes("sent your confirmation")||e.includes("calendar invite")||e.includes("confirmation code is")||e.includes("booking is confirmed")||e.includes("all set, your appointment")||e.includes("scheduled your appointment"))&&(V=!0),!V&&(e.includes("what is your email")||e.includes("what's your email")||e.includes("may i have your email")||e.includes("can i have your email")||e.includes("could i get your email")||e.includes("could you provide your email")||e.includes("provide your email")||e.includes("enter your email")||e.includes("spell your email")||e.includes("share your email")||e.includes("need your email")||e.includes("what email")||e.includes("which email")||e.includes("where can i send your confirmation")||e.includes("where should i send your confirmation")||e.includes("where can i send your calendar")||e.includes("where should i send your calendar")||e.includes("email")&&(e.includes("what is")||e.includes("what's")||e.includes("may i have")||e.includes("can you provide")||e.includes("could you provide")||e.includes("give me your")||e.includes("tell me your")))?(u.style.display="flex",setTimeout(()=>se.focus(),60)):u.style.display="none"}if(U===i.who&&N&&!F)N.innerText=i.text,F=!!i.isFinal;else{let e=i.who==="user",I=document.createElement("div");if(I.style.cssText=`
               display: flex; flex-direction: column; gap: 4px; max-width: 88%;
-              align-self: ${B?"flex-end":"flex-start"};
-            `;let q=document.createElement("div");q.style.cssText=`
-              padding: 10px 14px; border-radius: ${B?"14px 14px 2px 14px":"14px 14px 14px 2px"};
-              font-size: 13px; line-height: 1.45;
-              background: ${B?"#18181b":"#f4f4f5"};
-              color: ${B?"#ffffff":"#09090b"};
-              box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-            `,q.innerText=s.text,t.appendChild(q),m.insertBefore(t,c),z=s.who,F=q,I=!!s.isFinal}m.scrollTop=m.scrollHeight,v?.(s)},onAudioLevel:(s,t)=>{ce=s,de=t},onError:()=>{l.innerText="Error",g.style.background="#ef4444",b.innerText="Start Voice Call",u.style.background="#000000",u.disabled=!1,a.style.display="none",c.style.display="none",R()}}),await _.start(W.token,fe,W.voice)}catch(h){console.error("[OmniDesk Voice Widget Error]:",h),l.innerText="Error",g.style.background="#ef4444",b.innerText="Start Voice Call",u.style.background="#000000",u.disabled=!1,a.style.display="none",c.style.display="none",R()}}function ae(){_&&(_.stop(),_=null),H="idle",a.style.display="none",c.style.display="none",R()}return u.onclick=()=>{H==="connected"?ae():H==="idle"&&oe()},{destroy:()=>{R(),_&&_.stop(),E.remove()},startCall:oe,endCall:ae}}if(typeof document<"u"){let r=document.currentScript||document.querySelector("script[data-agent], script[data-business-id], script[src*='widget.js']");if(r){let i,d=r.src||"";if(d&&d.startsWith("http"))try{i=new URL(d).origin}catch{}let f=r.getAttribute("data-business-id")||void 0,k=r.getAttribute("data-agent")||void 0,M=r.getAttribute("data-theme")||"dark",x=r.getAttribute("data-accent")||"emerald",C=r.getAttribute("data-position")||"bottom-right",p=r.getAttribute("data-label")||void 0,e=r.getAttribute("data-host")||i||"https://omni-desk-rho.vercel.app",w=r.getAttribute("data-greeting")||void 0;document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{le({businessId:f,agentId:k,theme:M,accent:x,position:C,label:p,host:e,greeting:w})}):le({businessId:f,agentId:k,theme:M,accent:x,position:C,label:p,host:e,greeting:w})}}export{le as initOmniDeskWidget};
+              align-self: ${e?"flex-end":"flex-start"};
+            `,e){let v=document.createElement("div");v.style.cssText=`
+                padding: 10px 14px; border-radius: 14px 14px 2px 14px;
+                font-size: 13px; line-height: 1.45;
+                background: ${d};
+                color: #ffffff;
+                box-shadow: 0 2px 8px ${d}35;
+              `,v.innerText=i.text,I.appendChild(v),N=v}else{let v=document.createElement("div");v.style.cssText="display: flex; align-items: flex-start; gap: 8px;";let W=document.createElement("div");W.style.cssText=`
+                width: 24px; height: 24px; border-radius: 50%; background: #18181b;
+                display: grid; place-items: center; color: #ffffff; flex-shrink: 0; margin-top: 2px;
+              `,W.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>';let z=document.createElement("div");z.style.cssText=`
+                padding: 10px 14px; border-radius: 14px 14px 14px 2px;
+                font-size: 13px; line-height: 1.45;
+                background: ${t?"#18181b":"#f4f4f5"};
+                color: ${t?"#fafafa":"#09090b"};
+                border: ${t?"1px solid #27272a":"none"};
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+              `,z.innerText=i.text,v.appendChild(W),v.appendChild(z),I.appendChild(v),N=z}y.insertBefore(I,f),U=i.who,F=!!i.isFinal}y.scrollTop=y.scrollHeight,S?.(i)},onAudioLevel:(i,e)=>{if(fe=i,xe=e,O==="connected"){C.style.display="flex";let I=Math.max(i,e);le.forEach((v,W)=>{let z=Math.max(4,Math.min(14,Math.round(v*(.35+I*1.5))));ee[W]&&(ee[W].style.height=`${z}px`)})}},onError:()=>{a.innerText="Error",r.style.background="#ef4444",p.innerText="Start Voice Call",l.style.background=d,l.style.boxShadow=`0 4px 14px ${d}40`,l.disabled=!1,C.style.display="none",u.style.display="none",f.style.display="none",j()}}),await $.start(q.token,be,q.voice)}catch(c){console.error("[OmniDesk Voice Widget Error]:",c),a.innerText="Error",r.style.background="#ef4444",p.innerText="Start Voice Call",l.style.background=d,l.style.boxShadow=`0 4px 14px ${d}40`,l.disabled=!1,C.style.display="none",u.style.display="none",f.style.display="none",j()}}function pe(){$&&($.stop(),$=null),O="idle";let a=E.querySelector("#omnidesk-status-text"),r=E.querySelector("#omnidesk-status-dot"),p=l.querySelector("#omnidesk-btn-text");a&&(a.innerText="Idle \xB7 Ready"),r&&(r.style.background=t?"rgba(255,255,255,0.4)":"#a1a1aa"),p&&(p.innerText="Start Voice Call"),l.style.background=d,l.style.boxShadow=`0 4px 14px ${d}40`,l.disabled=!1,C.style.display="none",u.style.display="none",f.style.display="none",j()}return l.onclick=()=>{O==="connected"?pe():O==="idle"&&ce()},{destroy:()=>{j(),$&&$.stop(),A.remove()},startCall:ce,endCall:pe}}if(typeof document<"u"){let h=document.currentScript||document.querySelector("script[data-agent], script[data-business-id], script[src*='widget.js']");if(h){let n,x=h.src||"";if(x&&x.startsWith("http"))try{n=new URL(x).origin}catch{}let m=h.getAttribute("data-business-id")||void 0,T=h.getAttribute("data-agent")||void 0,P=h.getAttribute("data-theme")||"dark",k=h.getAttribute("data-accent")||"emerald",M=h.getAttribute("data-position")||"bottom-right",g=h.getAttribute("data-label")||void 0,s=h.getAttribute("data-host")||n||"https://omni-desk-rho.vercel.app",w=h.getAttribute("data-greeting")||void 0;document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{he({businessId:m,agentId:T,theme:P,accent:k,position:M,label:g,host:s,greeting:w})}):he({businessId:m,agentId:T,theme:P,accent:k,position:M,label:g,host:s,greeting:w})}}export{he as initOmniDeskWidget};
 //# sourceMappingURL=vanilla.mjs.map

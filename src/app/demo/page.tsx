@@ -169,63 +169,70 @@ export default function DemoPage() {
             ];
           });
           if (event.who === "user") {
-            if (event.text.includes("@") || (event.text.toLowerCase().includes(" at ") && event.text.toLowerCase().includes(" dot "))) {
+            const userTextLower = event.text.toLowerCase();
+            if (
+              event.text.includes("@") ||
+              (userTextLower.includes(" at ") && userTextLower.includes(" dot ")) ||
+              userTextLower.includes("gmail") ||
+              userTextLower.includes("yahoo") ||
+              userTextLower.includes("outlook") ||
+              userTextLower.includes("hotmail") ||
+              userTextLower.includes("icloud")
+            ) {
               emailCapturedRef.current = true;
               setShowEmailBar(false);
             }
           } else if (event.who === "agent") {
             const lower = event.text.toLowerCase();
 
-            // First: Check if agent is actively asking for caller's email
-            const isAskingForEmail =
-              lower.includes("what is your email") ||
-              lower.includes("what's your email") ||
-              lower.includes("may i have your email") ||
-              lower.includes("provide your email") ||
-              lower.includes("can i have your email") ||
-              lower.includes("could i get your email") ||
-              lower.includes("could you provide your email") ||
-              lower.includes("enter your email") ||
-              lower.includes("spell your email") ||
-              lower.includes("where can i send your confirmation") ||
-              lower.includes("where should i send your confirmation") ||
-              lower.includes("where can i send your calendar invite") ||
-              lower.includes("where should i send your calendar invite") ||
-              (lower.includes("email") && (
-                lower.includes("what") ||
-                lower.includes("have") ||
-                lower.includes("provide") ||
-                lower.includes("give") ||
-                lower.includes("tell") ||
-                lower.includes("share") ||
-                lower.includes("address")
-              ));
-
-            if (isAskingForEmail) {
-              emailCapturedRef.current = false;
-              setShowEmailBar(true);
-              return;
-            }
-
-            // If agent acknowledges, verifies, sends, or finalizes booking, mark captured and hide bar
-            if (
+            // 1. Immediate confirmation check: if agent confirms email, sends invite, or completes booking, lock permanently
+            const isConfirmationOrDone =
               lower.includes("verified your email") ||
-              lower.includes("thank you for your email") ||
-              lower.includes("thank you for providing your email") ||
-              lower.includes("sent a calendar invite") ||
+              lower.includes("email is verified") ||
+              lower.includes("verified that email") ||
+              lower.includes("sent a calendar") ||
               lower.includes("sent your confirmation") ||
+              lower.includes("calendar invite") ||
               lower.includes("confirmation code is") ||
-              lower.includes("i have sent")
-            ) {
+              lower.includes("booking is confirmed") ||
+              lower.includes("all set, your appointment") ||
+              lower.includes("scheduled your appointment");
+
+            if (isConfirmationOrDone) {
               emailCapturedRef.current = true;
-              setShowEmailBar(false);
-              return;
             }
 
-            // If already captured, never re-show email bar
-            if (emailCapturedRef.current) {
-              setShowEmailBar(false);
-            }
+            // 2. Strictly trigger popup ONLY when agent explicitly asks for email and not yet captured
+            const isStrictlyAskingEmail =
+              !emailCapturedRef.current &&
+              (lower.includes("what is your email") ||
+                lower.includes("what's your email") ||
+                lower.includes("may i have your email") ||
+                lower.includes("can i have your email") ||
+                lower.includes("could i get your email") ||
+                lower.includes("could you provide your email") ||
+                lower.includes("provide your email") ||
+                lower.includes("enter your email") ||
+                lower.includes("spell your email") ||
+                lower.includes("share your email") ||
+                lower.includes("need your email") ||
+                lower.includes("what email") ||
+                lower.includes("which email") ||
+                lower.includes("where can i send your confirmation") ||
+                lower.includes("where should i send your confirmation") ||
+                lower.includes("where can i send your calendar") ||
+                lower.includes("where should i send your calendar") ||
+                (lower.includes("email") && (
+                  lower.includes("what is") ||
+                  lower.includes("what's") ||
+                  lower.includes("may i have") ||
+                  lower.includes("can you provide") ||
+                  lower.includes("could you provide") ||
+                  lower.includes("give me your") ||
+                  lower.includes("tell me your")
+                )));
+
+            setShowEmailBar(Boolean(isStrictlyAskingEmail));
           }
         },
         onError: (err) => {

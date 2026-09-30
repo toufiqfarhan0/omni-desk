@@ -200,12 +200,12 @@ export class AssemblyAIVoiceClient {
       this.playbackNode = await addWorklet(this.playbackCtx, PLAYBACK_WORKLET, "playback");
       this.playbackNode.connect(this.playbackCtx.destination);
 
-      // Microphone stream
+      // Microphone stream with acoustic echo cancellation and noise suppression
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
           echoCancellation: true,
-          noiseSuppression: false,
+          noiseSuppression: true,
           autoGainControl: true,
         },
       });

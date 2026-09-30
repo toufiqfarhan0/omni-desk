@@ -190,7 +190,7 @@ export class AssemblyAIVoiceClient {
         audio: {
           channelCount: 1,
           echoCancellation: true,
-          noiseSuppression: false,
+          noiseSuppression: true,
           autoGainControl: true,
         },
       });

@@ -445,13 +445,13 @@ export async function executeTool(
         };
       }
       const res = await validateAndVerifyEmail(email, biz.id);
-      if (res.ok && res.valid) {
+      if (res.ok && res.valid && res.email) {
         return {
           ok: true,
           valid: true,
           email: res.email,
           auto_corrected: res.auto_corrected,
-          message: `Email verified: ${res.email}. Please confirm this with the caller.`,
+          message: `Email verified: ${res.email}. Acknowledge with the caller as ${res.email} (do NOT spell it out as 'zero at gmail dot com').`,
         };
       }
       return {
